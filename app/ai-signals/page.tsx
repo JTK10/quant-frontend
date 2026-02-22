@@ -1,5 +1,6 @@
 import AutoRefresh from '../components/AutoRefresh';
 import DatePicker from '../components/DatePicker';
+import { resolveDate, type DateSearchParams } from '../utils/date';
 import { getInternalApiUrl } from '../utils/internalApi';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,8 @@ async function getAISignals(dateStr: string) {
   return res.json();
 }
 
-export default async function AISignalsPage({ searchParams }: { searchParams: { date?: string } }) {
-  const dateStr = searchParams.date || new Date().toISOString().split('T')[0];
+export default async function AISignalsPage({ searchParams }: { searchParams: DateSearchParams }) {
+  const dateStr = await resolveDate(searchParams);
   const signals = await getAISignals(dateStr);
 
   return (

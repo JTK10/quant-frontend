@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 
 const DEFAULT_EXCHANGE = "NSE";
 
@@ -155,7 +157,7 @@ const TICKER_CORRECTIONS: Record<string, string> = {
   "WAAREE ENERGIES LIMITED": "WAAREEENER"
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const baseUrl = process.env.AWS_API_URL;
     const secret = process.env.RADAR_SECRET;
@@ -167,15 +169,27 @@ export async function GET() {
       );
     }
 
-    const res = await fetch(
-      `${baseUrl}?route=smart-radar&secret=${secret}`,
-      { cache: "no-store" }
-    );
+    const awsUrl = new URL(baseUrl);
+    awsUrl.searchParams.set("route", "smart-radar");
+    awsUrl.searchParams.set("secret", secret);
+
+    const date = request.nextUrl.searchParams.get("date");
+    if (date) {
+      awsUrl.searchParams.set("date", date);
+    }
+
+    const res = await fetch(awsUrl.toString(), { cache: "no-store" });
 
     const data = await res.json();
 
+    if (!res.ok) {
+      return NextResponse.json(data, { status: res.status });
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+
     // Attach TradingView mapping
-    const enriched = data.map((stock: any) => {
+    const enriched = rows.map((stock: any) => {
       const cleaned =
         TICKER_CORRECTIONS[stock.Name] ||
         stock.Name.replace(/&/g, "").replace(/\s+/g, "");

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     const awsUrl = new URL(baseUrl);
-    awsUrl.searchParams.set("route", "ai-signals");
+    awsUrl.searchParams.set("route", "sector-heatmap");
     awsUrl.searchParams.set("secret", secret);
 
     const date = request.nextUrl.searchParams.get("date");

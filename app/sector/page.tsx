@@ -1,22 +1,65 @@
 import AutoRefresh from '../components/AutoRefresh';
 import DatePicker from '../components/DatePicker';
+import { resolveDate, type DateSearchParams } from '../utils/date';
+import { getInternalApiUrl } from '../utils/internalApi';
 
 export const dynamic = 'force-dynamic';
 
-async function getSectorData(dateStr: string) {
-  // Simulated Aggregated Sector Data (Average OI Change)
-  return [
-    { Sector: "Banking", OI: 4.2 },
-    { Sector: "IT", OI: 1.5 },
-    { Sector: "Auto", OI: 8.4 },
-    { Sector: "Metals", OI: -3.2 },
-    { Sector: "Pharma", OI: -1.1 },
-    { Sector: "Energy", OI: 0.5 },
-  ].sort((a, b) => b.OI - a.OI);
+type SectorDatum = {
+  Sector: string;
+  OI: number;
+};
+
+function normalizeSectorData(data: unknown): SectorDatum[] {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  const sectors: SectorDatum[] = [];
+
+  for (const item of data) {
+    if (!item || typeof item !== 'object') {
+      continue;
+    }
+
+    const record = item as Record<string, unknown>;
+    const sector =
+      (typeof record.Sector === 'string' && record.Sector) ||
+      (typeof record.sector === 'string' && record.sector) ||
+      (typeof record.Name === 'string' && record.Name) ||
+      (typeof record.name === 'string' && record.name) ||
+      null;
+
+    const oiValue =
+      record.OI ??
+      record.oi ??
+      record.OIChange ??
+      record.oiChange ??
+      record.oi_change ??
+      record.value;
+    const oi = typeof oiValue === 'number' ? oiValue : Number(oiValue);
+
+    if (!sector || Number.isNaN(oi)) {
+      continue;
+    }
+
+    sectors.push({ Sector: sector, OI: oi });
+  }
+
+  return sectors.sort((a, b) => b.OI - a.OI);
 }
 
-export default async function SectorPage({ searchParams }: { searchParams: { date?: string } }) {
-  const dateStr = searchParams.date || new Date().toISOString().split('T')[0];
+async function getSectorData(dateStr: string) {
+  const url = await getInternalApiUrl(`/api/sector?date=${encodeURIComponent(dateStr)}`);
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return [];
+
+  const data: unknown = await res.json();
+  return normalizeSectorData(data);
+}
+
+export default async function SectorPage({ searchParams }: { searchParams: DateSearchParams }) {
+  const dateStr = await resolveDate(searchParams);
   const sectors = await getSectorData(dateStr);
 
   return (
@@ -33,7 +76,7 @@ export default async function SectorPage({ searchParams }: { searchParams: { dat
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {sectors.map((sec: any) => {
+        {sectors.map((sec) => {
           const isBull = sec.OI > 0;
           
           // Calculate opacity based on strength (Max 10% OI for 100% opacity)
@@ -64,6 +107,12 @@ export default async function SectorPage({ searchParams }: { searchParams: { dat
           );
         })}
       </div>
+
+      {sectors.length === 0 && (
+        <div className="mt-8 text-center text-brand-muted italic">
+          No sector data available for {dateStr}.
+        </div>
+      )}
     </div>
   );
 }

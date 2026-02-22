@@ -1,16 +1,20 @@
+import AutoRefresh from '../components/AutoRefresh';
+import DatePicker from '../components/DatePicker';
+import { resolveDate, type DateSearchParams } from '../utils/date';
 import { getInternalApiUrl } from '../utils/internalApi';
 
 export const dynamic = 'force-dynamic';
 
-async function getAnalyticsData() {
-  const url = await getInternalApiUrl('/api/swing-analytics');
+async function getAnalyticsData(dateStr: string) {
+  const url = await getInternalApiUrl(`/api/analytics?date=${encodeURIComponent(dateStr)}`);
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) return null;
   return res.json();
 }
 
-export default async function AnalyticsPage() {
-  const data = await getAnalyticsData();
+export default async function AnalyticsPage({ searchParams }: { searchParams: DateSearchParams }) {
+  const dateStr = await resolveDate(searchParams);
+  const data = await getAnalyticsData(dateStr);
   
   if (!data) return <div className="text-white">Error loading analytics.</div>;
 
@@ -18,9 +22,15 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="font-sans max-w-7xl mx-auto text-white">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold tracking-tight">Swing Performance Analytics</h2>
-        <p className="text-brand-muted text-sm mt-1">Live execution metrics from the hybrid swing model.</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Swing Performance Analytics</h2>
+          <p className="text-brand-muted text-sm mt-1">Live execution metrics from the hybrid swing model for <span className="text-brand-accent">{dateStr}</span>.</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <DatePicker />
+          <AutoRefresh interval={60000} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">

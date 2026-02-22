@@ -1,10 +1,11 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Calendar } from 'lucide-react';
 
 export default function DatePicker() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   
   // Default to today if no date in URL
@@ -14,8 +15,9 @@ export default function DatePicker() {
     const newDate = e.target.value;
     const currentParams = new URLSearchParams(Array.from(searchParams.entries()));
     currentParams.set('date', newDate);
-    // Push the new URL, triggering a server-side re-render
-    router.push(`?${currentParams.toString()}`);
+
+    const query = currentParams.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
   };
 
   return (

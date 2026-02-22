@@ -1,5 +1,6 @@
 import AutoRefresh from '../components/AutoRefresh';
 import DatePicker from '../components/DatePicker';
+import { resolveDate, type DateSearchParams } from '../utils/date';
 import { getInternalApiUrl } from '../utils/internalApi';
 
 export const dynamic = 'force-dynamic';
@@ -11,8 +12,8 @@ async function getVelocityData(dateStr: string) {
   return res.json();
 }
 
-export default async function VelocityPage({ searchParams }: { searchParams: { date?: string } }) {
-  const dateStr = searchParams.date || new Date().toISOString().split('T')[0];
+export default async function VelocityPage({ searchParams }: { searchParams: DateSearchParams }) {
+  const dateStr = await resolveDate(searchParams);
   
   const data = await getVelocityData(dateStr);
   const isBullish = data.bias === "BULLISH";
