@@ -6,10 +6,19 @@ import { ExternalLink, TrendingUp, TrendingDown } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 async function getRadarData(dateStr: string) {
-  // Use &secret= to append it to the URL
-  const url = `${process.env.AWS_LAMBDA_URL}?route=smart-radar&date=${dateStr}&secret=${process.env.AWS_RADAR_SECRET}`;
+  const secret = process.env.AWS_RADAR_SECRET || '';
+  // Build the URL carefully using template literals
+  const url = `${process.env.AWS_LAMBDA_URL}?route=smart-radar&date=${dateStr}&secret=${secret}`;
   
-  const res = await fetch(url, { cache: 'no-store' });
+  // DEBUG: Check this in your Vercel Logs to see if 'secret' is visible
+  console.log(`Fetching: ${process.env.AWS_LAMBDA_URL}?route=smart-radar&date=${dateStr}&secret=[PROTECTED]`);
+
+  const res = await fetch(url, { 
+    cache: 'no-store',
+    headers: {
+      'x-radar-secret': secret // We send it in BOTH places just to be safe
+    }
+  });
   
   if (!res.ok) return [];
   return res.json();
