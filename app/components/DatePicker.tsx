@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Calendar } from 'lucide-react';
 
@@ -9,21 +8,11 @@ export default function DatePicker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const today = new Date().toISOString().split('T')[0];
-
-  const [date, setDate] = useState(
-    searchParams.get('date') || today
-  );
-
-  // Sync state when URL changes
-  useEffect(() => {
-    const urlDate = searchParams.get('date') || today;
-    setDate(urlDate);
-  }, [searchParams, today]);
+  const currentDate =
+    searchParams.get('date') ?? new Date().toISOString().split('T')[0];
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value;
-    setDate(newDate); // update input immediately
 
     const params = new URLSearchParams(searchParams.toString());
     params.set('date', newDate);
@@ -37,7 +26,7 @@ export default function DatePicker() {
       <Calendar size={18} className="text-brand-muted" />
       <input
         type="date"
-        value={date}
+        value={currentDate}
         onChange={handleDateChange}
         className="bg-transparent text-white font-mono text-sm focus:outline-none cursor-pointer"
       />
