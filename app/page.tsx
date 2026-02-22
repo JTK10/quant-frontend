@@ -13,7 +13,7 @@ async function getRadarData(dateStr: string) {
 }
 
 export default async function RadarPage({ searchParams }: { searchParams: DateSearchParams }) {
-  const dateStr = await resolveDate(searchParams);
+  const dateStr = resolveDate(searchParams);
   const data = await getRadarData(dateStr);
 
   return (
