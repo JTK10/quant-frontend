@@ -16,12 +16,11 @@ export async function GET(request: NextRequest) {
 
     const awsUrl = new URL(baseUrl);
     awsUrl.searchParams.set("route", "swing-analytics");
+    const date =
+      request.nextUrl.searchParams.get("date") ??
+      new Date().toISOString().split("T")[0];
+    awsUrl.searchParams.set("date", date);
     awsUrl.searchParams.set("secret", secret);
-
-    const date = request.nextUrl.searchParams.get("date");
-    if (date) {
-      awsUrl.searchParams.set("date", date);
-    }
 
     const res = await fetch(awsUrl.toString(), { cache: "no-store" });
     const data = await res.json();
