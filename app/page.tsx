@@ -1,8 +1,11 @@
 import AutoRefresh from './components/AutoRefresh';
 import DatePicker from './components/DatePicker';
+import SectorSkyline from './components/SectorSkyline';
 import SmartRadarPremium from './components/SmartRadarPremium';
+import type { RadarStock } from './types/radar';
 import { resolveDate, type DateSearchParams } from './utils/date';
 import { getInternalApiUrl } from './utils/internalApi';
+import { buildSectorData } from './utils/sectorSkyline';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +18,12 @@ async function getRadarData(dateStr: string) {
 
 export default async function RadarPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
-  const data = await getRadarData(dateStr);
+  const raw = await getRadarData(dateStr);
+  const data = Array.isArray(raw) ? (raw as RadarStock[]) : [];
+  const sectorData = buildSectorData(data);
 
   return (
-    <div className="font-sans max-w-7xl mx-auto text-white">
+    <div className="font-sans w-full text-white">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Smart Radar</h1>
@@ -28,6 +33,10 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
           <DatePicker />
           <AutoRefresh interval={30000} />
         </div>
+      </div>
+
+      <div className="mb-10">
+        <SectorSkyline sectors={sectorData} />
       </div>
 
       <SmartRadarPremium data={data} />
