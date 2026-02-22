@@ -2,32 +2,36 @@ import DatePicker from '../components/DatePicker';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AnalyticsPage({ searchParams }: { searchParams: { date?: string } }) {
-  const dateStr = searchParams.date || new Date().toISOString().split('T')[0];
+async function getAnalyticsData() {
+  const url = `${process.env.AWS_LAMBDA_URL}?route=swing-analytics`;
+  const res = await fetch(url, {
+    headers: { 'x-radar-secret': process.env.AWS_RADAR_SECRET || '' },
+    cache: 'no-store'
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export default async function AnalyticsPage() {
+  const data = await getAnalyticsData();
   
-  // Dummy Analytics Data
-  const metrics = { totalTrades: 42, winRate: 64.5, avgReturn: 1.2, avgHold: 3.5, bestTrade: 14.5 };
-  const trades = [
-    { Symbol: "RELIANCE", Direction: "LONG", Entry_Date: "2026-01-10", ReturnPct: 4.5, Exit_Reason: "Target Hit" },
-    { Symbol: "TCS", Direction: "SHORT", Entry_Date: "2026-01-12", ReturnPct: -1.2, Exit_Reason: "Stop Loss" },
-  ];
+  if (!data) return <div className="text-white">Error loading analytics.</div>;
+
+  const { metrics, trades } = data;
 
   return (
     <div className="font-sans max-w-7xl mx-auto text-white">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Swing Analytics</h2>
-          <p className="text-brand-muted text-sm mt-1">Historical backtest performance.</p>
-        </div>
-        <DatePicker />
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold tracking-tight">Swing Performance Analytics</h2>
+        <p className="text-brand-muted text-sm mt-1">Live execution metrics from the hybrid swing model.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <MetricCard title="Total Trades" value={metrics.totalTrades} />
-        <MetricCard title="Win Rate" value={`${metrics.winRate}%`} isBull={metrics.winRate > 50} />
-        <MetricCard title="Avg Return" value={`${metrics.avgReturn}%`} isBull={metrics.avgReturn > 0} />
-        <MetricCard title="Avg Hold" value={metrics.avgHold} />
-        <MetricCard title="Best Trade" value={`+${metrics.bestTrade}%`} isBull={true} />
+        <MetricCard title="Win Rate" value={`${metrics.winRate.toFixed(1)}%`} isBull={metrics.winRate > 50} />
+        <MetricCard title="Avg Return" value={`${metrics.avgReturn.toFixed(2)}%`} isBull={metrics.avgReturn > 0} />
+        <MetricCard title="Avg Hold" value={`${metrics.avgHold.toFixed(1)}d`} />
+        <MetricCard title="Best Trade" value={`+${metrics.bestTrade.toFixed(1)}%`} isBull={true} />
       </div>
 
       <div className="bg-brand-surface border border-brand-border rounded-xl overflow-hidden">
@@ -65,8 +69,8 @@ function MetricCard({ title, value, isBull = null }: { title: string, value: any
   if (isBull === false) color = "text-brand-bear";
 
   return (
-    <div className="bg-brand-surface border border-brand-border rounded-xl p-5">
-      <div className="text-brand-muted text-xs font-semibold uppercase mb-2">{title}</div>
+    <div className="bg-brand-surface border border-brand-border rounded-xl p-5 shadow-sm">
+      <div className="text-brand-muted text-xs font-bold uppercase mb-2 tracking-wider">{title}</div>
       <div className={`text-2xl font-black ${color}`}>{value}</div>
     </div>
   );

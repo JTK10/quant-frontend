@@ -5,19 +5,22 @@ import { ExternalLink, TrendingUp, TrendingDown } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-// 1. The Live Fetch Function
 async function getRadarData(dateStr: string) {
   const url = `${process.env.AWS_LAMBDA_URL}?route=smart-radar&date=${dateStr}`;
   
   const res = await fetch(url, {
-    headers: { 'x-radar-secret': process.env.AWS_RADAR_SECRET || '' },
-    cache: 'no-store' // Force fresh data
+    headers: { 
+      'x-radar-secret': process.env.AWS_RADAR_SECRET || '' 
+    },
+    cache: 'no-store'
   });
   
-  if (!res.ok) {
-    console.error("AWS Lambda Error:", await res.text());
-    return [];
+  // If you still get a 403, add this log to see what's happening in Vercel logs
+  if (res.status === 403) {
+      console.error("The Handshake failed. Check if AWS_RADAR_SECRET in Vercel matches AWS.");
   }
+
+  if (!res.ok) return [];
   return res.json();
 }
 
