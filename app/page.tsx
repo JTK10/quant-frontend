@@ -5,19 +5,12 @@ import { ExternalLink, TrendingUp, TrendingDown } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-async function getRadarData(dateStr: string) {
-  const secret = process.env.AWS_RADAR_SECRET || '';
-  // Build the URL carefully using template literals
-  const url = `${process.env.AWS_LAMBDA_URL}?route=smart-radar&date=${dateStr}&secret=${secret}`;
-  
-  // DEBUG: Check this in your Vercel Logs to see if 'secret' is visible
-  console.log(`Fetching: ${process.env.AWS_LAMBDA_URL}?route=smart-radar&date=${dateStr}&secret=[PROTECTED]`);
+async function getRadarData() {
+  const baseUrl = process.env.NEXT_PUBLIC_AWS_LAMBDA_URL;
+  const secret = process.env.NEXT_PUBLIC_RADAR_SECRET;
 
-  const res = await fetch(url, { 
-    cache: 'no-store',
-    headers: {
-      'x-radar-secret': secret // We send it in BOTH places just to be safe
-    }
+  const res = await fetch(`${baseUrl}?route=smart-radar&secret=${secret}`, { 
+    cache: 'no-store'
   });
   
   if (!res.ok) return [];
@@ -29,7 +22,7 @@ export default async function Dashboard({ searchParams }: { searchParams: { date
   const dateStr = searchParams.date || new Date().toISOString().split('T')[0];
 
   // 3. Fetch LIVE data (No more dummy arrays!)
-  const signals = await getRadarData(dateStr);
+  const signals = await getRadarData();
 
   const topThree = signals.slice(0, 3);
   const tableData = signals.slice(3);
