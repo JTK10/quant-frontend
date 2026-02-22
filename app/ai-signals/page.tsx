@@ -4,17 +4,15 @@ import DatePicker from '../components/DatePicker';
 export const dynamic = 'force-dynamic';
 
 async function getAISignals(dateStr: string) {
-  // const url = `${process.env.AWS_LAMBDA_URL}?route=ai-signals&date=${dateStr}`;
-  // const res = await fetch(url, {
-  //   headers: { 'X-Radar-Secret': process.env.AWS_RADAR_SECRET || '' },
-  //   cache: 'no-store'
-  // });
-  // if (!res.ok) return [];
-  // return res.json();
-
-  return [
-    { Name: "INDIGO", Decision: "AI_SELECTED", Confidence: 88, Target: "4500", StopLoss: "4380", RiskReward: "1:3", Reason: "Strong institutional buying detected at VWAP. Call writing unwinding rapidly at 4400 CE.", Time: "09:45 AM" }
-  ];
+  const url = `${process.env.AWS_LAMBDA_URL}?route=ai-signals&date=${dateStr}`;
+  
+  const res = await fetch(url, {
+    headers: { 'x-radar-secret': process.env.AWS_RADAR_SECRET || '' },
+    cache: 'no-store'
+  });
+  
+  if (!res.ok) return [];
+  return res.json();
 }
 
 export default async function AISignalsPage({ searchParams }: { searchParams: { date?: string } }) {

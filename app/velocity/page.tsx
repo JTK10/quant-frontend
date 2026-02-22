@@ -4,25 +4,21 @@ import DatePicker from '../components/DatePicker';
 export const dynamic = 'force-dynamic';
 
 async function getVelocityData(dateStr: string) {
-  // const url = `${process.env.AWS_LAMBDA_URL}?route=market-velocity&date=${dateStr}`;
-  // const res = await fetch(url, {
-  //   headers: { 'X-Radar-Secret': process.env.AWS_RADAR_SECRET || '' },
-  //   cache: 'no-store'
-  // });
-  // if (!res.ok) return { bias: "NEUTRAL", bulls: [], bears: [] };
-  // return res.json();
-
-  // Simulated Data
-  return {
-    bias: "BULLISH",
-    bulls: [{ Name: "RELIANCE", Price: 2950.4, OI: 5.2, Break: "PDH" }, { Name: "TCS", Price: 4100.0, OI: 3.1, Break: "INSIDE" }],
-    bears: [{ Name: "HDFCBANK", Price: 1420.5, OI: -4.5, Break: "PDL" }]
-  };
+  const url = `${process.env.AWS_LAMBDA_URL}?route=market-velocity&date=${dateStr}`;
+  
+  const res = await fetch(url, {
+    headers: { 'x-radar-secret': process.env.AWS_RADAR_SECRET || '' },
+    cache: 'no-store'
+  });
+  
+  if (!res.ok) return { bias: "NEUTRAL", bulls: [], bears: [] };
+  return res.json();
 }
 
 export default async function VelocityPage({ searchParams }: { searchParams: { date?: string } }) {
   const dateStr = searchParams.date || new Date().toISOString().split('T')[0];
   const data = await getVelocityData(dateStr);
+
   const isBullish = data.bias === "BULLISH";
 
   return (

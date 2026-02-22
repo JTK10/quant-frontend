@@ -5,21 +5,28 @@ import { ExternalLink, TrendingUp, TrendingDown } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-// Accept searchParams from Next.js
+// 1. The Live Fetch Function
+async function getRadarData(dateStr: string) {
+  const url = `${process.env.AWS_LAMBDA_URL}?route=smart-radar&date=${dateStr}`;
+  
+  const res = await fetch(url, {
+    headers: { 'x-radar-secret': process.env.AWS_RADAR_SECRET || '' },
+    cache: 'no-store' // Force fresh data
+  });
+  
+  if (!res.ok) {
+    console.error("AWS Lambda Error:", await res.text());
+    return [];
+  }
+  return res.json();
+}
+
 export default async function Dashboard({ searchParams }: { searchParams: { date?: string } }) {
+  // 2. Get date from URL (e.g., ?date=2026-02-20)
   const dateStr = searchParams.date || new Date().toISOString().split('T')[0];
 
-  // Fetch from your Lambda, passing the date parameter
-  // const res = await fetch(`${process.env.AWS_LAMBDA_URL}/smart-radar?date=${dateStr}`, { headers: { 'X-Radar-Secret': '...' } });
-  // const signals = await res.json();
-  
-  // Dummy data
-  const signals = [
-    { Name: "HDFCBANK", SmartRank: 94.5, OI: 12.4, Break: "PDH" },
-    { Name: "RELIANCE", SmartRank: 88.2, OI: 8.1, Break: "INSIDE" },
-    { Name: "TCS", SmartRank: 85.0, OI: -5.5, Break: "PDL" },
-    { Name: "INFY", SmartRank: 70.0, OI: 2.1, Break: "INSIDE" }
-  ];
+  // 3. Fetch LIVE data (No more dummy arrays!)
+  const signals = await getRadarData(dateStr);
 
   const topThree = signals.slice(0, 3);
   const tableData = signals.slice(3);
