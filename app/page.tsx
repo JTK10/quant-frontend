@@ -1,5 +1,6 @@
 import AutoRefresh from './components/AutoRefresh';
 import DatePicker from './components/DatePicker';
+import SmartRadarPremium from './components/SmartRadarPremium';
 import { resolveDate, type DateSearchParams } from './utils/date';
 import { getInternalApiUrl } from './utils/internalApi';
 
@@ -29,11 +30,7 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
         </div>
       </div>
 
-      <div className="bg-brand-surface border border-brand-border rounded-xl p-4">
-        <pre className="text-xs text-gray-200 whitespace-pre-wrap break-words">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      </div>
+      <SmartRadarPremium data={data} />
     </div>
   );
 }
