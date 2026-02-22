@@ -1,34 +1,112 @@
-"use client";
+import AutoRefresh from './components/AutoRefresh';
+import DatePicker from './components/DatePicker';
+import { getTradingViewUrl } from './utils/tradingview';
+import { ExternalLink, TrendingUp, TrendingDown } from 'lucide-react';
 
-import { useEffect, useState } from "react";
+export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+// Accept searchParams from Next.js
+export default async function Dashboard({ searchParams }: { searchParams: { date?: string } }) {
+  const dateStr = searchParams.date || new Date().toISOString().split('T')[0];
 
-  useEffect(() => {
-    fetch("https://ayg0muysdf.execute-api.ap-south-1.amazonaws.com/default/daiyprecalculate?route=smart-radar&date=2026-02-20")
-      .then((res) => res.json())
-      .then((res) => {
-        setData(res);
-        setLoading(false);
-      });
-  }, []);
+  // Fetch from your Lambda, passing the date parameter
+  // const res = await fetch(`${process.env.AWS_LAMBDA_URL}/smart-radar?date=${dateStr}`, { headers: { 'X-Radar-Secret': '...' } });
+  // const signals = await res.json();
+  
+  // Dummy data
+  const signals = [
+    { Name: "HDFCBANK", SmartRank: 94.5, OI: 12.4, Break: "PDH" },
+    { Name: "RELIANCE", SmartRank: 88.2, OI: 8.1, Break: "INSIDE" },
+    { Name: "TCS", SmartRank: 85.0, OI: -5.5, Break: "PDL" },
+    { Name: "INFY", SmartRank: 70.0, OI: 2.1, Break: "INSIDE" }
+  ];
 
-  if (loading) return <div className="p-10 text-white">Loading...</div>;
+  const topThree = signals.slice(0, 3);
+  const tableData = signals.slice(3);
 
   return (
-    <div className="min-h-screen bg-black text-white p-10">
-      <h1 className="text-3xl font-bold mb-6">Smart Radar</h1>
-
-      {data.map((item, index) => (
-        <div
-          key={index}
-          className="bg-gray-900 p-4 mb-4 rounded-lg border border-gray-700"
-        >
-          <pre className="text-sm">{JSON.stringify(item, null, 2)}</pre>
+    <div className="font-sans max-w-7xl mx-auto">
+      <AutoRefresh interval={60000} /> 
+      
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Smart Radar</h1>
+          <p className="text-brand-muted text-sm mt-1">Live algorithmic order flow.</p>
         </div>
-      ))}
+        <DatePicker /> {/* Interactive Date Picker */}
+      </div>
+
+      {/* Spotlight Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+        {topThree.map((stock: any, idx: number) => {
+          const isBull = stock.OI > 0;
+          return (
+            <div key={idx} className="bg-brand-surface border border-brand-border rounded-xl p-5">
+              <div className="flex justify-between items-start mb-4">
+                <a href={getTradingViewUrl(stock.Name)} target="_blank" rel="noopener noreferrer" className="text-xl font-bold text-white hover:text-brand-accent flex items-center gap-2">
+                  {stock.Name} <ExternalLink size={14} className="text-brand-muted" />
+                </a>
+                <span className={`px-2.5 py-1 rounded text-xs font-bold ${isBull ? 'bg-brand-bullBg text-brand-bull' : 'bg-brand-bearBg text-brand-bear'}`}>
+                  {isBull ? 'LONG' : 'SHORT'}
+                </span>
+              </div>
+              <div className="flex justify-between items-end mt-6">
+                <div>
+                  <div className="text-xs text-brand-muted mb-1 font-medium uppercase">Smart Rank</div>
+                  <div className="text-4xl font-black text-white">{stock.SmartRank.toFixed(1)}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-brand-muted mb-1 font-medium uppercase">OI Shift</div>
+                  <div className={`flex items-center justify-end gap-1 text-lg font-bold ${isBull ? 'text-brand-bull' : 'text-brand-bear'}`}>
+                    {isBull ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                    {stock.OI > 0 ? '+' : ''}{stock.OI}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Data Table */}
+      <div className="bg-brand-surface border border-brand-border rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-brand-border">
+          <h3 className="font-semibold text-white">Market Radar Feed</h3>
+        </div>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="bg-[#0f1522] border-b border-brand-border text-brand-muted">
+              <th className="px-5 py-3 font-medium uppercase text-xs">Symbol</th>
+              <th className="px-5 py-3 font-medium uppercase text-xs">Action</th>
+              <th className="px-5 py-3 font-medium uppercase text-xs">Rank</th>
+              <th className="px-5 py-3 font-medium uppercase text-xs text-right">OI Change</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-brand-border">
+            {tableData.map((stock: any, idx: number) => {
+              const isBull = stock.OI > 0;
+              return (
+                <tr key={idx} className="hover:bg-white/5 transition-colors">
+                  <td className="px-5 py-4">
+                    <a href={getTradingViewUrl(stock.Name)} target="_blank" rel="noopener noreferrer" className="font-bold text-white hover:text-brand-accent flex items-center gap-2 w-fit">
+                      {stock.Name} <ExternalLink size={12} className="text-brand-muted" />
+                    </a>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${isBull ? 'bg-brand-bullBg text-brand-bull' : 'bg-brand-bearBg text-brand-bear'}`}>
+                      {isBull ? 'LONG' : 'SHORT'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 font-bold text-gray-200">{stock.SmartRank.toFixed(1)}</td>
+                  <td className={`px-5 py-4 text-right font-mono font-bold ${isBull ? 'text-brand-bull' : 'text-brand-bear'}`}>
+                    {stock.OI > 0 ? '+' : ''}{stock.OI}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
