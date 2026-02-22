@@ -1,100 +1,21 @@
 import AutoRefresh from '../components/AutoRefresh';
 import DatePicker from '../components/DatePicker';
-import SectorSkyline from '../components/SectorSkyline';
-import type { RadarStock, SectorStrength } from '../types/radar';
 import { resolveDate, type DateSearchParams } from '../utils/date';
 import { getInternalApiUrl } from '../utils/internalApi';
-import { buildSectorData } from '../utils/sectorSkyline';
 
 export const dynamic = 'force-dynamic';
 
-function toNumber(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
+type SectorDatum = {
+  Sector: string;
+  OI: number;
+};
 
-  if (typeof value === 'string') {
-    const parsed = Number(value.replace(/[%+,]/g, '').trim());
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  return 0;
-}
-
-function normalizeStocks(rawStocks: unknown): RadarStock[] {
-  if (!Array.isArray(rawStocks)) {
-    return [];
-  }
-
-  const stocks: RadarStock[] = [];
-
-  for (const item of rawStocks) {
-    if (!item || typeof item !== 'object') {
-      continue;
-    }
-
-    const record = item as Record<string, unknown>;
-    const name =
-      (typeof record.Name === 'string' && record.Name) ||
-      (typeof record.name === 'string' && record.name) ||
-      (typeof record.Symbol === 'string' && record.Symbol) ||
-      (typeof record.symbol === 'string' && record.symbol) ||
-      (typeof record.ticker === 'string' && record.ticker) ||
-      null;
-
-    if (!name) {
-      continue;
-    }
-
-    const oiValue =
-      record.OI ??
-      record['OI %'] ??
-      record.oi ??
-      record.oiPercent ??
-      record.oi_change ??
-      0;
-
-    const chart =
-      (typeof record.Chart === 'string' && record.Chart) ||
-      (typeof record.chart === 'string' && record.chart) ||
-      '';
-
-    stocks.push({
-      Name: name,
-      SmartRank: toNumber(record.SmartRank),
-      Peak_Score: toNumber(record.Peak_Score),
-      Signal_Generated_Score: toNumber(record.Signal_Generated_Score),
-      OI: toNumber(oiValue),
-      'OI %': toNumber(oiValue),
-      Chart: chart,
-    });
-  }
-
-  return stocks;
-}
-
-function normalizeSectorData(data: unknown): SectorStrength[] {
+function normalizeSectorData(data: unknown): SectorDatum[] {
   if (!Array.isArray(data)) {
     return [];
   }
 
-  const stockLike = data.some((item) => {
-    if (!item || typeof item !== 'object') {
-      return false;
-    }
-
-    const record = item as Record<string, unknown>;
-    return (
-      typeof record.Name === 'string' &&
-      ('SmartRank' in record || 'Peak_Score' in record || 'Signal_Generated_Score' in record)
-    );
-  });
-
-  if (stockLike) {
-    return buildSectorData(data as RadarStock[]);
-  }
-
-  const sectors: SectorStrength[] = [];
+  const sectors: SectorDatum[] = [];
 
   for (const item of data) {
     if (!item || typeof item !== 'object') {
@@ -102,48 +23,33 @@ function normalizeSectorData(data: unknown): SectorStrength[] {
     }
 
     const record = item as Record<string, unknown>;
-    const name =
+    const sector =
       (typeof record.Sector === 'string' && record.Sector) ||
       (typeof record.sector === 'string' && record.sector) ||
       (typeof record.Name === 'string' && record.Name) ||
       (typeof record.name === 'string' && record.name) ||
       null;
 
-    if (!name) {
-      continue;
-    }
-
-    const strengthValue =
-      record.strength ??
-      record.Strength ??
+    const oiValue =
       record.OI ??
       record.oi ??
       record.OIChange ??
       record.oiChange ??
       record.oi_change ??
       record.value;
+    const oi = typeof oiValue === 'number' ? oiValue : Number(oiValue);
 
-    const stocks =
-      normalizeStocks(
-        record.stocks ??
-          record.Stocks ??
-          record.constituents ??
-          record.Constituents ??
-          record.members ??
-          record.Members
-      ) ?? [];
+    if (!sector || Number.isNaN(oi)) {
+      continue;
+    }
 
-    sectors.push({
-      name,
-      strength: toNumber(strengthValue),
-      stocks,
-    });
+    sectors.push({ Sector: sector, OI: oi });
   }
 
-  return sectors.sort((a, b) => b.strength - a.strength);
+  return sectors.sort((a, b) => b.OI - a.OI);
 }
 
-async function getSectorData(dateStr: string): Promise<SectorStrength[]> {
+async function getSectorData(dateStr: string) {
   const url = await getInternalApiUrl(`/api/sector?date=${encodeURIComponent(dateStr)}`);
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) return [];
@@ -157,13 +63,11 @@ export default async function SectorPage({ searchParams }: { searchParams: DateS
   const sectors = await getSectorData(dateStr);
 
   return (
-    <div className="font-sans w-full text-white">
+    <div className="font-sans max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Sector Scope</h2>
-          <p className="text-brand-muted text-sm mt-1">
-            Institutional sector heat engine for <span className="text-brand-accent">{dateStr}</span>.
-          </p>
+          <h2 className="text-3xl font-bold tracking-tight text-white">Sector Heatmap</h2>
+          <p className="text-brand-muted text-sm mt-1">Capital flow based on Open Interest velocity.</p>
         </div>
         <div className="flex items-center gap-4">
           <DatePicker />
@@ -171,7 +75,44 @@ export default async function SectorPage({ searchParams }: { searchParams: DateS
         </div>
       </div>
 
-      <SectorSkyline sectors={sectors} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {sectors.map((sec) => {
+          const isBull = sec.OI > 0;
+          
+          // Calculate opacity based on strength (Max 10% OI for 100% opacity)
+          const strength = Math.min(Math.abs(sec.OI) / 10, 1); 
+          
+          // Generate dynamic style object for the background
+          const bgStyle = isBull 
+            ? `rgba(16, 185, 129, ${Math.max(strength, 0.15)})` // brand.bull
+            : `rgba(239, 68, 68, ${Math.max(strength, 0.15)})`; // brand.bear
+
+          return (
+            <div 
+              key={sec.Sector}
+              className="relative p-6 rounded-xl border border-brand-border flex flex-col justify-between aspect-video transition-transform hover:scale-105 cursor-default overflow-hidden"
+              style={{ backgroundColor: bgStyle }}
+            >
+              <div className="font-black text-xl tracking-wide z-10 text-white">{sec.Sector}</div>
+              <div className="flex justify-between items-end z-10">
+                <span className="text-sm font-semibold text-white/70">Avg OI Shift</span>
+                <span className={`text-2xl font-black text-white`}>
+                  {isBull ? '+' : ''}{sec.OI.toFixed(1)}%
+                </span>
+              </div>
+              
+              {/* Glass overlay to ensure text is always readable */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+            </div>
+          );
+        })}
+      </div>
+
+      {sectors.length === 0 && (
+        <div className="mt-8 text-center text-brand-muted italic">
+          No sector data available for {dateStr}.
+        </div>
+      )}
     </div>
   );
 }
