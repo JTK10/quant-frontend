@@ -29,13 +29,15 @@ export default async function SectorPage({ searchParams }: { searchParams: { dat
 
   return (
     <div className="font-sans max-w-7xl mx-auto">
-      <AutoRefresh interval={60000} />
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-white">Sector Heatmap</h2>
           <p className="text-brand-muted text-sm mt-1">Capital flow based on Open Interest velocity.</p>
         </div>
-        <DatePicker />
+        <div className="flex items-center gap-4">
+          <DatePicker />
+          <AutoRefresh interval={60000} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

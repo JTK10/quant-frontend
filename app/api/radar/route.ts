@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const baseUrl = process.env.AWS_API_URL;
-  const secret = process.env.RADAR_SECRET;
+  try {
+    const res = await fetch(
+      "ayg0muysdf.execute-api.ap-south-1.amazonaws.com/default/daiyprecalculate?route=smart-radar&secret=EliteQuant2026!",
+      { cache: "no-store" }
+    );
 
-  const res = await fetch(
-    `${baseUrl}?route=smart-radar&secret=${secret}`
-  );
+    const data = await res.json();
 
-  const data = await res.json();
-
-  return NextResponse.json(data);
+    return NextResponse.json(data);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
 }

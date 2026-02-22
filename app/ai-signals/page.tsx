@@ -21,13 +21,15 @@ export default async function AISignalsPage({ searchParams }: { searchParams: { 
 
   return (
     <div className="font-sans max-w-7xl mx-auto">
-      <AutoRefresh interval={60000} />
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">AI Verdicts Dashboard</h1>
           <p className="text-brand-muted text-sm mt-1">Daily machine learning driven trade signals.</p>
         </div>
-        <DatePicker />
+        <div className="flex items-center gap-4">
+          <DatePicker />
+          <AutoRefresh interval={60000} />
+        </div>
       </div>
 
       <div className="space-y-6">

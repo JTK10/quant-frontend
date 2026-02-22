@@ -24,14 +24,15 @@ export default async function SwingPage({ searchParams }: { searchParams: { date
 
   return (
     <div className="font-sans max-w-7xl mx-auto">
-      <AutoRefresh interval={60000} />
-      
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-white">Swing Trading Engine</h2>
           <p className="text-brand-muted text-sm mt-1">Daily Hybrid Adaptive Swing Model</p>
         </div>
-        <DatePicker />
+        <div className="flex items-center gap-4">
+          <DatePicker />
+          <AutoRefresh interval={60000} />
+        </div>
       </div>
 
       <div className="bg-brand-surface border border-brand-border rounded-xl overflow-hidden">

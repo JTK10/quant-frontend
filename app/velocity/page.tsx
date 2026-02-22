@@ -23,14 +23,15 @@ export default async function VelocityPage({ searchParams }: { searchParams: { d
 
   return (
     <div className="font-sans max-w-7xl mx-auto text-white">
-      <AutoRefresh interval={30000} />
-      
       <div className="flex justify-between items-center mb-8">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Market Velocity</h2>
           <p className="text-brand-muted text-sm mt-1">Showing momentum for: <span className="text-brand-accent">{dateStr}</span></p>
         </div>
-        <DatePicker />
+        <div className="flex items-center gap-4">
+          <DatePicker />
+          <AutoRefresh interval={30000} />
+        </div>
       </div>
 
       {/* Bias Indicator */}
