@@ -4,14 +4,6 @@ import DatePicker from '../components/DatePicker';
 export const dynamic = 'force-dynamic';
 
 async function getSectorData(dateStr: string) {
-  // const url = `${process.env.AWS_LAMBDA_URL}?route=sector-heatmap&date=${dateStr}`;
-  // const res = await fetch(url, {
-  //   headers: { 'X-Radar-Secret': process.env.AWS_RADAR_SECRET || '' },
-  //   cache: 'no-store'
-  // });
-  // if (!res.ok) return [];
-  // return res.json();
-  
   // Simulated Aggregated Sector Data (Average OI Change)
   return [
     { Sector: "Banking", OI: 4.2 },

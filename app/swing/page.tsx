@@ -1,21 +1,14 @@
 import AutoRefresh from '../components/AutoRefresh';
 import DatePicker from '../components/DatePicker';
+import { getInternalApiUrl } from '../utils/internalApi';
 
 export const dynamic = 'force-dynamic';
 
 async function getActiveSwings(dateStr: string) {
-  // const url = `${process.env.AWS_LAMBDA_URL}?route=swing-active&date=${dateStr}`;
-  // const res = await fetch(url, {
-  //   headers: { 'X-Radar-Secret': process.env.AWS_RADAR_SECRET || '' },
-  //   cache: 'no-store'
-  // });
-  // if (!res.ok) return [];
-  // return res.json();
-  
-  return [
-    { Symbol: "TATASTEEL", Direction: "LONG", Confidence: 85, Setup: "VCP Breakout", Status: "ACTIVE", Trigger: "142.50", Close: 145.20 },
-    { Symbol: "HDFCBANK", Direction: "SHORT", Confidence: 60, Setup: "Trendline Breakdown", Status: "PENDING", Trigger: "1410.00", Close: 1415.50 }
-  ];
+  const url = await getInternalApiUrl(`/api/swing?date=${encodeURIComponent(dateStr)}`);
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) return [];
+  return res.json();
 }
 
 export default async function SwingPage({ searchParams }: { searchParams: { date?: string } }) {

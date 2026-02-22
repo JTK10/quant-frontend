@@ -1,13 +1,10 @@
-import DatePicker from '../components/DatePicker';
+import { getInternalApiUrl } from '../utils/internalApi';
 
 export const dynamic = 'force-dynamic';
 
 async function getAnalyticsData() {
-  const url = `${process.env.AWS_LAMBDA_URL}?route=swing-analytics`;
-  const res = await fetch(url, {
-    headers: { 'x-radar-secret': process.env.AWS_RADAR_SECRET || '' },
-    cache: 'no-store'
-  });
+  const url = await getInternalApiUrl('/api/swing-analytics');
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) return null;
   return res.json();
 }

@@ -1,15 +1,12 @@
 import AutoRefresh from '../components/AutoRefresh';
 import DatePicker from '../components/DatePicker';
+import { getInternalApiUrl } from '../utils/internalApi';
 
 export const dynamic = 'force-dynamic';
 
 async function getAISignals(dateStr: string) {
-  const url = `${process.env.AWS_LAMBDA_URL}?route=ai-signals&date=${dateStr}`;
-  
-  const res = await fetch(url, {
-    headers: { 'x-radar-secret': process.env.AWS_RADAR_SECRET || '' },
-    cache: 'no-store'
-  });
+  const url = await getInternalApiUrl(`/api/ai?date=${encodeURIComponent(dateStr)}`);
+  const res = await fetch(url, { cache: 'no-store' });
   
   if (!res.ok) return [];
   return res.json();
