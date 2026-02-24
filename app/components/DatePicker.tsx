@@ -2,12 +2,13 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays } from 'lucide-react';
+import { getTodayInIST } from '../utils/date';
 
 export default function DatePicker() {
   const router      = useRouter();
   const pathname    = usePathname();
   const searchParams= useSearchParams();
-  const currentDate = searchParams.get('date') ?? new Date().toISOString().split('T')[0];
+  const currentDate = searchParams.get('date') ?? getTodayInIST();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const params = new URLSearchParams(searchParams.toString());

@@ -184,22 +184,26 @@ function resolveName(row: RadarRow): string {
 function withStreamlitRanking(rows: RadarRow[]): RadarRow[] {
   const ranked = rows.map((row) => {
     const latestScore = toNumber(
-      row["Latest Score"] ?? row.Latest_Score ?? row.Score ?? row.Best_Score
+      row["Latest Score"] ?? row.Latest ?? row.Latest_Score
     );
     const signalGeneratedScore = toNumber(
       row.Signal_Generated_Score ??
       row.SignalGeneratedScore ??
       row["Signal Generated Score"]
     );
-    const peakRaw = toNumber(row.Peak_Score ?? row["Peak Score"] ?? row.Best_Score);
+    const peakRaw = toNumber(
+      row.Peak_Score ?? row.Peak ?? row["Peak Score"] ?? row.Best_Score
+    );
     const peakScore = Math.max(peakRaw, latestScore);
-    const smartRank = Number(
+    const computedSmartRank = Number(
       (
         0.5 * peakScore +
         0.3 * latestScore +
         0.2 * signalGeneratedScore
       ).toFixed(2)
     );
+    const upstreamSmartRank = toNumber(row.SmartRank ?? row["Smart Rank"]);
+    const smartRank = upstreamSmartRank > 0 ? upstreamSmartRank : computedSmartRank;
 
     return {
       ...row,
