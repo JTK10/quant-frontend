@@ -1,120 +1,191 @@
 'use client';
 
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import type { SectorStrength } from '../types/radar';
 
+function toNum(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') { const n = Number(v.replace(/[%+,]/g,'').trim()); return Number.isFinite(n) ? n : 0; }
+  return 0;
+}
+
 export default function SectorSkyline({ sectors }: { sectors: SectorStrength[] }) {
-  const [activeSector, setActiveSector] = useState<SectorStrength | null>(null);
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
 
-  const sorted = [...sectors].sort((a, b) => b.strength - a.strength);
-  const max = Math.max(...sorted.map((s) => Math.abs(s.strength)), 1);
-
-  if (!sorted.length) {
+  if (!sectors.length) {
     return (
-      <div className="bg-brand-surface border border-brand-border rounded-2xl p-8 text-center text-brand-muted italic">
-        No sector heat data available for the selected date.
+      <div className="rounded-xl border p-10 text-center"
+        style={{ background:'var(--color-brand-surface)', borderColor:'var(--color-brand-border)' }}>
+        <p className="font-mono text-xs tracking-widest" style={{ color:'var(--color-brand-muted)' }}>
+          NO SECTOR DATA
+        </p>
       </div>
     );
   }
 
-  const parseOi = (value: unknown): number => {
-    if (typeof value === 'number' && Number.isFinite(value)) return value;
-    if (typeof value === 'string') {
-      const parsed = Number(value.replace(/[%+,]/g, '').trim());
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
-    return 0;
-  };
+  const sorted  = [...sectors].sort((a, b) => b.strength - a.strength);
+  const maxAbs  = Math.max(...sorted.map(s => Math.abs(s.strength)), 0.1);
+  const active  = openIdx !== null ? sorted[openIdx] : null;
 
   return (
-    <div className="relative w-full">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-brand-muted">Sector Skyline Heat Engine</h2>
-        <div className="text-xs text-brand-muted">Left: Bull Pressure | Right: Bear Pressure</div>
+    <div className="rounded-xl border overflow-hidden"
+      style={{ background:'var(--color-brand-surface)', borderColor:'var(--color-brand-border)' }}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b"
+        style={{ borderColor:'var(--color-brand-border)' }}>
+        <div>
+          <div className="font-bold tracking-wider text-sm" style={{ color:'var(--color-brand-text)' }}>
+            Sector Pressure Map
+          </div>
+          <div className="font-mono text-[10px] mt-0.5" style={{ color:'var(--color-brand-muted)' }}>
+            Click a column to inspect stocks
+          </div>
+        </div>
+        <div className="flex items-center gap-4 font-mono text-[10px]" style={{ color:'var(--color-brand-muted)' }}>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-sm inline-block" style={{ background:'var(--color-brand-bull)' }} />
+            BULL
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-sm inline-block" style={{ background:'var(--color-brand-bear)' }} />
+            BEAR
+          </span>
+        </div>
       </div>
 
-      <div className="w-full overflow-x-auto pb-10">
-        <div className="flex items-end justify-between gap-4 h-[320px] px-4 min-w-[760px]">
-          {sorted.map((sector, i) => {
-            const heightPercent = (Math.abs(sector.strength) / max) * 100;
-            const isBull = sector.strength >= 0;
+      {/* Bar chart */}
+      <div className="px-6 py-5 overflow-x-auto">
+        <div className="flex items-end gap-1.5" style={{ minWidth: `${sorted.length * 56}px`, height: '160px' }}>
+          {sorted.map((sec, i) => {
+            const pct    = (Math.abs(sec.strength) / maxAbs) * 100;
+            const isBull = sec.strength >= 0;
+            const isOpen = openIdx === i;
+            const bull   = 'var(--color-brand-bull)';
+            const bear   = 'var(--color-brand-bear)';
+            const colTop = isBull ? bull : bear;
+            const colBot = isBull ? '#03845a' : '#8b1e2f';
 
             return (
-              <motion.div
-                key={sector.name}
-                initial={{ height: 0 }}
-                animate={{ height: `${Math.max(heightPercent, 8)}%` }}
-                transition={{ duration: 0.6, delay: i * 0.05 }}
-                onClick={() => setActiveSector(sector)}
-                className={`w-10 rounded-t-xl cursor-pointer relative group shrink-0 ${
-                  isBull
-                    ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
-                    : 'bg-gradient-to-t from-red-600 to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]'
-                }`}
+              <div
+                key={sec.name}
+                className="flex flex-col items-center gap-1 cursor-pointer flex-1 min-w-[48px] group"
+                style={{ alignSelf: 'flex-end' }}
+                onClick={() => setOpenIdx(isOpen ? null : i)}
               >
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs text-gray-400 rotate-45 whitespace-nowrap">
-                  {sector.name}
+                {/* Bar */}
+                <div
+                  className="w-full rounded-t-md relative overflow-hidden transition-opacity duration-200"
+                  style={{
+                    height:   `${Math.max(pct, 4)}%`,
+                    background: `linear-gradient(to top, ${colBot}, ${colTop})`,
+                    boxShadow:  `0 0 12px ${colTop}40`,
+                    outline:    isOpen ? `1px solid ${colTop}` : 'none',
+                    opacity:    openIdx !== null && !isOpen ? 0.4 : 1,
+                    minHeight:  '6px',
+                  }}
+                >
+                  {/* Shimmer sweep */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full"
+                    style={{ transition:'transform 0.7s ease' }} />
                 </div>
-              </motion.div>
+                {/* Value */}
+                <div className="font-mono text-[9px] tabular-nums font-bold"
+                  style={{ color: colTop }}>
+                  {sec.strength > 0 ? '+' : ''}{sec.strength.toFixed(1)}
+                </div>
+                {/* Name */}
+                <div className="font-mono text-[8px] text-center leading-tight break-words w-full px-0.5 transition-colors"
+                  style={{ color: isOpen ? 'var(--color-brand-text)' : 'var(--color-brand-muted)', maxWidth:'52px' }}>
+                  {sec.name.toUpperCase()}
+                </div>
+                {/* Count */}
+                <div className="font-mono text-[8px]" style={{ color:'rgba(90,114,153,0.5)' }}>
+                  {sec.stocks.length}s
+                </div>
+              </div>
             );
           })}
         </div>
       </div>
 
-      <AnimatePresence>
-        {activeSector && (
-          <>
-            <motion.button
-              key="overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setActiveSector(null)}
-              className="fixed inset-0 bg-black/50 z-40"
-              aria-label="Close sector drawer"
-            />
-            <motion.div
-              key="drawer"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-              className="fixed right-0 top-0 h-full w-[420px] max-w-[92vw] bg-[#0b1220] border-l border-gray-800 p-6 overflow-y-auto z-50"
-            >
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-xl font-bold text-white">{activeSector.name}</h2>
-                <button
-                  onClick={() => setActiveSector(null)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  x
-                </button>
+      {/* ── Expanded Detail Panel (inline, no overlay) ───── */}
+      {active && (
+        <div className="border-t" style={{ borderColor:'var(--color-brand-border)', background:'rgba(6,10,20,0.7)' }}>
+          <div className="px-6 py-5">
+            {/* Panel header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-sm"
+                  style={{ background: active.strength >= 0 ? 'var(--color-brand-bull)' : 'var(--color-brand-bear)' }} />
+                <span className="font-bold tracking-widest text-sm uppercase" style={{ color:'var(--color-brand-text)' }}>
+                  {active.name}
+                </span>
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded"
+                  style={{ background:'var(--color-brand-border)', color:'var(--color-brand-muted)' }}>
+                  {active.stocks.length} stock{active.stocks.length !== 1 ? 's' : ''}
+                </span>
               </div>
-              <div className="text-xs text-brand-muted mb-6">
-                Sector strength: {activeSector.strength.toFixed(2)}
+              <button
+                onClick={() => setOpenIdx(null)}
+                className="font-mono text-[10px] tracking-widest px-2 py-1 rounded transition-colors"
+                style={{ color:'var(--color-brand-muted)', background:'var(--color-brand-border)' }}
+              >
+                CLOSE ×
+              </button>
+            </div>
+
+            {/* Stat row */}
+            <div className="flex flex-wrap gap-6 mb-4 font-mono text-[11px]">
+              <div style={{ color:'var(--color-brand-muted)' }}>
+                Strength: <span className="font-bold" style={{ color: active.strength >= 0 ? 'var(--color-brand-bull)' : 'var(--color-brand-bear)' }}>
+                  {active.strength > 0 ? '+' : ''}{active.strength.toFixed(2)}
+                </span>
               </div>
+              {typeof active.bullRatio === 'number' && (
+                <div style={{ color:'var(--color-brand-muted)' }}>
+                  Bullish: <span className="font-bold" style={{ color:'var(--color-brand-text)' }}>
+                    {(active.bullRatio * 100).toFixed(0)}%
+                  </span>
+                </div>
+              )}
+              {typeof active.avgOi === 'number' && (
+                <div style={{ color:'var(--color-brand-muted)' }}>
+                  Avg OI: <span className="font-bold" style={{ color: active.avgOi >= 0 ? 'var(--color-brand-bull)' : 'var(--color-brand-bear)' }}>
+                    {active.avgOi > 0 ? '+' : ''}{active.avgOi.toFixed(2)}%
+                  </span>
+                </div>
+              )}
+            </div>
 
-              {activeSector.stocks.map((stock, idx) => {
-                const oi = parseOi(stock.OI ?? stock['OI %']);
-
+            {/* Stocks grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+              {active.stocks.map((stock, idx) => {
+                const oi = toNum(stock.OI ?? stock['OI %']);
+                const bull = oi >= 0;
                 return (
                   <div
                     key={`${stock.Name}-${idx}`}
-                    className="flex justify-between py-2 border-b border-gray-800 text-sm"
+                    className="flex items-center justify-between rounded-lg px-3 py-2 border"
+                    style={{
+                      background:   'var(--color-brand-surface)',
+                      borderColor:  'var(--color-brand-border)',
+                    }}
                   >
-                    <span className="text-gray-200">{stock.Name}</span>
-                    <span className={oi > 0 ? 'text-emerald-400' : 'text-red-400'}>
-                      {oi > 0 ? '+' : ''}
-                      {oi.toFixed(2)}%
+                    <span className="text-[11px] font-semibold truncate" style={{ color:'var(--color-brand-text)' }}>
+                      {stock.Name}
+                    </span>
+                    <span className="font-mono text-[10px] font-bold ml-1.5 shrink-0"
+                      style={{ color: bull ? 'var(--color-brand-bull)' : 'var(--color-brand-bear)' }}>
+                      {bull ? '+' : ''}{oi.toFixed(1)}%
                     </span>
                   </div>
                 );
               })}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

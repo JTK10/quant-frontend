@@ -1,31 +1,47 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { RefreshCw } from 'lucide-react';
 
-interface AutoRefreshProps {
-  interval: number;
-}
-
-export default function AutoRefresh({ interval }: AutoRefreshProps) {
+export default function AutoRefresh({ interval }: { interval: number }) {
   const router = useRouter();
+  const [spinning, setSpinning] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState('');
+
+  const refresh = () => {
+    setSpinning(true);
+    router.refresh();
+    const now = new Date();
+    setLastRefresh(`${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`);
+    setTimeout(() => setSpinning(false), 600);
+  };
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      router.refresh();
-    }, interval);
-
-    return () => {
-      clearInterval(timer);
-    };
-  }, [interval, router]);
+    const t = setInterval(refresh, interval);
+    return () => clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interval]);
 
   return (
     <button
-      onClick={() => router.refresh()}
-      className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
+      onClick={refresh}
+      title="Refresh data"
+      className="flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs tracking-wider border transition-all duration-150"
+      style={{
+        background: 'var(--color-brand-surface)',
+        borderColor: 'var(--color-brand-border)',
+        color: spinning ? 'var(--color-brand-accent)' : 'var(--color-brand-muted)',
+      }}
     >
-      Refresh
+      <RefreshCw
+        size={12}
+        style={{
+          transition: 'transform 0.6s ease',
+          transform: spinning ? 'rotate(360deg)' : 'rotate(0deg)',
+        }}
+      />
+      {lastRefresh ? lastRefresh : 'REFRESH'}
     </button>
   );
 }

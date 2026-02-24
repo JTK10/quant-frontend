@@ -6,11 +6,12 @@ import { getInternalApiUrl } from '../utils/internalApi';
 export const dynamic = 'force-dynamic';
 
 async function getAISignals(dateStr: string) {
-  const url = await getInternalApiUrl(`/api/ai?date=${encodeURIComponent(dateStr)}`);
-  const res = await fetch(url, { cache: 'no-store' });
-  
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const url = await getInternalApiUrl(`/api/ai?date=${encodeURIComponent(dateStr)}`);
+    const res = await fetch(url, { cache:'no-store' });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
 }
 
 export default async function AISignalsPage({ searchParams }: { searchParams: DateSearchParams }) {
@@ -18,70 +19,100 @@ export default async function AISignalsPage({ searchParams }: { searchParams: Da
   const signals = await getAISignals(dateStr);
 
   return (
-    <div className="font-sans max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">AI Verdicts Dashboard</h1>
-          <p className="text-brand-muted text-sm mt-1">Daily machine learning driven trade signals.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-1 h-5 rounded-full inline-block" style={{ background:'var(--color-brand-accent)' }} />
+            <h1 className="text-2xl font-bold tracking-wide text-white">AI Verdicts</h1>
+          </div>
+          <p className="font-mono text-xs tracking-widest" style={{ color:'var(--color-brand-muted)' }}>
+            MACHINE LEARNING SIGNALS
+            <span className="ml-2" style={{ color:'var(--color-brand-accent)' }}>{dateStr}</span>
+          </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <DatePicker />
           <AutoRefresh interval={60000} />
         </div>
       </div>
 
-      <div className="space-y-6">
+      {signals.length === 0 && (
+        <div className="rounded-xl border p-12 text-center"
+          style={{ background:'var(--color-brand-surface)', borderColor:'var(--color-brand-border)' }}>
+          <p className="font-mono text-xs tracking-widest" style={{ color:'var(--color-brand-muted)' }}>
+            NO AI SIGNALS FOR {dateStr}
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-5">
         {signals.map((sig: any) => {
-          const isHighConviction = sig.Confidence > 80;
-          
+          const hiConf  = sig.Confidence > 80;
+          const confCol = hiConf ? 'var(--color-brand-bull)' : 'var(--color-brand-gold)';
           return (
-            <div key={sig.Name} className={`bg-brand-surface border border-brand-border rounded-2xl p-8`}>
-              
-              {/* Header */}
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h2 className="text-3xl font-black text-white">{sig.Name}</h2>
-                  <span className="text-brand-muted text-sm">Signal Time: {sig.Time}</span>
-                </div>
-                <div className={`px-4 py-2 rounded-lg font-black ${isHighConviction ? 'bg-brand-bull text-slate-950' : 'bg-yellow-500 text-slate-950'}`}>
-                  {sig.Decision.replace('_', ' ')}
-                </div>
-              </div>
+            <div key={sig.Name} className="rounded-xl border overflow-hidden relative"
+              style={{ background:'var(--color-brand-surface)', borderColor:'var(--color-brand-border)' }}>
+              {/* Top accent line */}
+              <div className="absolute top-0 inset-x-0 h-px"
+                style={{ background:`linear-gradient(90deg,transparent,${confCol}80,transparent)` }} />
 
-              {/* AI Reasoning block */}
-              <div className="bg-white/5 border border-brand-border p-4 rounded-xl mb-6 text-brand-muted font-medium italic">
-                " {sig.Reason} "
-              </div>
-
-              {/* Trading Metrics */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-black/30 p-4 rounded-xl border border-brand-border">
-                <div>
-                  <div className="text-brand-bull text-xs font-bold mb-1 tracking-wider">TARGET</div>
-                  <div className="text-xl font-mono text-white">{sig.Target}</div>
-                </div>
-                <div>
-                  <div className="text-brand-bear text-xs font-bold mb-1 tracking-wider">STOPLOSS</div>
-                  <div className="text-xl font-mono text-white">{sig.StopLoss}</div>
-                </div>
-                <div>
-                  <div className="text-brand-muted text-xs font-bold mb-1 tracking-wider">R/R RATIO</div>
-                  <div className="text-xl font-mono text-white">{sig.RiskReward}</div>
-                </div>
-                
-                {/* Confidence Bar */}
-                <div>
-                  <div className="text-brand-muted text-xs font-bold mb-1 tracking-wider flex justify-between">
-                    <span>CONFIDENCE</span> <span>{sig.Confidence}%</span>
+              <div className="p-6">
+                {/* Name + decision */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
+                  <div>
+                    <h2 className="text-2xl font-bold text-white tracking-wide">{sig.Name}</h2>
+                    <div className="font-mono text-[10px] mt-1" style={{ color:'var(--color-brand-muted)' }}>
+                      Signal Time: {sig.Time}
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden mt-2">
-                    <div 
-                      className={`h-full ${isHighConviction ? 'bg-brand-bull' : 'bg-yellow-500'}`} 
-                      style={{ width: `${sig.Confidence}%` }}
-                    ></div>
+                  <div className="font-bold text-sm px-4 py-2 rounded-lg tracking-wider"
+                    style={{
+                      background: hiConf ? 'var(--color-brand-bullbg)' : 'rgba(240,165,0,0.1)',
+                      color:      confCol,
+                      border:     `1px solid ${confCol}40`,
+                    }}>
+                    {sig.Decision?.replace('_',' ')}
                   </div>
                 </div>
-              </div>
 
+                {/* Reason */}
+                <div className="rounded-lg border px-4 py-3 mb-5 text-sm italic leading-relaxed"
+                  style={{
+                    background:   'rgba(0,0,0,0.3)',
+                    borderColor:  'var(--color-brand-border)',
+                    color:        'var(--color-brand-muted)',
+                  }}>
+                  "{sig.Reason}"
+                </div>
+
+                {/* Trading metrics grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-xl border p-4"
+                  style={{ background:'rgba(0,0,0,0.25)', borderColor:'var(--color-brand-border)' }}>
+                  <div>
+                    <div className="font-mono text-[9px] tracking-widest mb-1" style={{ color:'var(--color-brand-bull)' }}>TARGET</div>
+                    <div className="font-mono text-xl font-bold text-white">{sig.Target}</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-[9px] tracking-widest mb-1" style={{ color:'var(--color-brand-bear)' }}>STOP LOSS</div>
+                    <div className="font-mono text-xl font-bold text-white">{sig.StopLoss}</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-[9px] tracking-widest mb-1" style={{ color:'var(--color-brand-muted)' }}>RISK/REWARD</div>
+                    <div className="font-mono text-xl font-bold text-white">{sig.RiskReward}</div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between font-mono text-[9px] tracking-widest mb-2" style={{ color:'var(--color-brand-muted)' }}>
+                      <span>CONFIDENCE</span>
+                      <span style={{ color: confCol }}>{sig.Confidence}%</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background:'var(--color-brand-border)' }}>
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width:`${sig.Confidence}%`, background: confCol }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           );
         })}

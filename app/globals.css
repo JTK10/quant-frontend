@@ -1,26 +1,75 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ── Google Fonts ─────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ── Tailwind v4 Theme Tokens ─────────────────────────── */
+@theme {
+  --font-sans: 'Sora', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-brand-bg:       #060a14;
+  --color-brand-surface:  #0d1424;
+  --color-brand-surface2: #111c30;
+  --color-brand-border:   #1a2840;
+  --color-brand-muted:    #5a7299;
+  --color-brand-text:     #c8d8f0;
+  --color-brand-bull:     #05d98f;
+  --color-brand-bullbg:   rgba(5,217,143,0.07);
+  --color-brand-bear:     #f0365a;
+  --color-brand-bearbg:   rgba(240,54,90,0.07);
+  --color-brand-accent:   #4f8ef7;
+  --color-brand-accentbg: rgba(79,142,247,0.08);
+  --color-brand-gold:     #f0a500;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ── Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 3px; height: 3px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--color-brand-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-brand-muted); }
+
+/* ── Subtle dot-grid texture overlay ─────────────────── */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(79,142,247,0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── Card top-glow line ───────────────────────────────── */
+.card-glow-top::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(79,142,247,0.5), transparent);
+}
+
+/* ── Number shimmer animation ─────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.4s ease both; }
+
+/* ── Bar fill animation ───────────────────────────────── */
+@keyframes fillBar {
+  from { width: 0; }
+}
+
+/* ── Ping for live dot ────────────────────────────────── */
+@keyframes ping {
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+.animate-ping { animation: ping 1.4s cubic-bezier(0,0,0.2,1) infinite; }
+
+/* ── Date input styling ───────────────────────────────── */
+input[type='date']::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }

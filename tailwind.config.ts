@@ -8,20 +8,27 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans:  ['Sora', 'sans-serif'],
+        mono:  ['JetBrains Mono', 'monospace'],
+      },
       colors: {
-        // Trade Finder style matte dark mode
         brand: {
-          bg: '#030712',      // Deepest gray/black for main background
-          surface: '#111827', // Raised surface for cards and sidebar
-          border: '#1f2937',  // Subtle borders
-          muted: '#9ca3af',   // Secondary text
-          bull: '#10b981',    // Crisp Emerald Green
-          bullBg: 'rgba(16, 185, 129, 0.1)',
-          bear: '#ef4444',    // Crisp Red
-          bearBg: 'rgba(239, 68, 68, 0.1)',
-          accent: '#3b82f6',  // Blue for active states/links
+          bg:        '#060a14',
+          surface:   '#0d1424',
+          surface2:  '#111c30',
+          border:    '#1a2840',
+          muted:     '#5a7299',
+          text:      '#c8d8f0',
+          bull:      '#05d98f',
+          bullbg:    'rgba(5,217,143,0.07)',
+          bear:      '#f0365a',
+          bearbg:    'rgba(240,54,90,0.07)',
+          accent:    '#4f8ef7',
+          accentbg:  'rgba(79,142,247,0.08)',
+          gold:      '#f0a500',
         }
-      }
+      },
     },
   },
   plugins: [],
