@@ -202,6 +202,8 @@ function normalizeTicker(name: string): string {
 }
 
 function inferSector(stock: RadarStock): string {
+  const stockName = typeof stock.Name === 'string' && stock.Name.trim() ? stock.Name : '';
+
   // 1. Direct sector field from API
   const direct = (typeof stock.Sector === 'string' && stock.Sector.trim())
     || (typeof stock.sector === 'string' && stock.sector.trim())
@@ -210,9 +212,10 @@ function inferSector(stock: RadarStock): string {
   if (direct) return direct;
 
   // 2. Exact ticker map
-  const norm = normalizeTicker(stock.Name);
+  if (!stockName) return 'Other';
+  const norm = normalizeTicker(stockName);
   if (TICKER_MAP[norm]) return TICKER_MAP[norm];
-  if (TICKER_MAP[stock.Name]) return TICKER_MAP[stock.Name];
+  if (TICKER_MAP[stockName]) return TICKER_MAP[stockName];
 
   // 3. Keyword substring match
   for (const [kw, sector] of KEYWORD_MAP) {

@@ -172,10 +172,8 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
               {stocks.map((stock, i) => (
                 <div
                   key={`${stock.Name}-${i}`}
-                  className="flex items-center justify-between px-5 py-3 border-b group"
+                  className="flex items-center justify-between px-5 py-3 border-b transition-colors hover:bg-white/5"
                   style={{ borderColor: "rgba(47,71,108,0.4)", cursor: "default" }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
                 >
                   <div>
                     <div className="font-semibold text-sm" style={{ color: "var(--color-brand-text)" }}>{stock.Name}</div>

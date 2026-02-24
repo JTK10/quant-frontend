@@ -54,17 +54,11 @@ function SectorCard({ sec }: { sec: SectorStrength }) {
 
   return (
     <div
-      className="rounded-xl border overflow-hidden relative group"
+      className="rounded-xl border overflow-hidden relative group transition-shadow hover:shadow-[0_0_24px_rgba(60,130,246,0.18)]"
       style={{
         background:   'var(--color-brand-surface)',
         borderColor:  `rgba(${isBull ? '5,217,143' : '240,54,90'},${0.12 + intensityPct * 0.35})`,
         transition:   'box-shadow 0.2s, border-color 0.2s',
-      }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 0 24px rgba(${isBull ? '5,217,143' : '240,54,90'},0.1)`;
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow = 'none';
       }}
     >
       {/* Strength bar (top edge) */}

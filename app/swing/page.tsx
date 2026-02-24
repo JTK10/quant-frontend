@@ -99,14 +99,12 @@ export default async function SwingPage({ searchParams }: { searchParams: DateSe
             return (
               <div
                 key={idx}
-                className="grid gap-3 px-5 py-4 border-b items-center"
+                className="grid gap-3 px-5 py-4 border-b items-center transition-colors hover:bg-white/5"
                 style={{
                   gridTemplateColumns:'1fr 5rem 8rem 10rem 7rem 7rem',
                   borderColor:'rgba(26,40,64,0.5)',
                   transition:'background 0.1s',
                 }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
               >
                 <div className="font-semibold text-sm" style={{ color:'var(--color-brand-text)' }}>
                   {trade.Symbol}

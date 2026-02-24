@@ -95,8 +95,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Da
             {trades.map((t: any, i: number) => (
               <tr key={i} className="border-b"
                 style={{ borderColor:'rgba(26,40,64,0.5)', cursor:'default' }}
-                onMouseEnter={(e: any) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                onMouseLeave={(e: any) => e.currentTarget.style.background = 'transparent'}>
+              >
                 <td className="px-5 py-3.5 font-semibold" style={{ color:'var(--color-brand-text)' }}>{t.Symbol}</td>
                 <td className="px-5 py-3.5 font-mono text-xs" style={{ color:'var(--color-brand-muted)' }}>{t.Direction}</td>
                 <td className="px-5 py-3.5 font-mono font-bold text-right"

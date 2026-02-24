@@ -12,6 +12,15 @@ function toNum(v: unknown): number {
   return 0;
 }
 
+function pickText(stock: RadarStock, keys: string[]): string {
+  for (const key of keys) {
+    const value = stock[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return '-';
+}
+
 /* Medal colour for top-3 */
 const MEDAL = [
   { bg: 'linear-gradient(135deg,#f0a500,#c97d00)', text: '#000', label: '1ST' },
@@ -88,6 +97,8 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
             const sigScore   = toNum(stock.Signal_Generated_Score);
             const medal      = MEDAL[i];
             const breakType  = typeof stock.Break === 'string' ? stock.Break : '';
+            const entryTime  = pickText(stock, ['Entry Time', 'Entry_Time', 'entryTime', 'Signal_Generated_At', 'Time']);
+            const reentry    = pickText(stock, ['Reentry', 'Reentry Time', 'Reentry_Time', 'reentryTime', 'ReentryTime']);
 
             return (
               <div
@@ -164,6 +175,10 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                     <ConfBar value={sigScore} />
                   </div>
 
+                  <div className="font-mono text-[10px] mb-4" style={{ color:'var(--color-brand-muted)' }}>
+                    ENTRY {entryTime} · REENTRY {reentry}
+                  </div>
+
                   {/* Chart link */}
                   <Link href={stock.Chart} target="_blank" rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-wider transition-colors"
@@ -187,12 +202,12 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
             {/* Table head */}
             <div className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest"
               style={{
-                gridTemplateColumns: '2.5rem 1fr 5rem 5rem 9rem 5.5rem',
+                gridTemplateColumns: '2.5rem 1fr 5rem 5rem 9rem 8.5rem 5.5rem',
                 borderColor:'var(--color-brand-border)',
                 background:'rgba(0,0,0,0.2)',
                 color:'var(--color-brand-muted)',
               }}>
-              {['#','ASSET','PEAK','RANK','SIGNAL','CHART'].map(h => <div key={h}>{h}</div>)}
+              {['#','ASSET','PEAK','RANK','SIGNAL','TIMING','CHART'].map(h => <div key={h}>{h}</div>)}
             </div>
 
             <div className="overflow-y-auto" style={{ maxHeight:'460px' }}>
@@ -202,12 +217,14 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                 const sigScore  = toNum(stock.Signal_Generated_Score);
                 const oi        = toNum(stock.OI ?? stock['OI %']);
                 const col       = scoreColor(sigScore);
+                const entryTime = pickText(stock, ['Entry Time', 'Entry_Time', 'entryTime', 'Signal_Generated_At', 'Time']);
+                const reentry   = pickText(stock, ['Reentry', 'Reentry Time', 'Reentry_Time', 'reentryTime', 'ReentryTime']);
                 return (
                   <div
                     key={stock.Name}
                     className="grid gap-3 px-5 py-3 border-b items-center group cursor-default"
                     style={{
-                      gridTemplateColumns:'2.5rem 1fr 5rem 5rem 9rem 5.5rem',
+                      gridTemplateColumns:'2.5rem 1fr 5rem 5rem 9rem 8.5rem 5.5rem',
                       borderColor:'rgba(26,40,64,0.6)',
                       transition:'background 0.1s',
                     }}
@@ -231,6 +248,10 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                         <div className="h-full rounded-full" style={{ width:`${Math.min(sigScore,100)}%`, background:col }} />
                       </div>
                       <span className="font-mono text-[10px] w-8 text-right" style={{ color: col }}>{sigScore.toFixed(0)}</span>
+                    </div>
+                    <div className="font-mono text-[10px] leading-4" style={{ color:'var(--color-brand-muted)' }}>
+                      <div>E: {entryTime}</div>
+                      <div>R: {reentry}</div>
                     </div>
                     <Link href={stock.Chart} target="_blank" rel="noopener noreferrer"
                       className="font-mono text-[10px] tracking-wider transition-colors"
