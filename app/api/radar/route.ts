@@ -157,6 +157,65 @@ const TICKER_CORRECTIONS: Record<string, string> = {
   "WAAREE ENERGIES LIMITED": "WAAREEENER"
 };
 
+type RadarRow = Record<string, unknown>;
+
+function toText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function toNumber(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(/[%+,]/g, "").trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function resolveName(row: RadarRow): string {
+  return (
+    toText(row.Name) ||
+    toText(row.Symbol) ||
+    toText(row.Ticker) ||
+    toText(row.InstrumentKey)
+  ) || "UNKNOWN";
+}
+
+function withStreamlitRanking(rows: RadarRow[]): RadarRow[] {
+  const ranked = rows.map((row) => {
+    const latestScore = toNumber(
+      row["Latest Score"] ?? row.Latest_Score ?? row.Score ?? row.Best_Score
+    );
+    const signalGeneratedScore = toNumber(
+      row.Signal_Generated_Score ??
+      row.SignalGeneratedScore ??
+      row["Signal Generated Score"]
+    );
+    const peakRaw = toNumber(row.Peak_Score ?? row["Peak Score"] ?? row.Best_Score);
+    const peakScore = Math.max(peakRaw, latestScore);
+    const smartRank = Number(
+      (
+        0.5 * peakScore +
+        0.3 * latestScore +
+        0.2 * signalGeneratedScore
+      ).toFixed(2)
+    );
+
+    return {
+      ...row,
+      "Latest Score": latestScore,
+      Peak_Score: peakScore,
+      Signal_Generated_Score: signalGeneratedScore,
+      SmartRank: smartRank,
+    };
+  });
+
+  return ranked.sort(
+    (a, b) =>
+      toNumber(b.SmartRank) - toNumber(a.SmartRank)
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     const baseUrl = process.env.AWS_API_URL;
@@ -185,18 +244,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(data, { status: res.status });
     }
 
-    const rows = Array.isArray(data) ? data : [];
+    const rows = Array.isArray(data)
+      ? data.filter((row): row is RadarRow => !!row && typeof row === "object")
+      : [];
+
+    const rankedRows = withStreamlitRanking(rows);
 
     // Attach TradingView mapping
-    const enriched = rows.map((stock: any) => {
-      const cleaned =
-        TICKER_CORRECTIONS[stock.Name] ||
-        stock.Name.replace(/&/g, "").replace(/\s+/g, "");
+    const enriched = rankedRows.map((stock) => {
+      const name = resolveName(stock);
+      const cleanedFromMap = TICKER_CORRECTIONS[name];
+      const cleaned = cleanedFromMap || name.replace(/&/g, "").replace(/\s+/g, "");
 
       const tvSymbol = `${DEFAULT_EXCHANGE}:${cleaned}`;
 
       return {
         ...stock,
+        Name: name,
         TV_Symbol: tvSymbol,
         Chart: `https://www.tradingview.com/chart/?symbol=${tvSymbol}`
       };

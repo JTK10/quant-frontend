@@ -154,7 +154,7 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                     <div className="border-l pl-4 pb-1" style={{ borderColor:'var(--color-brand-border)' }}>
                       <div className="font-mono text-[9px] tracking-widest mb-0.5" style={{ color:'var(--color-brand-muted)' }}>SMART RANK</div>
                       <div className="text-xl font-mono" style={{ color:'var(--color-brand-text)' }}>
-                        #{smartRank.toFixed(0)}
+                        {smartRank.toFixed(2)}
                       </div>
                     </div>
                   </div>
