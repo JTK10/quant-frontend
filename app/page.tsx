@@ -13,7 +13,8 @@ async function getRadarData(dateStr: string): Promise<RadarStock[]> {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return [];
     const raw = await res.json();
-    return Array.isArray(raw) ? raw : [];
+    if (!Array.isArray(raw)) return [];
+    return [...raw].sort((a, b) => toNum(b.SmartRank) - toNum(a.SmartRank));
   } catch { return []; }
 }
 
