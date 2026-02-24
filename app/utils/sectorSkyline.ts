@@ -72,7 +72,7 @@ const TICKER_MAP: Record<string, string> = {
 
   // Infrastructure / Construction
   LT:'Infrastructure', ADANIENT:'Infrastructure', ADANIPORTS:'Infrastructure',
-  RVNL:'Infrastructure', IRFC:'Infrastructure', IRCTC:'Infrastructure',
+  RVNL:'Infrastructure', IRFC:'Infrastructure',
   NBCC:'Infrastructure', GMRAIRPORT:'Infrastructure', BDL:'Infrastructure',
   CONCOR:'Infrastructure', NCC:'Infrastructure', KEC:'Infrastructure',
   PNCINFRA:'Infrastructure', HGINFRA:'Infrastructure',
