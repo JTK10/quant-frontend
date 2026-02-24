@@ -8,26 +8,29 @@
   --font-sans: 'Sora', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  --color-brand-bg:       #060a14;
-  --color-brand-surface:  #0d1424;
-  --color-brand-surface2: #111c30;
-  --color-brand-border:   #1a2840;
-  --color-brand-muted:    #5a7299;
-  --color-brand-text:     #c8d8f0;
+  --color-brand-bg:       #0f1a2b;
+  --color-brand-surface:  #182944;
+  --color-brand-surface2: #1e3252;
+  --color-brand-border:   #2f476c;
+  --color-brand-muted:    #9bb1cf;
+  --color-brand-text:     #e7eefb;
   --color-brand-bull:     #05d98f;
-  --color-brand-bullbg:   rgba(5,217,143,0.07);
-  --color-brand-bear:     #f0365a;
-  --color-brand-bearbg:   rgba(240,54,90,0.07);
-  --color-brand-accent:   #4f8ef7;
-  --color-brand-accentbg: rgba(79,142,247,0.08);
-  --color-brand-gold:     #f0a500;
+  --color-brand-bullbg:   rgba(5,217,143,0.14);
+  --color-brand-bear:     #e65573;
+  --color-brand-bearbg:   rgba(230,85,115,0.14);
+  --color-brand-accent:   #3c82f6;
+  --color-brand-accentbg: rgba(60,130,246,0.14);
+  --color-brand-gold:     #d6991a;
 }
 
 /* ── Base ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
-  background-color: var(--color-brand-bg);
+  background:
+    radial-gradient(1000px 560px at 82% -8%, rgba(60,130,246,0.2), transparent 62%),
+    radial-gradient(900px 500px at -8% 18%, rgba(5,217,143,0.12), transparent 58%),
+    linear-gradient(180deg, #1a2b45 0%, #14233a 50%, var(--color-brand-bg) 100%);
   color: var(--color-brand-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
