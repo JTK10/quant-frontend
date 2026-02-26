@@ -1,4 +1,4 @@
-const TICKER_CORRECTIONS: Record<string, string> = {
+export const TICKER_CORRECTIONS: Record<string, string> = {
     "LIC HOUSING FINANCE LTD": "LICHSGFIN", "INOX WIND LIMITED": "INOXWIND",
     "HINDUSTAN ZINC LIMITED": "HINDZINC", "HINDUSTAN UNILEVER LTD.": "HINDUNILVR",
     "TATA TECHNOLOGIES LIMITED": "TATATECH", "SYNGENE INTERNATIONAL LTD": "SYNGENE",
@@ -110,8 +110,13 @@ const TICKER_CORRECTIONS: Record<string, string> = {
     "FSN E COMMERCE VENTURES LIMITED": "NYKAA", "FSN E-COMMERCE VENTURES LTD": "NYKAA"
 };
 
+export function resolveTickerSymbol(stockName: string) {
+  const raw = typeof stockName === 'string' ? stockName : '';
+  const corrected = TICKER_CORRECTIONS[raw] || raw;
+  return corrected.replace(/^NSE:/i, '').trim();
+}
+
 export function getTradingViewUrl(stockName: string) {
-  let cleanName = TICKER_CORRECTIONS[stockName] || stockName;
-  cleanName = cleanName.replace(/&/g, '_').replace(/\s+/g, '');
-  return `https://www.tradingview.com/chart/?symbol=NSE:${cleanName}&interval=5`;
+  const symbol = resolveTickerSymbol(stockName).replace(/&/g, '_').replace(/\s+/g, '');
+  return `https://www.tradingview.com/chart/?symbol=NSE:${symbol}&interval=5`;
 }
