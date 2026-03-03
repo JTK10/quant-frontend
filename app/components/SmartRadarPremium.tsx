@@ -1,15 +1,23 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import type { RadarStock } from '../types/radar';
 
-function toNum(v: unknown): number {
-  if (typeof v === 'number' && Number.isFinite(v)) return v;
-  if (typeof v === 'string') {
-    const n = Number(v.replace(/[%+,]/g, '').trim());
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
+type SortKey = 'rankIndex' | 'asset' | 'break' | 'oi' | 'latest' | 'signal' | 'peak' | 'rank' | 'chart';
+type SortDirection = 'asc' | 'desc';
+
+interface RadarRow {
+  stock: RadarStock;
+  rankIndex: number;
+  asset: string;
+  breakType: string;
+  oi: number;
+  latest: number | null;
+  signal: number;
+  peak: number | null;
+  rank: number | null;
+  chart: string;
 }
 
 function pickText(stock: RadarStock, keys: string[]): string {
@@ -38,6 +46,17 @@ function scoreColor(v: number) {
   if (v >= 80) return 'var(--color-brand-bull)';
   if (v >= 55) return 'var(--color-brand-gold)';
   return 'var(--color-brand-bear)';
+}
+
+function fmt(value: number | null, digits = 1): string {
+  return value === null ? '-' : value.toFixed(digits);
+}
+
+function compareNullableNumber(a: number | null, b: number | null): number {
+  if (a === null && b === null) return 0;
+  if (a === null) return -1;
+  if (b === null) return 1;
+  return a - b;
 }
 
 function OiBadge({ oi }: { oi: number }) {
@@ -85,11 +104,58 @@ function SectionDivider({ label }: { label: string }) {
   );
 }
 
-function fmt(value: number | null, digits = 1): string {
-  return value === null ? '-' : value.toFixed(digits);
-}
-
 export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
+  const [sortKey, setSortKey] = useState<SortKey>('rank');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const rows = useMemo<RadarRow[]>(
+    () =>
+      data.map((stock, i) => ({
+        stock,
+        rankIndex: i + 1,
+        asset: stock.Name ?? '-',
+        breakType: pickText(stock, ['Break', 'BreakType']),
+        oi: pickNum(stock, ['OI', 'OI %', 'OI_Change', 'pChangeInOpenInterest']) ?? 0,
+        latest: pickNum(stock, ['Latest Score', 'Latest', 'Latest_Score']),
+        signal: pickNum(stock, ['Signal_Generated_Score', 'Signal Generated Score']) ?? 0,
+        peak: pickNum(stock, ['Peak_Score', 'Peak', 'Peak Score', 'Best_Score']),
+        rank: pickNum(stock, ['SmartRank', 'Smart Rank']),
+        chart: String(stock.Chart ?? ''),
+      })),
+    [data]
+  );
+
+  const sortedRows = useMemo(() => {
+    const sorted = [...rows].sort((a, b) => {
+      const factor = sortDirection === 'asc' ? 1 : -1;
+
+      switch (sortKey) {
+        case 'rankIndex':
+          return factor * (a.rankIndex - b.rankIndex);
+        case 'asset':
+          return factor * a.asset.localeCompare(b.asset);
+        case 'break':
+          return factor * a.breakType.localeCompare(b.breakType);
+        case 'oi':
+          return factor * (a.oi - b.oi);
+        case 'latest':
+          return factor * compareNullableNumber(a.latest, b.latest);
+        case 'signal':
+          return factor * (a.signal - b.signal);
+        case 'peak':
+          return factor * compareNullableNumber(a.peak, b.peak);
+        case 'rank':
+          return factor * compareNullableNumber(a.rank, b.rank);
+        case 'chart':
+          return factor * a.chart.localeCompare(b.chart);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted.slice(0, 20);
+  }, [rows, sortDirection, sortKey]);
+
   if (!data.length) {
     return (
       <div
@@ -103,9 +169,25 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
     );
   }
 
+  const setSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+      return;
+    }
+
+    const textLike = key === 'asset' || key === 'break' || key === 'chart';
+    setSortKey(key);
+    setSortDirection(textLike ? 'asc' : 'desc');
+  };
+
+  const sortTag = (key: SortKey): string => {
+    if (sortKey !== key) return 'SORT';
+    return sortDirection === 'asc' ? 'ASC' : 'DESC';
+  };
+
   return (
     <section className="space-y-5">
-      <SectionDivider label={`Full Rankings - ${data.length}`} />
+      <SectionDivider label={`Top 20 Rankings - Showing ${sortedRows.length} of ${data.length}`} />
 
       <div
         className="rounded-xl border overflow-hidden"
@@ -114,35 +196,46 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
         <div
           className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest"
           style={{
-            gridTemplateColumns: '2.5rem minmax(11rem,1.8fr) 6.2rem 5.8rem 5.5rem 9rem 5.5rem 5.5rem 6rem 5rem',
+            gridTemplateColumns: '2.5rem minmax(12rem,2fr) 6.2rem 5.8rem 5.5rem 9rem 5.5rem 5.5rem 5rem',
             borderColor: 'var(--color-brand-border)',
             background: 'rgba(0,0,0,0.2)',
             color: 'var(--color-brand-muted)',
           }}
         >
-          {['#', 'ASSET', 'BREAK', 'OI', 'LATEST', 'SIGNAL', 'PEAK', 'RANK', 'PRICE', 'CHART'].map((h) => (
-            <div key={h}>{h}</div>
+          {[
+            { key: 'rankIndex' as const, label: '#' },
+            { key: 'asset' as const, label: 'ASSET' },
+            { key: 'break' as const, label: 'BREAK' },
+            { key: 'oi' as const, label: 'OI' },
+            { key: 'latest' as const, label: 'LATEST' },
+            { key: 'signal' as const, label: 'SIGNAL' },
+            { key: 'peak' as const, label: 'PEAK' },
+            { key: 'rank' as const, label: 'RANK' },
+            { key: 'chart' as const, label: 'CHART' },
+          ].map((col) => (
+            <button
+              key={col.key}
+              type="button"
+              onClick={() => setSort(col.key)}
+              className="text-left font-mono text-[9px] tracking-widest hover:text-[var(--color-brand-text)] transition-colors"
+              style={{ color: 'inherit' }}
+            >
+              {col.label} {sortTag(col.key)}
+            </button>
           ))}
         </div>
 
         <div className="overflow-y-auto" style={{ maxHeight: '700px' }}>
-          {data.map((stock, i) => {
-            const latestScore = pickNum(stock, ['Latest Score', 'Latest', 'Latest_Score']);
-            const peakScore = pickNum(stock, ['Peak_Score', 'Peak', 'Peak Score', 'Best_Score']);
-            const smartRank = pickNum(stock, ['SmartRank', 'Smart Rank']);
-            const sigScore = pickNum(stock, ['Signal_Generated_Score', 'Signal Generated Score']) ?? 0;
-            const oi = pickNum(stock, ['OI', 'OI %', 'OI_Change', 'pChangeInOpenInterest']) ?? 0;
-            const breakType = pickText(stock, ['Break', 'BreakType']);
-            const price = pickNum(stock, ['Current Price', 'SignalPrice', 'Price', 'CMP']);
-            const signalBar = Math.min(Math.max(sigScore, 0), 100);
+          {sortedRows.map((row, i) => {
+            const signalBar = Math.min(Math.max(row.signal, 0), 100);
             const signalColor = scoreColor(signalBar);
 
             return (
               <div
-                key={`${stock.Name}-${i}`}
+                key={`${row.asset}-${i}`}
                 className="grid gap-3 px-5 py-3 border-b items-center hover:bg-white/[0.02] transition-colors"
                 style={{
-                  gridTemplateColumns: '2.5rem minmax(11rem,1.8fr) 6.2rem 5.8rem 5.5rem 9rem 5.5rem 5.5rem 6rem 5rem',
+                  gridTemplateColumns: '2.5rem minmax(12rem,2fr) 6.2rem 5.8rem 5.5rem 9rem 5.5rem 5.5rem 5rem',
                   borderColor: 'rgba(26,40,64,0.6)',
                 }}
               >
@@ -154,14 +247,14 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                   <div
                     className="font-semibold text-sm leading-tight truncate"
                     style={{ color: 'var(--color-brand-text)' }}
-                    title={stock.Name}
+                    title={row.asset}
                   >
-                    {stock.Name}
+                    {row.asset}
                   </div>
                 </div>
 
                 <div>
-                  {breakType === '-' ? (
+                  {row.breakType === '-' ? (
                     <span className="font-mono text-[10px]" style={{ color: 'var(--color-brand-muted)' }}>
                       -
                     </span>
@@ -170,17 +263,17 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                       className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 rounded"
                       style={{ background: 'var(--color-brand-accentbg)', color: 'var(--color-brand-accent)' }}
                     >
-                      {breakType}
+                      {row.breakType}
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <OiBadge oi={toNum(oi)} />
+                  <OiBadge oi={row.oi} />
                 </div>
 
                 <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
-                  {fmt(latestScore)}
+                  {fmt(row.latest)}
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -193,19 +286,15 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                 </div>
 
                 <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
-                  {fmt(peakScore)}
+                  {fmt(row.peak)}
                 </div>
 
                 <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
-                  {fmt(smartRank)}
-                </div>
-
-                <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
-                  {fmt(price)}
+                  {fmt(row.rank)}
                 </div>
 
                 <Link
-                  href={stock.Chart}
+                  href={row.stock.Chart}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
