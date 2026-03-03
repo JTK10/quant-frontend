@@ -24,12 +24,21 @@ function toNum(v: unknown): number {
   return 0;
 }
 
+function oiValue(stock: RadarStock): number {
+  return toNum(
+    stock.OI ??
+    stock['OI %'] ??
+    stock.OI_Change ??
+    stock.pChangeInOpenInterest
+  );
+}
+
 export default async function RadarPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
   const data    = await getRadarData(dateStr);
 
-  const bulls  = data.filter(d => toNum(d.OI ?? d['OI %']) > 0).length;
-  const bears  = data.filter(d => toNum(d.OI ?? d['OI %']) < 0).length;
+  const bulls  = data.filter(d => oiValue(d) > 0).length;
+  const bears  = data.filter(d => oiValue(d) < 0).length;
   const topScore = data.length ? toNum(data[0]?.Peak_Score) : 0;
 
   return (

@@ -8,6 +8,8 @@ export interface RadarStock {
   Signal_Generated_Score?: NumericLike;
   OI?: NumericLike;
   'OI %'?: NumericLike;
+  OI_Change?: NumericLike;
+  pChangeInOpenInterest?: NumericLike;
   Break?: string;
   Confidence?: NumericLike;
   Chart: string;
