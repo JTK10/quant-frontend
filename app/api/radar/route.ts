@@ -183,27 +183,27 @@ function resolveName(row: RadarRow): string {
 
 function withStreamlitRanking(rows: RadarRow[]): RadarRow[] {
   const ranked = rows.map((row) => {
-    const latestScore = toNumber(
-      row["Latest Score"] ?? row.Latest ?? row.Latest_Score
+    // Streamlit rounds these at stat-build time before ranking.
+    const latestScore = Number(
+      toNumber(row["Latest Score"] ?? row.Latest ?? row.Latest_Score).toFixed(1)
     );
-    const signalGeneratedScore = toNumber(
+    const signalGeneratedScore = Number(
+      toNumber(
       row.Signal_Generated_Score ??
       row.SignalGeneratedScore ??
       row["Signal Generated Score"]
+      ).toFixed(1)
     );
     const peakRaw = toNumber(
       row.Peak_Score ?? row.Peak ?? row["Peak Score"] ?? row.Best_Score
     );
+    // Streamlit logic: Peak_Score = max(Peak_Score, Latest Score)
     const peakScore = Math.max(peakRaw, latestScore);
-    const computedSmartRank = Number(
-      (
-        0.5 * peakScore +
-        0.3 * latestScore +
-        0.2 * signalGeneratedScore
-      ).toFixed(2)
-    );
-    const upstreamSmartRank = toNumber(row.SmartRank ?? row["Smart Rank"]);
-    const smartRank = upstreamSmartRank > 0 ? upstreamSmartRank : computedSmartRank;
+    // Streamlit recomputes SmartRank from these three fields and sorts by it.
+    const smartRank =
+      0.5 * peakScore +
+      0.3 * latestScore +
+      0.2 * signalGeneratedScore;
 
     return {
       ...row,
@@ -272,9 +272,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(enriched);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: error.message },
+      { error: message },
       { status: 500 }
     );
   }
