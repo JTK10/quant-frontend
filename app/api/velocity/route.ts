@@ -101,9 +101,9 @@ function toVelocityItem(row: VelocityRow, forcedSide?: Side): VelocityItem {
     ),
     OI: toNumber(row.OI_Change ?? row.OI ?? row.oi_change ?? row.oi),
     Score: toNumber(row.Score_945 ?? row.Score ?? row.Signal_Generated_Score),
-    Break: toText(row.BreakType ?? row.Status ?? row.RankType),
+    Break: toText(row.Break ?? row.BreakType ?? row.Status ?? row.RankType),
     Side: side,
-    Time: toText(row.Time ?? row.SnapshotTime ?? row.Signal_Generated_At),
+    Time: toText(row.Signal_Generated_At ?? row.Time),
     Chart: name === "UNKNOWN" ? "" : getTradingViewUrl(name),
   };
 }
@@ -124,22 +124,9 @@ function normalizeExistingVelocityPayload(payload: unknown) {
 
   const bullsRaw = Array.isArray(obj.bulls) ? obj.bulls : [];
   const bearsRaw = Array.isArray(obj.bears) ? obj.bears : [];
-  const asOf = toText(obj.asOf) || null;
 
-  const bulls = sortAndTrim(
-    bullsRaw.map((item) => {
-      const velocity = toVelocityItem(asRecord(item), "BULLISH");
-      if (!velocity.Time && asOf) velocity.Time = asOf;
-      return velocity;
-    })
-  );
-  const bears = sortAndTrim(
-    bearsRaw.map((item) => {
-      const velocity = toVelocityItem(asRecord(item), "BEARISH");
-      if (!velocity.Time && asOf) velocity.Time = asOf;
-      return velocity;
-    })
-  );
+  const bulls = sortAndTrim(bullsRaw.map((item) => toVelocityItem(asRecord(item), "BULLISH")));
+  const bears = sortAndTrim(bearsRaw.map((item) => toVelocityItem(asRecord(item), "BEARISH")));
 
   const biasRaw = toText(obj.bias).toUpperCase();
   const computedBias: Side =
@@ -156,7 +143,7 @@ function normalizeExistingVelocityPayload(payload: unknown) {
         : computedBias,
     bulls,
     bears,
-    asOf,
+    asOf: toText(obj.asOf) || null,
   };
 }
 
