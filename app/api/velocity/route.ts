@@ -11,6 +11,7 @@ type VelocityItem = {
   Name: string;
   Price: number;
   OI: number;
+  Score: number;
   Break: string;
   Side: Side;
   Time: string;
@@ -56,11 +57,17 @@ function classifySide(row: VelocityRow): Side {
   if (side.includes("BULL")) return "BULLISH";
   if (side.includes("BEAR")) return "BEARISH";
 
+  const direction945 = toText(row.Direction_945 ?? row.direction_945).toUpperCase();
+  if (direction945 === "LONG") return "BULLISH";
+  if (direction945 === "SHORT") return "BEARISH";
+
   const rankType = toText(row.RankType ?? row.rankType).toUpperCase();
   if (rankType.includes("TOP GAINER")) return "BULLISH";
   if (rankType.includes("TOP LOSER")) return "BEARISH";
 
   const breakType = toText(row.BreakType ?? row.breakType).toUpperCase();
+  if (breakType.includes("OR_BREAKOUT")) return "BULLISH";
+  if (breakType.includes("OR_BREAKDOWN")) return "BEARISH";
   if (breakType.includes("PDH")) return "BULLISH";
   if (breakType.includes("PDL")) return "BEARISH";
 
@@ -93,6 +100,7 @@ function toVelocityItem(row: VelocityRow, forcedSide?: Side): VelocityItem {
       row.SignalPrice ?? row.Price ?? row.price ?? row.LTP ?? row.lastPrice ?? row.Close
     ),
     OI: toNumber(row.OI_Change ?? row.OI ?? row.oi_change ?? row.oi),
+    Score: toNumber(row.Score_945 ?? row.Score ?? row.Signal_Generated_Score),
     Break: toText(row.BreakType ?? row.Status ?? row.RankType),
     Side: side,
     Time: toText(row.Time ?? row.SnapshotTime ?? row.Signal_Generated_At),
@@ -101,7 +109,13 @@ function toVelocityItem(row: VelocityRow, forcedSide?: Side): VelocityItem {
 }
 
 function sortAndTrim(items: VelocityItem[]): VelocityItem[] {
-  return [...items].sort((a, b) => b.OI - a.OI).slice(0, 20);
+  return [...items]
+    .sort((a, b) => {
+      const scoreDiff = Math.abs(b.Score) - Math.abs(a.Score);
+      if (scoreDiff !== 0) return scoreDiff;
+      return b.OI - a.OI;
+    })
+    .slice(0, 20);
 }
 
 function normalizeExistingVelocityPayload(payload: unknown) {
