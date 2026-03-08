@@ -124,9 +124,22 @@ function normalizeExistingVelocityPayload(payload: unknown) {
 
   const bullsRaw = Array.isArray(obj.bulls) ? obj.bulls : [];
   const bearsRaw = Array.isArray(obj.bears) ? obj.bears : [];
+  const asOf = toText(obj.asOf) || null;
 
-  const bulls = sortAndTrim(bullsRaw.map((item) => toVelocityItem(asRecord(item), "BULLISH")));
-  const bears = sortAndTrim(bearsRaw.map((item) => toVelocityItem(asRecord(item), "BEARISH")));
+  const bulls = sortAndTrim(
+    bullsRaw.map((item) => {
+      const velocity = toVelocityItem(asRecord(item), "BULLISH");
+      if (!velocity.Time && asOf) velocity.Time = asOf;
+      return velocity;
+    })
+  );
+  const bears = sortAndTrim(
+    bearsRaw.map((item) => {
+      const velocity = toVelocityItem(asRecord(item), "BEARISH");
+      if (!velocity.Time && asOf) velocity.Time = asOf;
+      return velocity;
+    })
+  );
 
   const biasRaw = toText(obj.bias).toUpperCase();
   const computedBias: Side =
@@ -143,7 +156,7 @@ function normalizeExistingVelocityPayload(payload: unknown) {
         : computedBias,
     bulls,
     bears,
-    asOf: toText(obj.asOf) || null,
+    asOf,
   };
 }
 

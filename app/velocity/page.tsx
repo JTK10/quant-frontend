@@ -1,3 +1,4 @@
+import Link from "next/link";
 import AutoRefresh from "../components/AutoRefresh";
 import DatePicker from "../components/DatePicker";
 import { resolveDate, type DateSearchParams } from "../utils/date";
@@ -10,6 +11,9 @@ type VelocityStock = {
   Price: number;
   OI: number;
   Break: string;
+  Time: string;
+  Chart: string;
+  Side: "BULLISH" | "BEARISH";
 };
 
 type VelocityData = {
@@ -36,11 +40,16 @@ function toText(value: unknown): string {
 
 function normalizeStock(raw: unknown): VelocityStock {
   const row = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const sideRaw = toText(row.Side).toUpperCase();
+  const side: VelocityStock["Side"] = sideRaw === "BEARISH" ? "BEARISH" : "BULLISH";
   return {
     Name: toText(row.Name) || toText(row.Symbol) || "UNKNOWN",
     Price: toNum(row.Price ?? row.SignalPrice ?? row.lastPrice ?? row.Close),
     OI: toNum(row.OI ?? row.OI_Change),
     Break: toText(row.Break ?? row.BreakType ?? row.Status),
+    Time: toText(row.Time ?? row.Signal_Generated_At ?? row.SnapshotTime),
+    Chart: toText(row.Chart),
+    Side: side,
   };
 }
 
@@ -83,6 +92,7 @@ async function getVelocityData(dateStr: string): Promise<VelocityData> {
 export default async function VelocityPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
   const data = await getVelocityData(dateStr);
+  const scanRows = [...data.bulls, ...data.bears].sort((a, b) => Math.abs(b.OI) - Math.abs(a.OI));
   const bias = data.bias;
   const isBull = bias === "BULLISH";
   const isBear = bias === "BEARISH";
@@ -148,59 +158,99 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {[
-          { key: "bulls", label: "Bullish Momentum", col: "var(--color-brand-bull)", stocks: data.bulls, pos: true },
-          { key: "bears", label: "Bearish Momentum", col: "var(--color-brand-bear)", stocks: data.bears, pos: false },
-        ].map(({ key, label, col, stocks, pos }) => (
-          <div
-            key={key}
-            className="rounded-xl border overflow-hidden"
-            style={{ background: "var(--color-brand-surface)", borderColor: "var(--color-brand-border)" }}
-          >
-            <div
-              className="flex items-center justify-between px-5 py-3.5 border-b"
-              style={{ borderColor: "var(--color-brand-border)", background: "rgba(255,255,255,0.08)" }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: col }} />
-                <span className="font-mono text-[10px] tracking-widest uppercase" style={{ color: col }}>{label}</span>
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{ background: "var(--color-brand-surface)", borderColor: "var(--color-brand-border)" }}
+      >
+        <div
+          className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest"
+          style={{
+            gridTemplateColumns: "5.5rem minmax(11rem,2fr) 7rem 5.5rem 6.5rem 6rem 4.5rem",
+            borderColor: "var(--color-brand-border)",
+            background: "rgba(255,255,255,0.08)",
+            color: "var(--color-brand-muted)",
+          }}
+        >
+          <span>SIDE</span>
+          <span>ASSET</span>
+          <span>BREAK</span>
+          <span>TIME</span>
+          <span className="text-right">PRICE</span>
+          <span className="text-right">OI</span>
+          <span>CHART</span>
+        </div>
+
+        <div className="overflow-auto" style={{ maxHeight: "560px" }}>
+          {scanRows.map((stock, i) => {
+            const bull = stock.Side === "BULLISH";
+            const sideColor = bull ? "var(--color-brand-bull)" : "var(--color-brand-bear)";
+            const sideBg = bull ? "var(--color-brand-bullbg)" : "var(--color-brand-bearbg)";
+
+            return (
+              <div
+                key={`${stock.Name}-${stock.Side}-${i}`}
+                className="grid gap-3 px-5 py-2.5 border-b items-center hover:bg-white/5 transition-colors"
+                style={{
+                  gridTemplateColumns: "5.5rem minmax(11rem,2fr) 7rem 5.5rem 6.5rem 6rem 4.5rem",
+                  borderColor: "rgba(47,71,108,0.4)",
+                }}
+              >
+                <div>
+                  <span
+                    className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 rounded"
+                    style={{ color: sideColor, background: sideBg }}
+                  >
+                    {stock.Side === "BULLISH" ? "BULL" : "BEAR"}
+                  </span>
+                </div>
+
+                <div className="font-semibold text-sm truncate" style={{ color: "var(--color-brand-text)" }} title={stock.Name}>
+                  {stock.Name}
+                </div>
+
+                <div className="font-mono text-[10px] truncate" style={{ color: "var(--color-brand-muted)" }} title={stock.Break}>
+                  {stock.Break || "-"}
+                </div>
+
+                <div className="font-mono text-[10px] tabular-nums" style={{ color: "var(--color-brand-muted)" }}>
+                  {stock.Time || "-"}
+                </div>
+
+                <div className="font-mono text-sm tabular-nums text-right" style={{ color: "var(--color-brand-text)" }}>
+                  {"\u20B9"}{stock.Price.toFixed(2)}
+                </div>
+
+                <div className="font-mono text-[11px] font-semibold text-right" style={{ color: sideColor }}>
+                  {stock.OI > 0 ? "+" : ""}{stock.OI.toFixed(2)}%
+                </div>
+
+                <div>
+                  {stock.Chart ? (
+                    <Link
+                      href={stock.Chart}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
+                      style={{ color: "var(--color-brand-accent)" }}
+                    >
+                      CHART
+                    </Link>
+                  ) : (
+                    <span className="font-mono text-[10px]" style={{ color: "var(--color-brand-muted)" }}>
+                      -
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className="font-mono text-[10px]" style={{ color: "var(--color-brand-muted)" }}>{stocks.length}</span>
+            );
+          })}
+
+          {scanRows.length === 0 && (
+            <div className="p-8 text-center font-mono text-xs" style={{ color: "var(--color-brand-muted)" }}>
+              NO SIGNALS
             </div>
-            <div className="overflow-y-auto" style={{ maxHeight: "480px" }}>
-              {stocks.map((stock, i) => (
-                <div
-                  key={`${stock.Name}-${i}`}
-                  className="flex items-center justify-between px-5 py-3 border-b transition-colors hover:bg-white/5"
-                  style={{ borderColor: "rgba(47,71,108,0.4)", cursor: "default" }}
-                >
-                  <div>
-                    <div className="font-semibold text-sm" style={{ color: "var(--color-brand-text)" }}>{stock.Name}</div>
-                    {stock.Break && (
-                      <div className="font-mono text-[10px] mt-0.5" style={{ color: "var(--color-brand-muted)" }}>
-                        {stock.Break}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className="font-mono text-sm tabular-nums" style={{ color: "var(--color-brand-text)" }}>
-                      {"\u20B9"}{stock.Price.toFixed(2)}
-                    </div>
-                    <div className="font-mono text-[11px] font-semibold" style={{ color: col }}>
-                      {pos ? "+" : ""}{stock.OI.toFixed(2)}% OI
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {stocks.length === 0 && (
-                <div className="p-8 text-center font-mono text-xs" style={{ color: "var(--color-brand-muted)" }}>
-                  NO SIGNALS
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+          )}
+        </div>
       </div>
     </div>
   );
