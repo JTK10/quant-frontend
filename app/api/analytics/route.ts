@@ -35,6 +35,8 @@ type RequestVariant = {
 const EMPTY_RESPONSE = { items: [] as BosItem[] };
 
 const PRIMARY_ROUTES = [
+  "smart-radar",
+  "smart_radar",
   "bos-smart-radar",
   "bos-radar",
   "bos-breakout",
