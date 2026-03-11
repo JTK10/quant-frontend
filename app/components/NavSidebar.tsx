@@ -17,7 +17,7 @@ const NAV_GROUPS = [
     label: 'STRATEGY & AI',
     items: [
       { href: '/swing',     icon: LineChart,  label: 'Swing Engine' },
-      { href: '/analytics', icon: PieChart,   label: 'Analytics' },
+      { href: '/analytics', icon: PieChart,   label: 'BOS Break Out' },
       { href: '/ai-signals',icon: Cpu,        label: 'AI Signals' },
     ],
   },
