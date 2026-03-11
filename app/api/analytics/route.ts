@@ -27,30 +27,7 @@ type BosItem = {
   Chart: string;
 };
 
-type RequestVariant = {
-  routeName: string;
-  dateValue: string;
-};
-
 const EMPTY_RESPONSE = { items: [] as BosItem[] };
-
-const PRIMARY_ROUTES = [
-  "smart-radar",
-  "smart_radar",
-  "bos-smart-radar",
-  "bos-radar",
-  "bos-breakout",
-  "bos",
-];
-
-const FALLBACK_ROUTES = [
-  "bos-break-out",
-  "bos_breakout",
-  "bos_break_out",
-  "smart-radar-bos",
-  "smart_radar_bos",
-  "analytics",
-];
 
 function getRequestSignal(timeoutMs: number): AbortSignal | undefined {
   const timeoutFactory = (AbortSignal as typeof AbortSignal & {
@@ -58,23 +35,6 @@ function getRequestSignal(timeoutMs: number): AbortSignal | undefined {
   }).timeout;
 
   return typeof timeoutFactory === "function" ? timeoutFactory(timeoutMs) : undefined;
-}
-
-function buildDateCandidates(date: string): string[] {
-  const values = new Set<string>();
-  values.add(date);
-
-  const isoMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (isoMatch) {
-    values.add(`${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`);
-  }
-
-  const dmyMatch = date.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (dmyMatch) {
-    values.add(`${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}`);
-  }
-
-  return Array.from(values);
 }
 
 function toText(value: unknown): string {
@@ -277,10 +237,10 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
   }
 }
 
-async function fetchVariant(baseUrl: string, secret: string, variant: RequestVariant): Promise<BosItem[]> {
+async function loadBosItems(baseUrl: string, secret: string, date: string): Promise<BosItem[]> {
   const awsUrl = new URL(baseUrl);
-  awsUrl.searchParams.set("route", variant.routeName);
-  awsUrl.searchParams.set("date", variant.dateValue);
+  awsUrl.searchParams.set("route", "bos-radar");
+  awsUrl.searchParams.set("date", date);
   awsUrl.searchParams.set("secret", secret);
 
   const response = await fetch(awsUrl.toString(), {
@@ -294,38 +254,6 @@ async function fetchVariant(baseUrl: string, secret: string, variant: RequestVar
 
   const payload = await parseJsonSafe(response);
   return normalizePayload(payload);
-}
-
-async function loadBosItems(baseUrl: string, secret: string, date: string): Promise<BosItem[]> {
-  const dateCandidates = buildDateCandidates(date);
-
-  const runBatch = async (routes: string[]) => {
-    const variants: RequestVariant[] = routes.flatMap((routeName) =>
-      dateCandidates.map((dateValue) => ({ routeName, dateValue })),
-    );
-
-    const settled = await Promise.allSettled(
-      variants.map((variant) => fetchVariant(baseUrl, secret, variant)),
-    );
-
-    const deduped = new Map<string, BosItem>();
-    for (const result of settled) {
-      if (result.status !== "fulfilled") continue;
-      for (const item of result.value) {
-        const key = `${item.Symbol}|${item.Signal_Time}|${item.Entry_Price}`;
-        if (!deduped.has(key)) {
-          deduped.set(key, item);
-        }
-      }
-    }
-
-    return sortBosItems(Array.from(deduped.values()));
-  };
-
-  const primaryItems = await runBatch(PRIMARY_ROUTES);
-  if (primaryItems.length > 0) return primaryItems;
-
-  return runBatch(FALLBACK_ROUTES);
 }
 
 export async function GET(request: NextRequest) {
