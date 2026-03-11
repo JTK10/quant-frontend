@@ -32,10 +32,35 @@ const EMPTY_RESPONSE = { items: [] as BosItem[] };
 const ROUTE_CANDIDATES = [
   "bos-breakout",
   "bos-break-out",
+  "bos_breakout",
+  "bos_break_out",
   "bos-smart-radar",
   "bos-radar",
+  "bos",
+  "bos-analytics",
+  "analytics",
   "smart-radar-bos",
+  "smart_radar_bos",
 ];
+
+function buildDateCandidates(date: string): string[] {
+  const values = new Set<string>();
+  values.add(date);
+
+  const isoMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    values.add(`${isoMatch[3]}-${isoMatch[2]}-${isoMatch[1]}`);
+    values.add(`${isoMatch[1]}${isoMatch[2]}${isoMatch[3]}`);
+  }
+
+  const dmyMatch = date.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (dmyMatch) {
+    values.add(`${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}`);
+    values.add(`${dmyMatch[3]}${dmyMatch[2]}${dmyMatch[1]}`);
+  }
+
+  return Array.from(values);
+}
 
 function toText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -60,11 +85,47 @@ function asRecord(value: unknown): BosRow {
   return value && typeof value === "object" ? (value as BosRow) : {};
 }
 
-function extractRows(payload: unknown): BosRow[] {
-  if (Array.isArray(payload)) return payload.map(asRecord);
+function tryParseJson(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function unwrapPayload(payload: unknown): unknown {
+  if (typeof payload === "string") {
+    const trimmed = payload.trim();
+    if (!trimmed) return null;
+    return trimmed.startsWith("{") || trimmed.startsWith("[")
+      ? unwrapPayload(tryParseJson(trimmed))
+      : payload;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload.map((item) => unwrapPayload(item));
+  }
 
   const obj = asRecord(payload);
-  const candidates = ["items", "Items", "data", "rows", "result"];
+  const nestedKeys = ["body", "Body", "payload", "Payload", "data", "Data", "result", "Result"];
+  for (const key of nestedKeys) {
+    if (!(key in obj)) continue;
+    const nested = obj[key];
+    if (typeof nested === "string" || Array.isArray(nested) || (nested && typeof nested === "object")) {
+      const unwrapped = unwrapPayload(nested);
+      if (unwrapped) return unwrapped;
+    }
+  }
+
+  return payload;
+}
+
+function extractRows(payload: unknown): BosRow[] {
+  const unwrapped = unwrapPayload(payload);
+  if (Array.isArray(unwrapped)) return unwrapped.map(asRecord);
+
+  const obj = asRecord(unwrapped);
+  const candidates = ["items", "Items", "rows", "Rows", "records", "Records", "result", "Result"];
 
   for (const key of candidates) {
     const value = obj[key];
@@ -73,19 +134,23 @@ function extractRows(payload: unknown): BosRow[] {
     }
   }
 
-  return [];
+  return looksLikeBosRow(obj) ? [obj] : [];
 }
 
 function looksLikeBosRow(row: BosRow): boolean {
-  const alertType = toText(row.Alert_Type).toUpperCase();
+  const alertType = toText(row.Alert_Type ?? row.alert_type ?? row.AlertType).toUpperCase();
   if (alertType.includes("BOS")) return true;
 
   return Boolean(
-    toText(row.Signal_Time) ||
+    toText(row.Signal_Time ?? row.signal_time ?? row.BreakoutTime ?? row.breakout_time) ||
       row.RVOL !== undefined ||
+      row.rvol !== undefined ||
       row.PCR !== undefined ||
+      row.pcr !== undefined ||
       row.Coil_Score !== undefined ||
-      row.Range_Expan !== undefined,
+      row.coil_score !== undefined ||
+      row.Range_Expan !== undefined ||
+      row.range_expan !== undefined,
   );
 }
 
@@ -119,22 +184,22 @@ function toBosItem(row: BosRow): BosItem {
   return {
     Name: name,
     Symbol: symbol,
-    Direction: normalizeDirection(row.Direction ?? row.Side),
-    Signal_Time: toText(row.Signal_Time ?? row.Time ?? row.BreakoutTime),
-    Entry_Price: toNumber(row.Entry_Price ?? row.Entry ?? row.SignalPrice),
-    SL: toNumber(row.SL ?? row.StopLoss),
-    Target: toNumber(row.Target ?? row.Target1),
-    RiskReward: toText(row.RiskReward ?? row.RR) || "N/A",
-    RVOL: toNumber(row.RVOL),
-    PCR: toNumber(row.PCR ?? row.Option_PCR),
-    Body_Pct: toNumber(row.Body_Pct),
-    EMA_Gap_Pct: toNumber(row.EMA_Gap_Pct),
-    Coil_Score: toNumber(row.Coil_Score),
-    Range_Expan: toNumber(row.Range_Expan),
-    Opt_Vol_OI_Ratio: toNumber(row.Opt_Vol_OI_Ratio),
-    PCR_Aligned: toBoolean(row.PCR_Aligned),
-    Fired_At: toText(row.Fired_At ?? row.Timestamp),
-    InstrumentKey: toText(row.InstrumentKey),
+    Direction: normalizeDirection(row.Direction ?? row.direction ?? row.Side ?? row.side),
+    Signal_Time: toText(row.Signal_Time ?? row.signal_time ?? row.Time ?? row.time ?? row.BreakoutTime ?? row.breakout_time),
+    Entry_Price: toNumber(row.Entry_Price ?? row.entry_price ?? row.Entry ?? row.entry ?? row.SignalPrice ?? row.signal_price),
+    SL: toNumber(row.SL ?? row.sl ?? row.StopLoss ?? row.stop_loss),
+    Target: toNumber(row.Target ?? row.target ?? row.Target1 ?? row.target1),
+    RiskReward: toText(row.RiskReward ?? row.risk_reward ?? row.RR ?? row.rr) || "N/A",
+    RVOL: toNumber(row.RVOL ?? row.rvol),
+    PCR: toNumber(row.PCR ?? row.pcr ?? row.Option_PCR ?? row.option_pcr),
+    Body_Pct: toNumber(row.Body_Pct ?? row.body_pct),
+    EMA_Gap_Pct: toNumber(row.EMA_Gap_Pct ?? row.ema_gap_pct),
+    Coil_Score: toNumber(row.Coil_Score ?? row.coil_score),
+    Range_Expan: toNumber(row.Range_Expan ?? row.range_expan),
+    Opt_Vol_OI_Ratio: toNumber(row.Opt_Vol_OI_Ratio ?? row.opt_vol_oi_ratio),
+    PCR_Aligned: toBoolean(row.PCR_Aligned ?? row.pcr_aligned),
+    Fired_At: toText(row.Fired_At ?? row.fired_at ?? row.Timestamp ?? row.timestamp),
+    InstrumentKey: toText(row.InstrumentKey ?? row.instrument_key),
     Chart: name === "UNKNOWN" ? "" : getTradingViewUrl(symbol || name),
   };
 }
@@ -173,24 +238,27 @@ export async function GET(request: NextRequest) {
     const date =
       request.nextUrl.searchParams.get("date") ??
       new Date().toISOString().split("T")[0];
+    const dateCandidates = buildDateCandidates(date);
 
     for (const routeName of ROUTE_CANDIDATES) {
-      const awsUrl = new URL(baseUrl);
-      awsUrl.searchParams.set("route", routeName);
-      awsUrl.searchParams.set("date", date);
-      awsUrl.searchParams.set("secret", secret);
+      for (const dateValue of dateCandidates) {
+        const awsUrl = new URL(baseUrl);
+        awsUrl.searchParams.set("route", routeName);
+        awsUrl.searchParams.set("date", dateValue);
+        awsUrl.searchParams.set("secret", secret);
 
-      try {
-        const res = await fetch(awsUrl.toString(), { cache: "no-store" });
-        const payload = await parseJsonSafe(res);
-        if (!res.ok) continue;
+        try {
+          const res = await fetch(awsUrl.toString(), { cache: "no-store" });
+          const payload = await parseJsonSafe(res);
+          if (!res.ok) continue;
 
-        const items = normalizePayload(payload);
-        if (items.length > 0) {
-          return NextResponse.json({ items });
+          const items = normalizePayload(payload);
+          if (items.length > 0) {
+            return NextResponse.json({ items });
+          }
+        } catch {
+          continue;
         }
-      } catch {
-        continue;
       }
     }
 
