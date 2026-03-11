@@ -76,6 +76,7 @@ export default function NavSidebar() {
                   <li key={href}>
                     <Link
                       href={href}
+                      prefetch={true}
                       className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium tracking-wide transition-all duration-150 relative"
                       style={isActive ? {
                         background: 'var(--color-brand-accentbg)',

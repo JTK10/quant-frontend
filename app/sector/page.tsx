@@ -6,13 +6,13 @@ import { getInternalApiUrl } from '../utils/internalApi';
 import type { RadarStock, SectorStrength } from '../types/radar';
 import { buildSectorData } from '../utils/sectorSkyline';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 async function getRadarStocks(dateStr: string): Promise<RadarStock[]> {
   // Use the radar endpoint — it has full OI/SmartRank data needed for sector building
   try {
     const url = await getInternalApiUrl(`/api/radar?date=${encodeURIComponent(dateStr)}`);
-    const res = await fetch(url, { cache:'no-store' });
+    const res = await fetch(url, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const raw = await res.json();
     return Array.isArray(raw) ? raw : [];

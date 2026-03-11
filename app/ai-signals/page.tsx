@@ -3,12 +3,12 @@ import DatePicker from '../components/DatePicker';
 import { resolveDate, type DateSearchParams } from '../utils/date';
 import { getInternalApiUrl } from '../utils/internalApi';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 async function getAISignals(dateStr: string) {
   try {
     const url = await getInternalApiUrl(`/api/ai?date=${encodeURIComponent(dateStr)}`);
-    const res = await fetch(url, { cache:'no-store' });
+    const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) return [];
     return res.json();
   } catch { return []; }

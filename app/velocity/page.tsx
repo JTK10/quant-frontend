@@ -4,7 +4,7 @@ import DatePicker from "../components/DatePicker";
 import { resolveDate, type DateSearchParams } from "../utils/date";
 import { getInternalApiUrl } from "../utils/internalApi";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 type VelocityStock = {
   Name: string;
@@ -80,7 +80,7 @@ function normalizeVelocityData(raw: unknown): VelocityData {
 async function getVelocityData(dateStr: string): Promise<VelocityData> {
   try {
     const url = await getInternalApiUrl(`/api/velocity?date=${encodeURIComponent(dateStr)}`);
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) return EMPTY_DATA;
     const raw = await res.json();
     return normalizeVelocityData(raw);
