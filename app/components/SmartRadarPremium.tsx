@@ -10,7 +10,7 @@ import {
   toText,
 } from '../utils/scanner';
 
-type SortKey = 'rank' | 'asset' | 'side' | 'module' | 'time' | 'conf' | 'rvol' | 'pcr' | 'atm';
+type SortKey = 'rank' | 'asset' | 'side' | 'module' | 'time' | 'conf' | 'rvol' | 'atm';
 type SortDirection = 'asc' | 'desc';
 
 interface ScannerRow {
@@ -22,7 +22,6 @@ interface ScannerRow {
   time: string;
   confidence: number;
   rvol: number;
-  pcr: number;
   atmStrike: string;
   chart: string;
 }
@@ -67,7 +66,6 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
           time: toText(stock.Time ?? stock.Fired_At, '-'),
           confidence: toNumber(stock.Confidence ?? stock.Signal_Generated_Score),
           rvol: toNumber(stock.RVOL),
-          pcr: toNumber(stock.PCR),
           atmStrike: toText(stock.ATM_Strike, '-'),
           chart: toText(stock.Chart),
         };
@@ -92,8 +90,6 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
           return factor * (a.confidence - b.confidence);
         case 'rvol':
           return factor * (a.rvol - b.rvol);
-        case 'pcr':
-          return factor * (a.pcr - b.pcr);
         case 'atm':
           return factor * a.atmStrike.localeCompare(b.atmStrike);
         case 'rank':
@@ -142,9 +138,9 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
       >
         <div className="overflow-x-auto">
           <div
-            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[1040px]"
+            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[940px]"
             style={{
-              gridTemplateColumns: '5.5rem minmax(14rem,2.1fr) 7rem 7rem 6rem 7rem 6rem 6.5rem 7rem',
+              gridTemplateColumns: '5.5rem minmax(14rem,2.2fr) 7rem 7rem 6rem 7rem 6rem 7rem',
               borderColor: 'var(--color-brand-border)',
               background: 'rgba(0,0,0,0.2)',
               color: 'var(--color-brand-muted)',
@@ -158,7 +154,6 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
               { key: 'time' as const, label: 'TIME' },
               { key: 'conf' as const, label: 'CONFIDENCE' },
               { key: 'rvol' as const, label: 'RVOL' },
-              { key: 'pcr' as const, label: 'PCR LIVE' },
               { key: 'atm' as const, label: 'ATM STRIKE' },
             ].map((col, index) => (
               <button
@@ -184,9 +179,9 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
               return (
                 <div
                   key={`${row.asset}-${index}`}
-                  className="grid gap-3 px-5 py-3 border-b items-center min-w-[1040px] hover:bg-white/[0.02] transition-colors"
+                  className="grid gap-3 px-5 py-3 border-b items-center min-w-[940px] hover:bg-white/[0.02] transition-colors"
                   style={{
-                    gridTemplateColumns: '5.5rem minmax(14rem,2.1fr) 7rem 7rem 6rem 7rem 6rem 6.5rem 7rem',
+                    gridTemplateColumns: '5.5rem minmax(14rem,2.2fr) 7rem 7rem 6rem 7rem 6rem 7rem',
                     borderColor: 'rgba(26,40,64,0.6)',
                   }}
                 >
@@ -253,10 +248,6 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
 
                   <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
                     {row.rvol ? `${row.rvol.toFixed(1)}x` : '-'}
-                  </div>
-
-                  <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
-                    {row.pcr ? row.pcr.toFixed(2) : '-'}
                   </div>
 
                   <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>

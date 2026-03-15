@@ -13,7 +13,6 @@ type VelocityStock = {
   Time: string;
   Confidence: number;
   RVOL: number;
-  PCR: number;
   ATM_Strike: string;
   Chart: string;
   Side: "BULLISH" | "BEARISH";
@@ -39,7 +38,6 @@ function normalizeStock(raw: unknown): VelocityStock {
     Time: toText(row.Time ?? row.Signal_Generated_At, "-"),
     Confidence: toNumber(row.Confidence ?? row.Score),
     RVOL: toNumber(row.RVOL),
-    PCR: toNumber(row.PCR ?? row.PCR_Live ?? row.pcr_live),
     ATM_Strike: toText(row.ATM_Strike, "-"),
     Chart: toText(row.Chart),
     Side: side,
@@ -156,9 +154,9 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
       >
         <div className="overflow-x-auto">
           <div
-            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[1000px]"
+            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[910px]"
             style={{
-              gridTemplateColumns: "5.5rem minmax(12rem,1.9fr) 7rem 7rem 6rem 7rem 6rem 6.5rem 7rem",
+              gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 6rem 7rem 6rem 7rem",
               borderColor: "var(--color-brand-border)",
               background: "rgba(255,255,255,0.08)",
               color: "var(--color-brand-muted)",
@@ -171,7 +169,6 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
             <span>TIME</span>
             <span className="text-right">CONFIDENCE</span>
             <span className="text-right">RVOL</span>
-            <span className="text-right">PCR LIVE</span>
             <span className="text-right">ATM STRIKE</span>
           </div>
 
@@ -184,9 +181,9 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
               return (
                 <div
                   key={`${stock.Name}-${stock.Side}-${index}`}
-                  className="grid gap-3 px-5 py-2.5 border-b items-center min-w-[1000px] hover:bg-white/5 transition-colors"
+                  className="grid gap-3 px-5 py-2.5 border-b items-center min-w-[910px] hover:bg-white/5 transition-colors"
                   style={{
-                    gridTemplateColumns: "5.5rem minmax(12rem,1.9fr) 7rem 7rem 6rem 7rem 6rem 6.5rem 7rem",
+                    gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 6rem 7rem 6rem 7rem",
                     borderColor: "rgba(47,71,108,0.4)",
                   }}
                 >
@@ -239,10 +236,6 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
 
                   <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
                     {stock.RVOL ? `${stock.RVOL.toFixed(1)}x` : "-"}
-                  </div>
-
-                  <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.PCR ? stock.PCR.toFixed(2) : "-"}
                   </div>
 
                   <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
