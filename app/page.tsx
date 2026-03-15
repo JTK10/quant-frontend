@@ -6,12 +6,12 @@ import { resolveDate, type DateSearchParams } from './utils/date';
 import { getInternalApiUrl } from './utils/internalApi';
 import { toNumber } from './utils/scanner';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 30;
 
 async function getRadarData(dateStr: string): Promise<RadarStock[]> {
   try {
     const url = await getInternalApiUrl(`/api/radar?date=${encodeURIComponent(dateStr)}`);
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { next: { revalidate: 30 } });
     if (!res.ok) return [];
     const raw = await res.json();
     if (!Array.isArray(raw)) return [];
