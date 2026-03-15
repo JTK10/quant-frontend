@@ -10,7 +10,7 @@ import {
   toText,
 } from '../utils/scanner';
 
-type SortKey = 'rank' | 'asset' | 'side' | 'module' | 'time' | 'conf' | 'rvol' | 'atm';
+type SortKey = 'rank' | 'asset' | 'side' | 'module' | 'time' | 'conf' | 'rvol' | 'flowNow' | 'flowOpen' | 'atm';
 type SortDirection = 'asc' | 'desc';
 
 interface ScannerRow {
@@ -22,6 +22,8 @@ interface ScannerRow {
   time: string;
   confidence: number;
   rvol: number;
+  flowNow: number;
+  flowOpen: number;
   atmStrike: string;
   chart: string;
 }
@@ -30,6 +32,12 @@ function confidenceColor(value: number) {
   if (value >= 80) return 'var(--color-brand-bull)';
   if (value >= 65) return 'var(--color-brand-gold)';
   return 'var(--color-brand-bear)';
+}
+
+function confidenceBg(value: number) {
+  if (value >= 80) return 'rgba(5,217,143,0.14)';
+  if (value >= 65) return 'rgba(214,153,26,0.14)';
+  return 'rgba(230,85,115,0.14)';
 }
 
 function SectionDivider({ label }: { label: string }) {
@@ -66,6 +74,8 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
           time: toText(stock.Time ?? stock.Fired_At, '-'),
           confidence: toNumber(stock.Confidence ?? stock.Signal_Generated_Score),
           rvol: toNumber(stock.RVOL),
+          flowNow: toNumber(stock.PCR),
+          flowOpen: toNumber(stock.PCR_At_Open),
           atmStrike: toText(stock.ATM_Strike, '-'),
           chart: toText(stock.Chart),
         };
@@ -90,6 +100,10 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
           return factor * (a.confidence - b.confidence);
         case 'rvol':
           return factor * (a.rvol - b.rvol);
+        case 'flowNow':
+          return factor * (a.flowNow - b.flowNow);
+        case 'flowOpen':
+          return factor * (a.flowOpen - b.flowOpen);
         case 'atm':
           return factor * a.atmStrike.localeCompare(b.atmStrike);
         case 'rank':
@@ -118,7 +132,8 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
       return;
     }
 
-    const textLike = key === 'asset' || key === 'side' || key === 'module' || key === 'time' || key === 'atm';
+    const textLike =
+      key === 'asset' || key === 'side' || key === 'module' || key === 'time' || key === 'atm';
     setSortKey(key);
     setSortDirection(textLike ? 'asc' : 'desc');
   };
@@ -138,9 +153,9 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
       >
         <div className="overflow-x-auto">
           <div
-            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[940px]"
+            className="grid gap-2 px-4 py-2 border-b font-mono text-[8px] tracking-[0.18em] min-w-[1000px]"
             style={{
-              gridTemplateColumns: '5.5rem minmax(14rem,2.2fr) 7rem 7rem 6rem 7rem 6rem 7rem',
+              gridTemplateColumns: '4.5rem minmax(10.5rem,1.8fr) 5.5rem 5.5rem 4.75rem 5rem 4.75rem 5.25rem 5.25rem 6rem',
               borderColor: 'var(--color-brand-border)',
               background: 'rgba(0,0,0,0.2)',
               color: 'var(--color-brand-muted)',
@@ -154,6 +169,8 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
               { key: 'time' as const, label: 'TIME' },
               { key: 'conf' as const, label: 'CONFIDENCE' },
               { key: 'rvol' as const, label: 'RVOL' },
+              { key: 'flowNow' as const, label: 'LIVE FLOW' },
+              { key: 'flowOpen' as const, label: 'OPEN FLOW' },
               { key: 'atm' as const, label: 'ATM STRIKE' },
             ].map((col, index) => (
               <button
@@ -179,9 +196,9 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
               return (
                 <div
                   key={`${row.asset}-${index}`}
-                  className="grid gap-3 px-5 py-3 border-b items-center min-w-[940px] hover:bg-white/[0.02] transition-colors"
+                  className="grid gap-2 px-4 py-2.5 border-b items-center min-w-[1000px] hover:bg-white/[0.02] transition-colors"
                   style={{
-                    gridTemplateColumns: '5.5rem minmax(14rem,2.2fr) 7rem 7rem 6rem 7rem 6rem 7rem',
+                    gridTemplateColumns: '4.5rem minmax(10.5rem,1.8fr) 5.5rem 5.5rem 4.75rem 5rem 4.75rem 5.25rem 5.25rem 6rem',
                     borderColor: 'rgba(26,40,64,0.6)',
                   }}
                 >
@@ -191,7 +208,7 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                         href={row.chart}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded-full border px-3 py-1 font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
+                        className="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] tracking-wider transition-colors hover:opacity-90"
                         style={{
                           color: 'var(--color-brand-accent)',
                           borderColor: 'rgba(60,130,246,0.28)',
@@ -209,7 +226,7 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
 
                   <div className="min-w-0">
                     <div
-                      className="font-semibold text-sm leading-tight truncate"
+                      className="font-semibold text-[13px] leading-tight truncate"
                       style={{ color: 'var(--color-brand-text)' }}
                       title={row.asset}
                     >
@@ -222,35 +239,43 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
 
                   <div>
                     <span
-                      className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 rounded"
+                      className="font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded"
                       style={{ color: sideColor, background: sideBg }}
                     >
                       {sideBull ? 'BULL' : 'BEAR'}
                     </span>
                   </div>
 
-                  <div className="font-mono text-[10px]" style={{ color: 'var(--color-brand-text)' }}>
+                  <div className="font-mono text-[9px]" style={{ color: 'var(--color-brand-text)' }}>
                     {row.module}
                   </div>
 
-                  <div className="font-mono text-[10px] tabular-nums" style={{ color: 'var(--color-brand-muted)' }}>
+                  <div className="font-mono text-[9px] tabular-nums" style={{ color: 'var(--color-brand-muted)' }}>
                     {row.time}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'var(--color-brand-border)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${confidence}%`, background: confColor }} />
-                    </div>
-                    <span className="font-mono text-[10px] w-9 text-right" style={{ color: confColor }}>
+                  <div>
+                    <span
+                      className="inline-flex min-w-[42px] items-center justify-center rounded-full px-2 py-0.5 font-mono text-[9px]"
+                      style={{ color: confColor, background: confidenceBg(confidence) }}
+                    >
                       {confidence.toFixed(0)}
                     </span>
                   </div>
 
-                  <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
+                  <div className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
                     {row.rvol ? `${row.rvol.toFixed(1)}x` : '-'}
                   </div>
 
-                  <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
+                  <div className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
+                    {row.flowNow ? row.flowNow.toFixed(2) : '-'}
+                  </div>
+
+                  <div className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
+                    {row.flowOpen ? row.flowOpen.toFixed(2) : '-'}
+                  </div>
+
+                  <div className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
                     {row.atmStrike || '-'}
                   </div>
                 </div>

@@ -13,6 +13,8 @@ type VelocityStock = {
   Time: string;
   Confidence: number;
   RVOL: number;
+  FlowNow: number;
+  FlowOpen: number;
   ATM_Strike: string;
   Chart: string;
   Side: "BULLISH" | "BEARISH";
@@ -38,6 +40,8 @@ function normalizeStock(raw: unknown): VelocityStock {
     Time: toText(row.Time ?? row.Signal_Generated_At, "-"),
     Confidence: toNumber(row.Confidence ?? row.Score),
     RVOL: toNumber(row.RVOL),
+    FlowNow: toNumber(row.PCR),
+    FlowOpen: toNumber(row.PCR_At_Open ?? row.PCR_Open ?? row.pcr_open),
     ATM_Strike: toText(row.ATM_Strike, "-"),
     Chart: toText(row.Chart),
     Side: side,
@@ -154,9 +158,9 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
       >
         <div className="overflow-x-auto">
           <div
-            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[910px]"
+            className="grid gap-2 px-4 py-2 border-b font-mono text-[8px] tracking-[0.18em] min-w-[1000px]"
             style={{
-              gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 6rem 7rem 6rem 7rem",
+              gridTemplateColumns: "4.5rem minmax(10.5rem,1.8fr) 5.5rem 5.5rem 4.75rem 5rem 4.75rem 5.25rem 5.25rem 6rem",
               borderColor: "var(--color-brand-border)",
               background: "rgba(255,255,255,0.08)",
               color: "var(--color-brand-muted)",
@@ -167,9 +171,11 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
             <span>DIRECTION</span>
             <span>MODULE</span>
             <span>TIME</span>
-            <span className="text-right">CONFIDENCE</span>
-            <span className="text-right">RVOL</span>
-            <span className="text-right">ATM STRIKE</span>
+            <span>CONFIDENCE</span>
+            <span>RVOL</span>
+            <span>LIVE FLOW</span>
+            <span>OPEN FLOW</span>
+            <span>ATM STRIKE</span>
           </div>
 
           <div className="overflow-auto" style={{ maxHeight: "640px" }}>
@@ -181,9 +187,9 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
               return (
                 <div
                   key={`${stock.Name}-${stock.Side}-${index}`}
-                  className="grid gap-3 px-5 py-2.5 border-b items-center min-w-[910px] hover:bg-white/5 transition-colors"
+                  className="grid gap-2 px-4 py-2.5 border-b items-center min-w-[1000px] hover:bg-white/5 transition-colors"
                   style={{
-                    gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 6rem 7rem 6rem 7rem",
+                    gridTemplateColumns: "4.5rem minmax(10.5rem,1.8fr) 5.5rem 5.5rem 4.75rem 5rem 4.75rem 5.25rem 5.25rem 6rem",
                     borderColor: "rgba(47,71,108,0.4)",
                   }}
                 >
@@ -193,7 +199,7 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
                         href={stock.Chart}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded-full border px-3 py-1 font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
+                        className="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] tracking-wider transition-colors hover:opacity-90"
                         style={{
                           color: "var(--color-brand-accent)",
                           borderColor: "rgba(60,130,246,0.28)",
@@ -209,36 +215,49 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
                     )}
                   </div>
 
-                  <div className="font-semibold text-sm truncate" style={{ color: "var(--color-brand-text)" }} title={stock.Name}>
+                  <div className="font-semibold text-[13px] truncate" style={{ color: "var(--color-brand-text)" }} title={stock.Name}>
                     {stock.Name}
                   </div>
 
                   <div>
                     <span
-                      className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 rounded"
+                      className="font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded"
                       style={{ color: sideColor, background: sideBg }}
                     >
                       {bull ? "BULL" : "BEAR"}
                     </span>
                   </div>
 
-                  <div className="font-mono text-[10px]" style={{ color: "var(--color-brand-text)" }}>
+                  <div className="font-mono text-[9px]" style={{ color: "var(--color-brand-text)" }}>
                     {stock.ModuleLabel}
                   </div>
 
-                  <div className="font-mono text-[10px] tabular-nums" style={{ color: "var(--color-brand-muted)" }}>
+                  <div className="font-mono text-[9px] tabular-nums" style={{ color: "var(--color-brand-muted)" }}>
                     {stock.Time}
                   </div>
 
-                  <div className="font-mono text-[11px] font-semibold text-right" style={{ color: sideColor }}>
-                    {stock.Confidence.toFixed(0)}
+                  <div>
+                    <span
+                      className="inline-flex min-w-[42px] items-center justify-center rounded-full px-2 py-0.5 font-mono text-[9px]"
+                      style={{ color: sideColor, background: bull ? "rgba(5,217,143,0.14)" : "rgba(230,85,115,0.14)" }}
+                    >
+                      {stock.Confidence.toFixed(0)}
+                    </span>
                   </div>
 
-                  <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
+                  <div className="font-mono text-[11px] font-semibold" style={{ color: "var(--color-brand-text)" }}>
                     {stock.RVOL ? `${stock.RVOL.toFixed(1)}x` : "-"}
                   </div>
 
-                  <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
+                  <div className="font-mono text-[11px] font-semibold" style={{ color: "var(--color-brand-text)" }}>
+                    {stock.FlowNow ? stock.FlowNow.toFixed(2) : "-"}
+                  </div>
+
+                  <div className="font-mono text-[11px] font-semibold" style={{ color: "var(--color-brand-text)" }}>
+                    {stock.FlowOpen ? stock.FlowOpen.toFixed(2) : "-"}
+                  </div>
+
+                  <div className="font-mono text-[11px] font-semibold" style={{ color: "var(--color-brand-text)" }}>
                     {stock.ATM_Strike || "-"}
                   </div>
                 </div>
