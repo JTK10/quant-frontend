@@ -1,145 +1,142 @@
 import type { RadarStock, SectorStrength } from '../types/radar';
 import { computeSignalEdge, resolveSignalSide, toNumber } from './scanner';
-import { resolveTickerSymbol } from './tradingview';
+import { getTradingViewUrl, resolveTickerSymbol } from './tradingview';
 
-const SECTOR_MAP_RAW: Record<string, string> = {
-  HDFCBANK: 'Banking', ICICIBANK: 'Banking', SBIN: 'Banking', AXISBANK: 'Banking',
-  KOTAKBANK: 'Banking', INDUSINDBK: 'Banking', BANKBARODA: 'Banking', PNB: 'Banking',
-  AUBANK: 'Banking', BANDHANBNK: 'Banking', FEDERALBNK: 'Banking', IDFCFIRSTB: 'Banking',
-  RBLBANK: 'Banking',
-
-  BAJFINANCE: 'Finance', BAJAJFINSV: 'Finance', CHOLAFIN: 'Finance', SHRIRAMFIN: 'Finance',
-  MUTHOOTFIN: 'Finance', SBICARD: 'Finance', PEL: 'Finance', MANAPPURAM: 'Finance',
-  'L&TFH': 'Finance', 'M&MFIN': 'Finance', PFC: 'Finance', RECLTD: 'Finance', LTF: 'Finance',
-
-  TCS: 'IT', INFY: 'IT', HCLTECH: 'IT', WIPRO: 'IT', TECHM: 'IT', LTIM: 'IT',
-  LTTS: 'IT', PERSISTENT: 'IT', COFORGE: 'IT', MPHASIS: 'IT', TATAELXSI: 'IT',
-  OFSS: 'IT', KPITTECH: 'IT',
-
-  MARUTI: 'Auto', TATAMOTORS: 'Auto', 'M&M': 'Auto', 'BAJAJ-AUTO': 'Auto', EICHERMOT: 'Auto',
-  HEROMOTOCO: 'Auto', TVSMOTOR: 'Auto', ASHOKLEY: 'Auto', BHARATFORG: 'Auto',
-  BALKRISIND: 'Auto', MRF: 'Auto', APOLLOTYRE: 'Auto', MOTHERSON: 'Auto', BOSCHLTD: 'Auto',
-
-  RELIANCE: 'Oil & Gas', ONGC: 'Oil & Gas', BPCL: 'Oil & Gas', IOC: 'Oil & Gas', HPCL: 'Oil & Gas',
-  GAIL: 'Oil & Gas', PETRONET: 'Oil & Gas',
-
-  NTPC: 'Power', POWERGRID: 'Power', TATAPOWER: 'Power', ADANIGREEN: 'Power',
-  ADANIENSOL: 'Power', JSWENERGY: 'Power', NHPC: 'Power',
-
-  ITC: 'FMCG', HINDUNILVR: 'FMCG', NESTLEIND: 'FMCG', BRITANNIA: 'FMCG', TATACONSUM: 'FMCG',
-  DABUR: 'FMCG', GODREJCP: 'FMCG', MARICO: 'FMCG', COLPAL: 'FMCG', VBL: 'FMCG',
-
-  ASIANPAINT: 'Consumer', BERGEPAINT: 'Consumer', PIDILITIND: 'Consumer', TITAN: 'Consumer',
-  HAVELLS: 'Consumer', VOLTAS: 'Consumer', WHIRLPOOL: 'Consumer', PAGEIND: 'Consumer', TRENT: 'Consumer',
-
-  SUNPHARMA: 'Pharma', CIPLA: 'Pharma', DRREDDY: 'Pharma', DIVISLAB: 'Pharma', TORNTPHARM: 'Pharma',
-  LUPIN: 'Pharma', AUROPHARMA: 'Pharma', ALKEM: 'Pharma', BIOCON: 'Pharma', SYNGENE: 'Pharma',
-  GLENMARK: 'Pharma', GRANULES: 'Pharma', LAURUSLABS: 'Pharma',
-
-  APOLLOHOSP: 'Healthcare', METROPOLIS: 'Healthcare', LALPATHLAB: 'Healthcare',
-
-  TATASTEEL: 'Metals', JSWSTEEL: 'Metals', HINDALCO: 'Metals', VEDL: 'Metals', JINDALSTEL: 'Metals',
-  SAIL: 'Metals', NMDC: 'Metals', NATIONALUM: 'Metals', COALINDIA: 'Metals', HINDZINC: 'Metals',
-
-  DLF: 'Realty', GODREJPROP: 'Realty', OBEROIRLTY: 'Realty', PHOENIXLTD: 'Realty', PRESTIGE: 'Realty',
-  LODHA: 'Realty',
-
-  LT: 'Infra', ADANIPORTS: 'Infra',
-  HAL: 'Defence', BEL: 'Defence', MAZDOCK: 'Defence', COCHINSHIP: 'Defence', BDL: 'Defence',
-  IRCTC: 'Railways', CONCOR: 'Logistics', INDIGO: 'Aviation',
-  ADANIENT: 'Diversified',
+type SectorDefinition = {
+  key: string;
+  label: string;
+  symbols: string[];
 };
 
-const KEYWORD_MAP: [string, string][] = [
-  ['BANK', 'Banking'],
-  ['FINANCE', 'Finance'],
-  ['NBFC', 'Finance'],
-  ['CAPITAL', 'Finance'],
-  ['INSURANCE', 'Finance'],
-  ['LIFE', 'Finance'],
-  ['TECH', 'IT'],
-  ['INFOTECH', 'IT'],
-  ['SOFTWARE', 'IT'],
-  ['MOTOR', 'Auto'],
-  ['AUTO', 'Auto'],
-  ['VEHICLE', 'Auto'],
-  ['PHARMA', 'Pharma'],
-  ['LAB', 'Pharma'],
-  ['HEALTH', 'Healthcare'],
-  ['HOSPITAL', 'Healthcare'],
-  ['STEEL', 'Metals'],
-  ['METAL', 'Metals'],
-  ['ALUM', 'Metals'],
-  ['ZINC', 'Metals'],
-  ['OIL', 'Oil & Gas'],
-  ['PETRO', 'Oil & Gas'],
-  ['GAS', 'Oil & Gas'],
-  ['POWER', 'Power'],
-  ['ENERGY', 'Power'],
-  ['GRID', 'Power'],
-  ['FMCG', 'FMCG'],
-  ['CONSUMER', 'Consumer'],
-  ['RETAIL', 'Consumer'],
-  ['FOOD', 'Consumer'],
-  ['REALTY', 'Realty'],
-  ['ESTATE', 'Realty'],
-  ['PROPERTY', 'Realty'],
-  ['INFRA', 'Infra'],
-  ['RAIL', 'Railways'],
-  ['LOGISTIC', 'Logistics'],
-  ['AIRPORT', 'Aviation'],
-  ['AVIATION', 'Aviation'],
-  ['DEFENCE', 'Defence'],
-  ['DEFENSE', 'Defence'],
+const SECTOR_DEFINITIONS: SectorDefinition[] = [
+  {
+    key: 'PSU_POWER',
+    label: 'PSU Power',
+    symbols: ['NTPC', 'POWERGRID', 'NHPC', 'RECLTD', 'PFC', 'TORNTPOWER', 'ADANIGREEN', 'IREDA', 'INOXWIND', 'SUZLON', 'JSWENERGY', 'TATAPOWER', 'COALINDIA'],
+  },
+  {
+    key: 'METALS',
+    label: 'Metals',
+    symbols: ['HINDALCO', 'HINDZINC', 'NATIONALUM', 'TATASTEEL', 'JSWSTEEL', 'SAIL', 'JINDALSTEL', 'VEDL', 'NMDC'],
+  },
+  {
+    key: 'BANKS',
+    label: 'Banks',
+    symbols: ['HDFCBANK', 'ICICIBANK', 'AXISBANK', 'KOTAKBANK', 'SBIN', 'INDUSINDBK', 'FEDERALBNK', 'CANBK', 'BANDHANBNK', 'IDFCFIRSTB', 'YESBANK', 'RBLBANK'],
+  },
+  {
+    key: 'AUTO',
+    label: 'Auto',
+    symbols: ['MARUTI', 'TVSMOTOR', 'BAJAJ-AUTO', 'EICHERMOT', 'TATAMOTORS', 'HEROMOTOCO', 'ASHOKLEY', 'M&M'],
+  },
+  {
+    key: 'IT',
+    label: 'IT',
+    symbols: ['INFY', 'TCS', 'WIPRO', 'TECHM', 'HCLTECH', 'LTIM', 'COFORGE', 'PERSISTENT', 'MPHASIS'],
+  },
+  {
+    key: 'PHARMA',
+    label: 'Pharma',
+    symbols: ['SUNPHARMA', 'DRREDDY', 'CIPLA', 'LUPIN', 'DIVISLAB', 'BIOCON', 'AUROPHARMA', 'ALKEM'],
+  },
+  {
+    key: 'FMCG',
+    label: 'FMCG',
+    symbols: ['HINDUNILVR', 'ITC', 'NESTLEIND', 'BRITANNIA', 'DABUR', 'MARICO', 'GODREJCP', 'COLPAL'],
+  },
+  {
+    key: 'INFRA',
+    label: 'Infra',
+    symbols: ['LT', 'ABB', 'SIEMENS', 'BHEL', 'BEL', 'HAL', 'BDL', 'MAZDOCK', 'POLYCAB', 'HAVELLS', 'AMBER', 'KAYNES', 'BLUESTARCO'],
+  },
+  {
+    key: 'REALTY',
+    label: 'Realty',
+    symbols: ['DLF', 'LODHA', 'GODREJPROP', 'OBEROIRLTY', 'PHOENIXLTD', 'PRESTIGE', 'HUDCO'],
+  },
+  {
+    key: 'NBFC',
+    label: 'NBFC',
+    symbols: ['BAJFINANCE', 'BAJAJFINSV', 'CHOLAFIN', 'LTF', 'SHRIRAMFIN', 'MUTHOOTFIN', 'MANAPPURAM'],
+  },
+  {
+    key: 'OIL_GAS',
+    label: 'Oil & Gas',
+    symbols: ['RELIANCE', 'ONGC', 'IOC', 'BPCL', 'HINDPETRO', 'GAIL', 'OIL', 'PETRONET'],
+  },
+  {
+    key: 'CEMENT',
+    label: 'Cement',
+    symbols: ['ULTRACEMCO', 'AMBUJACEM', 'SHREECEM', 'GRASIM'],
+  },
+  {
+    key: 'CONSUMER',
+    label: 'Consumer',
+    symbols: ['TITAN', 'DMART', 'TRENT', 'VBL'],
+  },
 ];
 
-function asString(v: unknown): string {
-  return typeof v === 'string' ? v : '';
-}
+const UNMAPPED_SECTOR: SectorDefinition = {
+  key: 'UNMAPPED',
+  label: 'Unmapped',
+  symbols: [],
+};
 
 function normalizeTicker(value: string): string {
   return value
     .toUpperCase()
     .replace(/^(NSE:|BSE:)/, '')
     .replace(/[^A-Z0-9]/g, '')
-    .replace(/(LTD|LIMITED|INC|CORP|CORPN|CORPORATION)$/, '')
     .trim();
 }
 
-const SECTOR_MAP: Record<string, string> = Object.fromEntries(
-  Object.entries(SECTOR_MAP_RAW).map(([ticker, sector]) => [normalizeTicker(ticker), sector]),
-);
-
-function matchKeywordSector(norm: string): string | null {
-  for (const [keyword, sector] of KEYWORD_MAP) {
-    if (norm.includes(keyword)) return sector;
-  }
-  return null;
+function normalizeSectorKey(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-function inferSector(stock: RadarStock): string {
+const TICKER_TO_SECTOR = new Map<string, SectorDefinition>();
+const SECTOR_KEY_LOOKUP = new Map<string, SectorDefinition>();
+
+for (const definition of SECTOR_DEFINITIONS) {
+  SECTOR_KEY_LOOKUP.set(normalizeSectorKey(definition.key), definition);
+  SECTOR_KEY_LOOKUP.set(normalizeSectorKey(definition.label), definition);
+
+  for (const symbol of definition.symbols) {
+    TICKER_TO_SECTOR.set(normalizeTicker(symbol), definition);
+  }
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function resolveStockTicker(stock: RadarStock): string {
   const name = asString(stock.Name);
-  const correctedTicker = resolveTickerSymbol(name);
-  const tvSymbol = asString(stock.TV_Symbol).replace(/^NSE:/i, '');
-  const symbol = asString(stock.symbol) || asString(stock.Symbol);
+  const directSymbol = asString(stock.Symbol);
+  const ticker =
+    directSymbol ||
+    asString(stock.Ticker) ||
+    asString(stock.TV_Symbol).replace(/^NSE:/i, '') ||
+    resolveTickerSymbol(name);
 
-  for (const candidate of [correctedTicker, tvSymbol, symbol, name]) {
+  return ticker;
+}
+
+function resolveSectorDefinition(stock: RadarStock): SectorDefinition | null {
+  for (const rawSector of [asString(stock.Sector), asString(stock.sector), asString(stock.Industry), asString(stock.industry)]) {
+    if (!rawSector) continue;
+    const match = SECTOR_KEY_LOOKUP.get(normalizeSectorKey(rawSector));
+    if (match) return match;
+  }
+
+  for (const candidate of [resolveStockTicker(stock), asString(stock.Name)]) {
     const normalized = normalizeTicker(candidate);
-    if (normalized && SECTOR_MAP[normalized]) return SECTOR_MAP[normalized];
+    if (!normalized) continue;
+    const match = TICKER_TO_SECTOR.get(normalized);
+    if (match) return match;
   }
 
-  const direct =
-    (typeof stock.Sector === 'string' && stock.Sector.trim()) ||
-    (typeof stock.sector === 'string' && stock.sector.trim()) ||
-    (typeof stock.Industry === 'string' && stock.Industry.trim()) ||
-    (typeof stock.industry === 'string' && stock.industry.trim());
-  if (direct) {
-    const directMatch = matchKeywordSector(normalizeTicker(direct));
-    return directMatch ?? direct;
-  }
-
-  const keywordMatch = matchKeywordSector(normalizeTicker(name));
-  return keywordMatch ?? 'Others';
+  return null;
 }
 
 function getStockEdge(stock: RadarStock): number {
@@ -155,36 +152,86 @@ function getStockEdge(stock: RadarStock): number {
   return Number((direction * confidence).toFixed(2));
 }
 
-export function buildSectorData(data: RadarStock[]): SectorStrength[] {
-  if (!data.length) return [];
+function withDerivedSignalFields(stock: RadarStock, definition: SectorDefinition | null): RadarStock {
+  const ticker = resolveStockTicker(stock);
+  const name = asString(stock.Name);
+  const chart = asString(stock.Chart) || (name || ticker ? getTradingViewUrl(name || ticker) : '');
 
+  return {
+    ...stock,
+    Ticker: ticker,
+    Symbol: asString(stock.Symbol) || ticker,
+    Sector: definition?.label ?? UNMAPPED_SECTOR.label,
+    SignalEdge: getStockEdge(stock),
+    Chart: chart,
+  };
+}
+
+function buildSectorStrength(definition: SectorDefinition, stocks: RadarStock[]): SectorStrength {
+  const enrichedStocks = [...stocks].sort((a, b) => Math.abs(toNumber(b.SignalEdge)) - Math.abs(toNumber(a.SignalEdge)));
+  const edgeValues = enrichedStocks.map((stock) => toNumber(stock.SignalEdge));
+  const avgEdge =
+    edgeValues.reduce((sum, value) => sum + value, 0) /
+    Math.max(edgeValues.length, 1);
+  const bullishCount = edgeValues.filter((value) => value > 0).length;
+  const bearishCount = edgeValues.filter((value) => value < 0).length;
+  const bullRatio = bullishCount / Math.max(edgeValues.length, 1);
+
+  return {
+    key: definition.key,
+    name: definition.label,
+    strength: Number(avgEdge.toFixed(2)),
+    stocks: enrichedStocks,
+    count: enrichedStocks.length,
+    avgEdge: Number(avgEdge.toFixed(2)),
+    bullRatio,
+    bullishCount,
+    bearishCount,
+    trackedSymbols: definition.symbols,
+    trackedCount: definition.symbols.length,
+  };
+}
+
+export function compareSectorStrength(a: SectorStrength, b: SectorStrength): number {
+  const activeDiff = (b.count ?? b.stocks.length) - (a.count ?? a.stocks.length);
+  if (activeDiff !== 0) return activeDiff;
+
+  const towerDiff = Math.abs(b.strength) - Math.abs(a.strength);
+  if (towerDiff !== 0) return towerDiff;
+
+  const signedDiff = b.strength - a.strength;
+  if (signedDiff !== 0) return signedDiff;
+
+  return a.name.localeCompare(b.name);
+}
+
+export function buildSectorData(data: RadarStock[]): SectorStrength[] {
   const grouped = new Map<string, RadarStock[]>();
-  for (const stock of data) {
-    const sector = inferSector(stock);
-    const list = grouped.get(sector) ?? [];
-    list.push(stock);
-    grouped.set(sector, list);
+
+  for (const definition of SECTOR_DEFINITIONS) {
+    grouped.set(definition.key, []);
   }
 
-  const sectors: SectorStrength[] = Array.from(grouped.entries()).map(([name, stocks]) => {
-    const enrichedStocks = stocks.map((stock) => ({
-      ...stock,
-      Sector: inferSector(stock),
-      SignalEdge: getStockEdge(stock),
-    }));
-    const edgeValues = enrichedStocks.map((stock) => getStockEdge(stock));
-    const avgEdge = edgeValues.reduce((sum, value) => sum + value, 0) / Math.max(edgeValues.length, 1);
-    const bullRatio = edgeValues.filter((value) => value > 0).length / Math.max(edgeValues.length, 1);
+  const unmappedStocks: RadarStock[] = [];
 
-    return {
-      name,
-      strength: Number(avgEdge.toFixed(2)),
-      stocks: [...enrichedStocks].sort((a, b) => Math.abs(getStockEdge(b)) - Math.abs(getStockEdge(a))),
-      count: stocks.length,
-      avgEdge: Number(avgEdge.toFixed(2)),
-      bullRatio,
-    };
-  });
+  for (const stock of data) {
+    const definition = resolveSectorDefinition(stock);
+    const enriched = withDerivedSignalFields(stock, definition);
 
-  return sectors.sort((a, b) => b.strength - a.strength);
+    if (!definition) {
+      unmappedStocks.push(enriched);
+      continue;
+    }
+
+    grouped.get(definition.key)?.push(enriched);
+  }
+
+  const sectors = SECTOR_DEFINITIONS
+    .map((definition) => buildSectorStrength(definition, grouped.get(definition.key) ?? []));
+
+  if (unmappedStocks.length > 0) {
+    sectors.push(buildSectorStrength(UNMAPPED_SECTOR, unmappedStocks));
+  }
+
+  return sectors.sort(compareSectorStrength);
 }

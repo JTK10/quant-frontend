@@ -2,6 +2,7 @@ export type NumericLike = number | string;
 
 export interface RadarStock {
   Name: string;
+  Ticker?: string;
   Symbol?: string;
   Module?: string;
   ModuleLabel?: string;
@@ -53,10 +54,15 @@ export interface RadarStock {
 }
 
 export interface SectorStrength {
+  key: string;
   name: string;
   strength: number;
   stocks: RadarStock[];
   count?: number;
   avgEdge?: number;
   bullRatio?: number;
+  bullishCount?: number;
+  bearishCount?: number;
+  trackedSymbols?: string[];
+  trackedCount?: number;
 }
