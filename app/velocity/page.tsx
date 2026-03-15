@@ -9,13 +9,10 @@ export const dynamic = "force-dynamic";
 
 type VelocityStock = {
   Name: string;
-  Price: number;
   Confidence: number;
   RVOL: number;
-  RiskReward: string;
-  Break: string;
-  ModuleLabel: string;
-  Time: string;
+  PCR: number;
+  ATM_Strike: string;
   Chart: string;
   Side: "BULLISH" | "BEARISH";
 };
@@ -36,13 +33,10 @@ function normalizeStock(raw: unknown): VelocityStock {
 
   return {
     Name: toText(row.Name) || toText(row.Symbol) || "UNKNOWN",
-    Price: toNumber(row.Price ?? row.Entry ?? row.SignalPrice),
     Confidence: toNumber(row.Confidence ?? row.Score),
     RVOL: toNumber(row.RVOL),
-    RiskReward: toText(row.RiskReward, "-"),
-    Break: toText(row.Break ?? row.BreakType, "INSIDE"),
-    ModuleLabel: toText(row.ModuleLabel ?? row.Module, "SCANNER"),
-    Time: toText(row.Time ?? row.Signal_Generated_At, "-"),
+    PCR: toNumber(row.PCR ?? row.PCR_Live ?? row.pcr_live),
+    ATM_Strike: toText(row.ATM_Strike, "-"),
     Chart: toText(row.Chart),
     Side: side,
   };
@@ -158,24 +152,21 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
       >
         <div className="overflow-x-auto">
           <div
-            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[980px]"
+            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[860px]"
             style={{
-              gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 5.5rem 6.5rem 6rem 5.5rem 5rem 4.5rem",
+              gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 6rem 6.5rem 7rem",
               borderColor: "var(--color-brand-border)",
               background: "rgba(255,255,255,0.08)",
               color: "var(--color-brand-muted)",
             }}
           >
-            <span>SIDE</span>
-            <span>ASSET</span>
-            <span>MODULE</span>
-            <span>BREAK</span>
-            <span>TIME</span>
-            <span className="text-right">ENTRY</span>
-            <span className="text-right">CONF</span>
+            <span>TRADINGVIEW</span>
+            <span>NAME</span>
+            <span>DIRECTION</span>
+            <span className="text-right">CONFIDENCE</span>
             <span className="text-right">RVOL</span>
-            <span className="text-right">R:R</span>
-            <span>CHART</span>
+            <span className="text-right">PCR LIVE</span>
+            <span className="text-right">ATM STRIKE</span>
           </div>
 
           <div className="overflow-auto" style={{ maxHeight: "640px" }}>
@@ -186,13 +177,39 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
 
               return (
                 <div
-                  key={`${stock.Name}-${stock.Side}-${stock.Time}-${index}`}
-                  className="grid gap-3 px-5 py-2.5 border-b items-center min-w-[980px] hover:bg-white/5 transition-colors"
+                  key={`${stock.Name}-${stock.Side}-${index}`}
+                  className="grid gap-3 px-5 py-2.5 border-b items-center min-w-[860px] hover:bg-white/5 transition-colors"
                   style={{
-                    gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 5.5rem 6.5rem 6rem 5.5rem 5rem 4.5rem",
+                    gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 6rem 6.5rem 7rem",
                     borderColor: "rgba(47,71,108,0.4)",
                   }}
                 >
+                  <div>
+                    {stock.Chart ? (
+                      <Link
+                        href={stock.Chart}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-full border px-3 py-1 font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
+                        style={{
+                          color: "var(--color-brand-accent)",
+                          borderColor: "rgba(60,130,246,0.28)",
+                          background: "rgba(60,130,246,0.08)",
+                        }}
+                      >
+                        TV
+                      </Link>
+                    ) : (
+                      <span className="font-mono text-[10px]" style={{ color: "var(--color-brand-muted)" }}>
+                        -
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="font-semibold text-sm truncate" style={{ color: "var(--color-brand-text)" }} title={stock.Name}>
+                    {stock.Name}
+                  </div>
+
                   <div>
                     <span
                       className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 rounded"
@@ -200,26 +217,6 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
                     >
                       {bull ? "BULL" : "BEAR"}
                     </span>
-                  </div>
-
-                  <div className="font-semibold text-sm truncate" style={{ color: "var(--color-brand-text)" }} title={stock.Name}>
-                    {stock.Name}
-                  </div>
-
-                  <div className="font-mono text-[10px]" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.ModuleLabel}
-                  </div>
-
-                  <div className="font-mono text-[10px] truncate" style={{ color: "var(--color-brand-muted)" }} title={stock.Break}>
-                    {stock.Break}
-                  </div>
-
-                  <div className="font-mono text-[10px] tabular-nums" style={{ color: "var(--color-brand-muted)" }}>
-                    {stock.Time}
-                  </div>
-
-                  <div className="font-mono text-sm tabular-nums text-right" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.Price ? `INR ${stock.Price.toFixed(2)}` : "-"}
                   </div>
 
                   <div className="font-mono text-[11px] font-semibold text-right" style={{ color: sideColor }}>
@@ -231,25 +228,11 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
                   </div>
 
                   <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.RiskReward}
+                    {stock.PCR ? stock.PCR.toFixed(2) : "-"}
                   </div>
 
-                  <div>
-                    {stock.Chart ? (
-                      <Link
-                        href={stock.Chart}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
-                        style={{ color: "var(--color-brand-accent)" }}
-                      >
-                        CHART
-                      </Link>
-                    ) : (
-                      <span className="font-mono text-[10px]" style={{ color: "var(--color-brand-muted)" }}>
-                        -
-                      </span>
-                    )}
+                  <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
+                    {stock.ATM_Strike || "-"}
                   </div>
                 </div>
               );
