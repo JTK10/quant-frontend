@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { RadarStock } from '../types/radar';
 import {
+  formatModuleLabel,
   resolveSignalSide,
   toNumber,
   toText,
 } from '../utils/scanner';
 
-type SortKey = 'rank' | 'asset' | 'side' | 'conf' | 'rvol' | 'pcr' | 'atm';
+type SortKey = 'rank' | 'asset' | 'side' | 'module' | 'time' | 'conf' | 'rvol' | 'pcr' | 'atm';
 type SortDirection = 'asc' | 'desc';
 
 interface ScannerRow {
@@ -17,6 +18,8 @@ interface ScannerRow {
   rank: number;
   asset: string;
   side: string;
+  module: string;
+  time: string;
   confidence: number;
   rvol: number;
   pcr: number;
@@ -60,6 +63,8 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
           rank: rankValue || data.length - index,
           asset,
           side: resolveSignalSide(stock),
+          module: formatModuleLabel(stock.Module),
+          time: toText(stock.Time ?? stock.Fired_At, '-'),
           confidence: toNumber(stock.Confidence ?? stock.Signal_Generated_Score),
           rvol: toNumber(stock.RVOL),
           pcr: toNumber(stock.PCR),
@@ -79,6 +84,10 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
           return factor * a.asset.localeCompare(b.asset);
         case 'side':
           return factor * a.side.localeCompare(b.side);
+        case 'module':
+          return factor * a.module.localeCompare(b.module);
+        case 'time':
+          return factor * a.time.localeCompare(b.time);
         case 'conf':
           return factor * (a.confidence - b.confidence);
         case 'rvol':
@@ -113,7 +122,7 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
       return;
     }
 
-    const textLike = key === 'asset' || key === 'side' || key === 'atm';
+    const textLike = key === 'asset' || key === 'side' || key === 'module' || key === 'time' || key === 'atm';
     setSortKey(key);
     setSortDirection(textLike ? 'asc' : 'desc');
   };
@@ -133,9 +142,9 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
       >
         <div className="overflow-x-auto">
           <div
-            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[880px]"
+            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[1040px]"
             style={{
-              gridTemplateColumns: '5.5rem minmax(14rem,2.4fr) 7rem 7rem 6rem 6.5rem 7rem',
+              gridTemplateColumns: '5.5rem minmax(14rem,2.1fr) 7rem 7rem 6rem 7rem 6rem 6.5rem 7rem',
               borderColor: 'var(--color-brand-border)',
               background: 'rgba(0,0,0,0.2)',
               color: 'var(--color-brand-muted)',
@@ -145,6 +154,8 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
             {[
               { key: 'asset' as const, label: 'ASSET' },
               { key: 'side' as const, label: 'DIRECTION' },
+              { key: 'module' as const, label: 'MODULE' },
+              { key: 'time' as const, label: 'TIME' },
               { key: 'conf' as const, label: 'CONFIDENCE' },
               { key: 'rvol' as const, label: 'RVOL' },
               { key: 'pcr' as const, label: 'PCR LIVE' },
@@ -173,9 +184,9 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
               return (
                 <div
                   key={`${row.asset}-${index}`}
-                  className="grid gap-3 px-5 py-3 border-b items-center min-w-[880px] hover:bg-white/[0.02] transition-colors"
+                  className="grid gap-3 px-5 py-3 border-b items-center min-w-[1040px] hover:bg-white/[0.02] transition-colors"
                   style={{
-                    gridTemplateColumns: '5.5rem minmax(14rem,2.4fr) 7rem 7rem 6rem 6.5rem 7rem',
+                    gridTemplateColumns: '5.5rem minmax(14rem,2.1fr) 7rem 7rem 6rem 7rem 6rem 6.5rem 7rem',
                     borderColor: 'rgba(26,40,64,0.6)',
                   }}
                 >
@@ -221,6 +232,14 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                     >
                       {sideBull ? 'BULL' : 'BEAR'}
                     </span>
+                  </div>
+
+                  <div className="font-mono text-[10px]" style={{ color: 'var(--color-brand-text)' }}>
+                    {row.module}
+                  </div>
+
+                  <div className="font-mono text-[10px] tabular-nums" style={{ color: 'var(--color-brand-muted)' }}>
+                    {row.time}
                   </div>
 
                   <div className="flex items-center gap-1.5">
