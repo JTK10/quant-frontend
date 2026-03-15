@@ -9,6 +9,8 @@ export const dynamic = "force-dynamic";
 
 type VelocityStock = {
   Name: string;
+  ModuleLabel: string;
+  Time: string;
   Confidence: number;
   RVOL: number;
   PCR: number;
@@ -33,6 +35,8 @@ function normalizeStock(raw: unknown): VelocityStock {
 
   return {
     Name: toText(row.Name) || toText(row.Symbol) || "UNKNOWN",
+    ModuleLabel: toText(row.ModuleLabel ?? row.Module, "SCANNER"),
+    Time: toText(row.Time ?? row.Signal_Generated_At, "-"),
     Confidence: toNumber(row.Confidence ?? row.Score),
     RVOL: toNumber(row.RVOL),
     PCR: toNumber(row.PCR ?? row.PCR_Live ?? row.pcr_live),
@@ -152,9 +156,9 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
       >
         <div className="overflow-x-auto">
           <div
-            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[860px]"
+            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[1000px]"
             style={{
-              gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 6rem 6.5rem 7rem",
+              gridTemplateColumns: "5.5rem minmax(12rem,1.9fr) 7rem 7rem 6rem 7rem 6rem 6.5rem 7rem",
               borderColor: "var(--color-brand-border)",
               background: "rgba(255,255,255,0.08)",
               color: "var(--color-brand-muted)",
@@ -163,6 +167,8 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
             <span>TRADINGVIEW</span>
             <span>NAME</span>
             <span>DIRECTION</span>
+            <span>MODULE</span>
+            <span>TIME</span>
             <span className="text-right">CONFIDENCE</span>
             <span className="text-right">RVOL</span>
             <span className="text-right">PCR LIVE</span>
@@ -178,9 +184,9 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
               return (
                 <div
                   key={`${stock.Name}-${stock.Side}-${index}`}
-                  className="grid gap-3 px-5 py-2.5 border-b items-center min-w-[860px] hover:bg-white/5 transition-colors"
+                  className="grid gap-3 px-5 py-2.5 border-b items-center min-w-[1000px] hover:bg-white/5 transition-colors"
                   style={{
-                    gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 6rem 6.5rem 7rem",
+                    gridTemplateColumns: "5.5rem minmax(12rem,1.9fr) 7rem 7rem 6rem 7rem 6rem 6.5rem 7rem",
                     borderColor: "rgba(47,71,108,0.4)",
                   }}
                 >
@@ -217,6 +223,14 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
                     >
                       {bull ? "BULL" : "BEAR"}
                     </span>
+                  </div>
+
+                  <div className="font-mono text-[10px]" style={{ color: "var(--color-brand-text)" }}>
+                    {stock.ModuleLabel}
+                  </div>
+
+                  <div className="font-mono text-[10px] tabular-nums" style={{ color: "var(--color-brand-muted)" }}>
+                    {stock.Time}
                   </div>
 
                   <div className="font-mono text-[11px] font-semibold text-right" style={{ color: sideColor }}>
