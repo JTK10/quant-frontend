@@ -1,4 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  asSignalRecord,
+  isScannerSignalRow,
+  normalizeRadarSignal,
+  parseSignalTime,
+  resolveSignalName,
+  resolveSignalSide,
+  sortSignalRows,
+  toNumber,
+  toText,
+} from "../../utils/scanner";
 import { getTradingViewUrl } from "../../utils/tradingview";
 
 export const dynamic = "force-dynamic";
@@ -10,9 +21,12 @@ type VelocityRow = Record<string, unknown>;
 type VelocityItem = {
   Name: string;
   Price: number;
-  OI: number;
-  Score: number;
+  Confidence: number;
+  RVOL: number;
+  RiskReward: string;
   Break: string;
+  Module: string;
+  ModuleLabel: string;
   Side: Side;
   Time: string;
   Chart: string;
@@ -25,84 +39,45 @@ const EMPTY_RESPONSE = {
   asOf: null as string | null,
 };
 
-function toNumber(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value.replace(/[%+,]/g, "").trim());
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-function toText(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function asRecord(value: unknown): VelocityRow {
-  return value && typeof value === "object" ? (value as VelocityRow) : {};
-}
-
-function resolveName(row: VelocityRow): string {
-  return (
-    toText(row.Name) ||
-    toText(row.Symbol) ||
-    toText(row.Ticker) ||
-    toText(row.InstrumentKey) ||
-    "UNKNOWN"
-  );
-}
-
-function classifySide(row: VelocityRow): Side {
-  const side = toText(row.Side ?? row.side).toUpperCase();
-  if (side.includes("BULL")) return "BULLISH";
-  if (side.includes("BEAR")) return "BEARISH";
-
-  const direction945 = toText(row.Direction_945 ?? row.direction_945).toUpperCase();
-  if (direction945 === "LONG") return "BULLISH";
-  if (direction945 === "SHORT") return "BEARISH";
-
-  const rankType = toText(row.RankType ?? row.rankType).toUpperCase();
-  if (rankType.includes("TOP GAINER")) return "BULLISH";
-  if (rankType.includes("TOP LOSER")) return "BEARISH";
-
-  const breakType = toText(row.BreakType ?? row.breakType).toUpperCase();
-  if (breakType.includes("OR_BREAKOUT")) return "BULLISH";
-  if (breakType.includes("OR_BREAKDOWN")) return "BEARISH";
-  if (breakType.includes("PDH")) return "BULLISH";
-  if (breakType.includes("PDL")) return "BEARISH";
-
+function classifyLegacySide(row: VelocityRow): Side {
+  const side = resolveSignalSide(row);
+  if (side !== "NEUTRAL") return side;
   return "NEUTRAL";
 }
 
-function resolveTimeScore(value: unknown): number {
-  const text = toText(value);
-  if (!text) return -1;
+function toVelocityItem(raw: unknown, forcedSide?: Side): VelocityItem {
+  const row = asSignalRecord(raw);
 
-  const ts = Date.parse(text);
-  if (Number.isFinite(ts)) return ts;
+  if (isScannerSignalRow(row)) {
+    const base = normalizeRadarSignal(row);
+    return {
+      Name: base.Name,
+      Price: toNumber(base.Entry ?? base.Price),
+      Confidence: toNumber(base.Confidence),
+      RVOL: toNumber(base.RVOL),
+      RiskReward: toText(base.RiskReward, "-"),
+      Break: toText(base.Break ?? base.BreakType, "INSIDE"),
+      Module: toText(base.Module),
+      ModuleLabel: toText(base.ModuleLabel, "SCANNER"),
+      Side: forcedSide ?? (base.Side as Side),
+      Time: toText(base.Time ?? base.Fired_At),
+      Chart: toText(base.Chart),
+    };
+  }
 
-  const match = text.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  if (!match) return -1;
-
-  const hour = Number(match[1]);
-  const min = Number(match[2]);
-  const sec = Number(match[3] ?? "0");
-  return hour * 3600 + min * 60 + sec;
-}
-
-function toVelocityItem(row: VelocityRow, forcedSide?: Side): VelocityItem {
-  const name = resolveName(row);
-  const side = forcedSide ?? classifySide(row);
-
+  const name = resolveSignalName(row);
   return {
     Name: name,
     Price: toNumber(
       row.SignalPrice ?? row.Price ?? row.price ?? row.LTP ?? row.lastPrice ?? row.Close
     ),
-    OI: toNumber(row.OI_Change ?? row.OI ?? row.oi_change ?? row.oi),
-    Score: toNumber(row.Score_945 ?? row.Score ?? row.Signal_Generated_Score),
-    Break: toText(row.Break ?? row.BreakType ?? row.Status ?? row.RankType),
-    Side: side,
+    Confidence: Math.abs(toNumber(row.Score_945 ?? row.Score ?? row.Signal_Generated_Score)),
+    RVOL: 0,
+    RiskReward: "-",
+    Break: toText(row.Break ?? row.BreakType ?? row.Status ?? row.RankType, "INSIDE"),
+    Module: "",
+    ModuleLabel: "LEGACY",
+    Side: forcedSide ?? classifyLegacySide(row),
     Time: toText(row.Signal_Generated_At ?? row.Time),
     Chart: name === "UNKNOWN" ? "" : getTradingViewUrl(name),
   };
@@ -111,28 +86,55 @@ function toVelocityItem(row: VelocityRow, forcedSide?: Side): VelocityItem {
 function sortAndTrim(items: VelocityItem[]): VelocityItem[] {
   return [...items]
     .sort((a, b) => {
-      const scoreDiff = Math.abs(b.Score) - Math.abs(a.Score);
-      if (scoreDiff !== 0) return scoreDiff;
-      return b.OI - a.OI;
+      const confDiff = b.Confidence - a.Confidence;
+      if (confDiff !== 0) return confDiff;
+
+      const rvolDiff = b.RVOL - a.RVOL;
+      if (rvolDiff !== 0) return rvolDiff;
+
+      return parseSignalTime(b.Time) - parseSignalTime(a.Time);
     })
     .slice(0, 20);
 }
 
-function normalizeExistingVelocityPayload(payload: unknown) {
-  const obj = asRecord(payload);
+function normalizeVelocityPayload(payload: unknown) {
+  const obj = asSignalRecord(payload);
+
+  if (Array.isArray(payload)) {
+    const rows = payload.map(asSignalRecord);
+    const normalizedRows = rows.some(isScannerSignalRow)
+      ? sortSignalRows(rows.map((row) => normalizeRadarSignal(row)))
+      : rows;
+    const items = normalizedRows.map((row) => toVelocityItem(row));
+    const bulls = sortAndTrim(items.filter((item) => item.Side === "BULLISH"));
+    const bears = sortAndTrim(items.filter((item) => item.Side === "BEARISH"));
+    const bias: Side =
+      bulls.length + bears.length === 0
+        ? "NEUTRAL"
+        : bulls.reduce((sum, item) => sum + item.Confidence, 0) >= bears.reduce((sum, item) => sum + item.Confidence, 0)
+          ? "BULLISH"
+          : "BEARISH";
+
+    const asOf = items
+      .map((item) => item.Time)
+      .sort((a, b) => parseSignalTime(b) - parseSignalTime(a))[0] ?? null;
+
+    return { bias, bulls, bears, asOf };
+  }
+
   if (!("bulls" in obj) && !("bears" in obj)) return null;
 
   const bullsRaw = Array.isArray(obj.bulls) ? obj.bulls : [];
   const bearsRaw = Array.isArray(obj.bears) ? obj.bears : [];
 
-  const bulls = sortAndTrim(bullsRaw.map((item) => toVelocityItem(asRecord(item), "BULLISH")));
-  const bears = sortAndTrim(bearsRaw.map((item) => toVelocityItem(asRecord(item), "BEARISH")));
+  const bulls = sortAndTrim(bullsRaw.map((item) => toVelocityItem(item, "BULLISH")));
+  const bears = sortAndTrim(bearsRaw.map((item) => toVelocityItem(item, "BEARISH")));
 
   const biasRaw = toText(obj.bias).toUpperCase();
   const computedBias: Side =
     bulls.length + bears.length === 0
       ? "NEUTRAL"
-      : bulls.length > bears.length
+      : bulls.reduce((sum, item) => sum + item.Confidence, 0) >= bears.reduce((sum, item) => sum + item.Confidence, 0)
         ? "BULLISH"
         : "BEARISH";
 
@@ -145,42 +147,6 @@ function normalizeExistingVelocityPayload(payload: unknown) {
     bears,
     asOf: toText(obj.asOf) || null,
   };
-}
-
-function extractRows(payload: unknown): VelocityRow[] {
-  if (Array.isArray(payload)) return payload.map(asRecord);
-
-  const obj = asRecord(payload);
-  const candidates = ["data", "rows", "items", "result"];
-
-  for (const key of candidates) {
-    const value = obj[key];
-    if (Array.isArray(value)) {
-      return value.map(asRecord);
-    }
-  }
-
-  return [];
-}
-
-function pickLatestRows(rows: VelocityRow[]): VelocityRow[] {
-  const scored = rows
-    .map((row) => ({
-      row,
-      rawTime: toText(row.Time ?? row.SnapshotTime ?? row.Signal_Generated_At),
-      score: resolveTimeScore(row.Time ?? row.SnapshotTime ?? row.Signal_Generated_At),
-    }))
-    .filter((entry) => entry.rawTime.length > 0);
-
-  if (scored.length === 0) return rows;
-
-  const latest = scored.reduce((best, current) => {
-    return current.score > best.score ? current : best;
-  });
-
-  return scored
-    .filter((entry) => entry.score === latest.score && entry.rawTime === latest.rawTime)
-    .map((entry) => entry.row);
 }
 
 async function parseJsonSafe(response: Response): Promise<unknown> {
@@ -218,30 +184,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(EMPTY_RESPONSE);
     }
 
-    const precomputed = normalizeExistingVelocityPayload(payload);
-    if (precomputed) {
-      return NextResponse.json(precomputed);
-    }
-
-    const rows = pickLatestRows(extractRows(payload));
-    const enriched = rows.map((row) => toVelocityItem(row));
-
-    const bulls = sortAndTrim(enriched.filter((item) => item.Side === "BULLISH"));
-    const bears = sortAndTrim(enriched.filter((item) => item.Side === "BEARISH"));
-
-    const bias: Side =
-      bulls.length + bears.length === 0
-        ? "NEUTRAL"
-        : bulls.length > bears.length
-          ? "BULLISH"
-          : "BEARISH";
-
-    const asOf = rows
-      .map((row) => toText(row.Time ?? row.SnapshotTime ?? row.Signal_Generated_At))
-      .find((time) => time.length > 0) ?? null;
-
-    return NextResponse.json({ bias, bulls, bears, asOf });
-  } catch (error: unknown) {
+    const normalized = normalizeVelocityPayload(payload);
+    return NextResponse.json(normalized ?? EMPTY_RESPONSE);
+  } catch {
     return NextResponse.json(EMPTY_RESPONSE);
   }
 }

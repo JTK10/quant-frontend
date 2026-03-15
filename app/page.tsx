@@ -4,6 +4,7 @@ import SmartRadarPremium from './components/SmartRadarPremium';
 import type { RadarStock } from './types/radar';
 import { resolveDate, type DateSearchParams } from './utils/date';
 import { getInternalApiUrl } from './utils/internalApi';
+import { toNumber } from './utils/scanner';
 
 export const revalidate = 30;
 
@@ -14,19 +15,14 @@ async function getRadarData(dateStr: string): Promise<RadarStock[]> {
     if (!res.ok) return [];
     const raw = await res.json();
     if (!Array.isArray(raw)) return [];
-    return [...raw].sort((a, b) => toNum(b.SmartRank) - toNum(a.SmartRank));
+    return [...raw].sort((a, b) => {
+      const rankA = toNumber(a.SignalRank ?? a.SmartRank);
+      const rankB = toNumber(b.SignalRank ?? b.SmartRank);
+      return rankB - rankA;
+    });
   } catch {
     return [];
   }
-}
-
-function toNum(v: unknown): number {
-  if (typeof v === 'number' && Number.isFinite(v)) return v;
-  if (typeof v === 'string') {
-    const n = Number(v.replace(/[%+,]/g, '').trim());
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
 }
 
 export default async function RadarPage({ searchParams }: { searchParams: DateSearchParams }) {

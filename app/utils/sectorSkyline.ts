@@ -1,7 +1,7 @@
-﻿import type { RadarStock, SectorStrength } from '../types/radar';
+import type { RadarStock, SectorStrength } from '../types/radar';
+import { computeSignalEdge, resolveSignalSide, toNumber } from './scanner';
 import { resolveTickerSymbol } from './tradingview';
 
-// Mirror the Streamlit SECTOR_MAP so sector buckets are consistent.
 const SECTOR_MAP_RAW: Record<string, string> = {
   HDFCBANK: 'Banking', ICICIBANK: 'Banking', SBIN: 'Banking', AXISBANK: 'Banking',
   KOTAKBANK: 'Banking', INDUSINDBK: 'Banking', BANKBARODA: 'Banking', PNB: 'Banking',
@@ -93,15 +93,6 @@ const KEYWORD_MAP: [string, string][] = [
   ['DEFENSE', 'Defence'],
 ];
 
-function toNumber(v: unknown): number {
-  if (typeof v === 'number' && Number.isFinite(v)) return v;
-  if (typeof v === 'string') {
-    const n = Number(v.replace(/[%+,]/g, '').trim());
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
-}
-
 function asString(v: unknown): string {
   return typeof v === 'string' ? v : '';
 }
@@ -120,8 +111,8 @@ const SECTOR_MAP: Record<string, string> = Object.fromEntries(
 );
 
 function matchKeywordSector(norm: string): string | null {
-  for (const [kw, sector] of KEYWORD_MAP) {
-    if (norm.includes(kw)) return sector;
+  for (const [keyword, sector] of KEYWORD_MAP) {
+    if (norm.includes(keyword)) return sector;
   }
   return null;
 }
@@ -129,19 +120,19 @@ function matchKeywordSector(norm: string): string | null {
 function inferSector(stock: RadarStock): string {
   const name = asString(stock.Name);
   const correctedTicker = resolveTickerSymbol(name);
-  const tvSymbol = asString(stock['TV_Symbol']).replace(/^NSE:/i, '');
-  const symbol = asString(stock['symbol']) || asString(stock['Symbol']);
+  const tvSymbol = asString(stock.TV_Symbol).replace(/^NSE:/i, '');
+  const symbol = asString(stock.symbol) || asString(stock.Symbol);
 
-  const tickerCandidates = [correctedTicker, tvSymbol, symbol, name];
-  for (const candidate of tickerCandidates) {
+  for (const candidate of [correctedTicker, tvSymbol, symbol, name]) {
     const normalized = normalizeTicker(candidate);
     if (normalized && SECTOR_MAP[normalized]) return SECTOR_MAP[normalized];
   }
 
-  const direct = (typeof stock.Sector === 'string' && stock.Sector.trim())
-    || (typeof stock.sector === 'string' && stock.sector.trim())
-    || (typeof stock.Industry === 'string' && stock.Industry.trim())
-    || (typeof stock.industry === 'string' && stock.industry.trim());
+  const direct =
+    (typeof stock.Sector === 'string' && stock.Sector.trim()) ||
+    (typeof stock.sector === 'string' && stock.sector.trim()) ||
+    (typeof stock.Industry === 'string' && stock.Industry.trim()) ||
+    (typeof stock.industry === 'string' && stock.industry.trim());
   if (direct) {
     const directMatch = matchKeywordSector(normalizeTicker(direct));
     return directMatch ?? direct;
@@ -151,29 +142,46 @@ function inferSector(stock: RadarStock): string {
   return keywordMatch ?? 'Others';
 }
 
+function getStockEdge(stock: RadarStock): number {
+  const existing = toNumber(stock.SignalEdge);
+  if (existing !== 0) return existing;
+
+  const fallback = computeSignalEdge(stock as Record<string, unknown>);
+  if (fallback !== 0) return fallback;
+
+  const confidence = toNumber(stock.Confidence ?? stock.Signal_Generated_Score ?? stock.SignalRank);
+  const side = resolveSignalSide(stock as Record<string, unknown>);
+  const direction = side === 'BEARISH' ? -1 : 1;
+  return Number((direction * confidence).toFixed(2));
+}
+
 export function buildSectorData(data: RadarStock[]): SectorStrength[] {
   if (!data.length) return [];
 
   const grouped = new Map<string, RadarStock[]>();
   for (const stock of data) {
-    const sec = inferSector(stock);
-    const list = grouped.get(sec) ?? [];
+    const sector = inferSector(stock);
+    const list = grouped.get(sector) ?? [];
     list.push(stock);
-    grouped.set(sec, list);
+    grouped.set(sector, list);
   }
 
   const sectors: SectorStrength[] = Array.from(grouped.entries()).map(([name, stocks]) => {
-    const oiVals = stocks.map(s => toNumber(s.OI ?? s['OI %']));
-    const avgOi = oiVals.reduce((a, b) => a + b, 0) / Math.max(oiVals.length, 1);
-    const bullRatio = oiVals.filter(v => v > 0).length / Math.max(oiVals.length, 1);
-    const strength = Number((avgOi * 0.6 + (bullRatio - 0.5) * 30).toFixed(2));
+    const enrichedStocks = stocks.map((stock) => ({
+      ...stock,
+      Sector: inferSector(stock),
+      SignalEdge: getStockEdge(stock),
+    }));
+    const edgeValues = enrichedStocks.map((stock) => getStockEdge(stock));
+    const avgEdge = edgeValues.reduce((sum, value) => sum + value, 0) / Math.max(edgeValues.length, 1);
+    const bullRatio = edgeValues.filter((value) => value > 0).length / Math.max(edgeValues.length, 1);
 
     return {
       name,
-      strength,
-      stocks: [...stocks].sort((a, b) => toNumber(b.Signal_Generated_Score) - toNumber(a.Signal_Generated_Score)),
+      strength: Number(avgEdge.toFixed(2)),
+      stocks: [...enrichedStocks].sort((a, b) => Math.abs(getStockEdge(b)) - Math.abs(getStockEdge(a))),
       count: stocks.length,
-      avgOi,
+      avgEdge: Number(avgEdge.toFixed(2)),
       bullRatio,
     };
   });
