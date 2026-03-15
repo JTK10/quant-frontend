@@ -1,209 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getEffectiveTradingDateInIST } from "../../utils/date";
+import {
+  asSignalRecord,
+  isScannerSignalRow,
+  normalizeRadarSignal,
+  resolveSignalName,
+  sortSignalRows,
+  toNumber,
+} from "../../utils/scanner";
+import { getTradingViewUrl, resolveTickerSymbol } from "../../utils/tradingview";
 
 export const dynamic = "force-dynamic";
 
-const DEFAULT_EXCHANGE = "NSE";
-
-/*
- FULL STREAMLIT MAPPING
- (Copied from your Streamlit version)
-*/
-const TICKER_CORRECTIONS: Record<string, string> = {
-  "LIC HOUSING FINANCE LTD": "LICHSGFIN",
-  "INOX WIND LIMITED": "INOXWIND",
-  "HINDUSTAN ZINC LIMITED": "HINDZINC",
-  "HINDUSTAN UNILEVER LTD.": "HINDUNILVR",
-  "TATA TECHNOLOGIES LIMITED": "TATATECH",
-  "SYNGENE INTERNATIONAL LTD": "SYNGENE",
-  "MARUTI SUZUKI INDIA LTD.": "MARUTI",
-  "KEI INDUSTRIES LTD.": "KEI",
-  "JINDAL STEEL LIMITED": "JINDALSTEL",
-  "CENTRAL DEPO SER (I) LTD": "CDSL",
-  "BAJAJ FINANCE LIMITED": "BAJFINANCE",
-  "MAHINDRA & MAHINDRA LTD": "M&M",
-  "DABUR INDIA LTD": "DABUR",
-  "TRENT LTD": "TRENT",
-  "JIO FIN SERVICES LTD": "JIOFIN",
-  "IIFL FINANCE LIMITED": "IIFL",
-  "MUTHOOT FINANCE LIMITED": "MUTHOOTFIN",
-  "BOSCH LIMITED": "BOSCHLTD",
-  "HDFC LIFE INS CO LTD": "HDFCLIFE",
-  "ASIAN PAINTS LIMITED": "ASIANPAINT",
-  "DALMIA BHARAT LIMITED": "DALBHARAT",
-  "BLUE STAR LIMITED": "BLUESTARCO",
-  "HINDALCO INDUSTRIES LTD": "HINDALCO",
-  "360 ONE WAM LIMITED": "360ONE",
-  "PATANJALI FOODS LIMITED": "PATANJALI",
-  "INDUSIND BANK LIMITED": "INDUSINDBK",
-  "COAL INDIA LTD": "COALINDIA",
-  "TATA MOTORS LIMITED": "TATAMOTORS",
-  "INDIAN ENERGY EXC LTD": "IEX",
-  "RELIANCE INDUSTRIES LTD": "RELIANCE",
-  "GRASIM INDUSTRIES LTD": "GRASIM",
-  "LIFE INSURA CORP OF INDIA": "LICI",
-  "FEDERAL BANK LTD": "FEDERALBNK",
-  "JSW STEEL LIMITED": "JSWSTEEL",
-  "RAIL VIKAS NIGAM LIMITED": "RVNL",
-  "PIDILITE INDUSTRIES LTD": "PIDILITIND",
-  "MANAPPURAM FINANCE LTD": "MANAPPURAM",
-  "BAJAJ AUTO LIMITED": "BAJAJ-AUTO",
-  "DR. REDDY S LABORATORIES": "DRREDDY",
-  "CIPLA LTD": "CIPLA",
-  "CANARA BANK": "CANBK",
-  "AVENUE SUPERMARTS LIMITED": "DMART",
-  "STEEL AUTHORITY OF INDIA": "SAIL",
-  "INDIAN RAIL TOUR CORP LTD": "IRCTC",
-  "INFO EDGE (I) LTD": "NAUKRI",
-  "INTERGLOBE AVIATION LTD": "INDIGO",
-  "UNION BANK OF INDIA": "UNIONBANK",
-  "BAJAJ FINSERV LTD.": "BAJAJFINSV",
-  "SUN PHARMACEUTICAL IND L": "SUNPHARMA",
-  "EXIDE INDUSTRIES LTD": "EXIDEIND",
-  "BHARAT PETROLEUM CORP  LT": "BPCL",
-  "TATA POWER CO LTD": "TATAPOWER",
-  "HERO MOTOCORP LIMITED": "HEROMOTOCO",
-  "MARICO LIMITED": "MARICO",
-  "VODAFONE IDEA LIMITED": "IDEA",
-  "BRITANNIA INDUSTRIES LTD": "BRITANNIA",
-  "AU SMALL FINANCE BANK LTD": "AUBANK",
-  "INDIAN RAILWAY FIN CORP L": "IRFC",
-  "HINDUSTAN AERONAUTICS LTD": "HAL",
-  "BHARAT FORGE LTD": "BHARATFORG",
-  "BHARTI AIRTEL LIMITED": "BHARTIARTL",
-  "AXIS BANK LIMITED": "AXISBANK",
-  "PI INDUSTRIES LTD": "PIIND",
-  "NBCC (INDIA) LIMITED": "NBCC",
-  "BSE LIMITED": "BSE",
-  "IDFC FIRST BANK LIMITED": "IDFCFIRSTB",
-  "ITC LTD": "ITC",
-  "AUROBINDO PHARMA LTD": "AUROPHARMA",
-  "TVS MOTOR COMPANY  LTD": "TVSMOTOR",
-  "EICHER MOTORS LTD": "EICHERMOT",
-  "TATA ELXSI LIMITED": "TATAELXSI",
-  "HAVELLS INDIA LIMITED": "HAVELLS",
-  "TATA CONSULTANCY SERV LT": "TCS",
-  "ICICI BANK LTD.": "ICICIBANK",
-  "DLF LIMITED": "DLF",
-  "NESTLE INDIA LIMITED": "NESTLEIND",
-  "DIXON TECHNO (INDIA) LTD": "DIXON",
-  "COMPUTER AGE MNGT SER LTD": "CAMS",
-  "BIOCON LIMITED.": "BIOCON",
-  "PAGE INDUSTRIES LTD": "PAGEIND",
-  "ADANI PORT & SEZ LTD": "ADANIPORTS",
-  "CYIENT LIMITED": "CYIENT",
-  "ADANI GREEN ENERGY LTD": "ADANIGREEN",
-  "COFORGE LIMITED": "COFORGE",
-  "CUMMINS INDIA LTD": "CUMMINSIND",
-  "SUZLON ENERGY LIMITED": "SUZLON",
-  "HCL TECHNOLOGIES LTD": "HCLTECH",
-  "AMBUJA CEMENTS LTD": "AMBUJACEM",
-  "COLGATE PALMOLIVE LTD.": "COLPAL",
-  "TATA CONSUMER PRODUCT LTD": "TATACONSUM",
-  "KOTAK MAHINDRA BANK LTD": "KOTAKBANK",
-  "NHPC LTD": "NHPC",
-  "HDFC BANK LTD": "HDFCBANK",
-  "LUPIN LIMITED": "LUPIN",
-  "NMDC LTD.": "NMDC",
-  "NTPC LTD": "NTPC",
-  "CG POWER AND IND SOL LTD": "CGPOWER",
-  "INDIAN OIL CORP LTD": "IOC",
-  "KPIT TECHNOLOGIES LIMITED": "KPITTECH",
-  "ABB INDIA LIMITED": "ABB",
-  "LARSEN & TOUBRO LTD.": "LT",
-  "ULTRATECH CEMENT LIMITED": "ULTRACEMCO",
-  "INFOSYS LIMITED": "INFY",
-  "GAIL (INDIA) LTD": "GAIL",
-  "PETRONET LNG LIMITED": "PETRONET",
-  "POWER FIN CORP LTD.": "PFC",
-  "WIPRO LTD": "WIPRO",
-  "REC LIMITED": "RECLTD",
-  "ADANI ENERGY SOLUTION LTD": "ADANIENSOL",
-  "ADANI ENTERPRISES LIMITED": "ADANIENT",
-  "TATA STEEL LIMITED": "TATASTEEL",
-  "RBL BANK LIMITED": "RBLBANK",
-  "INDRAPRASTHA GAS LTD": "IGL",
-  "YES BANK LIMITED": "YESBANK",
-  "GLENMARK PHARMACEUTICALS": "GLENMARK",
-  "TECH MAHINDRA LIMITED": "TECHM",
-  "MPHASIS LIMITED": "MPHASIS",
-  "SIEMENS LTD": "SIEMENS",
-  "OIL INDIA LTD": "OIL",
-  "JSW ENERGY LIMITED": "JSWENERGY",
-  "LTIMINDTREE LIMITED": "LTIM",
-  "ASHOK LEYLAND LTD": "ASHOKLEY",
-  "DELHIVERY LIMITED": "DELHIVERY",
-  "DIVI S LABORATORIES LTD": "DIVISLAB",
-  "BANK OF BARODA": "BANKBARODA",
-  "MULTI COMMODITY EXCHANGE": "MCX",
-  "TITAN COMPANY LIMITED": "TITAN",
-  "VOLTAS LTD": "VOLTAS",
-  "SRF LTD": "SRF",
-  "POLYCAB INDIA LIMITED": "POLYCAB",
-  "BHARAT ELECTRONICS LTD": "BEL",
-  "BANK OF INDIA": "BANKINDIA",
-  "POWER GRID CORP. LTD.": "POWERGRID",
-  "GODREJ PROPERTIES LTD": "GODREJPROP",
-  "OIL AND NATURAL GAS CORP.": "ONGC",
-  "STATE BANK OF INDIA": "SBIN",
-  "SHREE CEMENT LIMITED": "SHREECEM",
-  "PUNJAB NATIONAL BANK": "PNB",
-  "UNITED SPIRITS LIMITED": "UNITDSPR",
-  "UPL LIMITED": "UPL",
-  "VARUN BEVERAGES LIMITED": "VBL",
-  "VEDANTA LIMITED": "VEDL",
-  "MAX HEALTHCARE INS LTD": "MAXHEALTH",
-  "MAZAGON DOCK SHIPBUIL LTD": "MAZDOCK",
-  "TATA CHEMICALS LTD": "TATACHEM",
-  "WAAREE ENERGIES LIMITED": "WAAREEENER"
-};
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type RadarRow = Record<string, unknown>;
 
-function toText(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function toNumber(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value.replace(/[%+,]/g, "").trim());
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-function resolveName(row: RadarRow): string {
-  return (
-    toText(row.Name) ||
-    toText(row.Symbol) ||
-    toText(row.Ticker) ||
-    toText(row.InstrumentKey)
-  ) || "UNKNOWN";
-}
-
-function withStreamlitRanking(rows: RadarRow[]): RadarRow[] {
+function withLegacyRanking(rows: RadarRow[]): RadarRow[] {
   const ranked = rows.map((row) => {
-    // Streamlit rounds these at stat-build time before ranking.
     const latestScore = Number(
       toNumber(row["Latest Score"] ?? row.Latest ?? row.Latest_Score).toFixed(1)
     );
     const signalGeneratedScore = Number(
       toNumber(
-      row.Signal_Generated_Score ??
-      row.SignalGeneratedScore ??
-      row["Signal Generated Score"]
+        row.Signal_Generated_Score ??
+        row.SignalGeneratedScore ??
+        row["Signal Generated Score"]
       ).toFixed(1)
     );
     const peakRaw = toNumber(
       row.Peak_Score ?? row.Peak ?? row["Peak Score"] ?? row.Best_Score
     );
-    // Streamlit logic: Peak_Score = max(Peak_Score, Latest Score)
     const peakScore = Math.max(peakRaw, latestScore);
-    // Streamlit recomputes SmartRank from these three fields and sorts by it.
+    const existingSmartRank = toNumber(row.SmartRank ?? row["Smart Rank"]);
     const smartRank =
-      0.5 * peakScore +
-      0.3 * latestScore +
-      0.2 * signalGeneratedScore;
+      existingSmartRank ||
+      0.5 * peakScore + 0.3 * latestScore + 0.2 * signalGeneratedScore;
 
     return {
       ...row,
@@ -214,10 +46,22 @@ function withStreamlitRanking(rows: RadarRow[]): RadarRow[] {
     };
   });
 
-  return ranked.sort(
-    (a, b) =>
-      toNumber(b.SmartRank) - toNumber(a.SmartRank)
-  );
+  return ranked.sort((a, b) => toNumber(b.SmartRank) - toNumber(a.SmartRank));
+}
+
+function normalizeLegacyRows(rows: RadarRow[]) {
+  return withLegacyRanking(rows).map((row) => {
+    const record = asSignalRecord(row);
+    const name = resolveSignalName(record);
+    const ticker = resolveTickerSymbol(name);
+
+    return {
+      ...row,
+      Name: name,
+      TV_Symbol: ticker ? `NSE:${ticker}` : "",
+      Chart: name === "UNKNOWN" ? "" : getTradingViewUrl(name),
+    };
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -234,14 +78,15 @@ export async function GET(request: NextRequest) {
 
     const awsUrl = new URL(baseUrl);
     awsUrl.searchParams.set("route", "smart-radar");
+    const dateParam = request.nextUrl.searchParams.get("date");
     const date =
-      request.nextUrl.searchParams.get("date") ??
-      new Date().toISOString().split("T")[0];
+      typeof dateParam === "string" && DATE_RE.test(dateParam)
+        ? dateParam
+        : getEffectiveTradingDateInIST();
     awsUrl.searchParams.set("date", date);
     awsUrl.searchParams.set("secret", secret);
 
     const res = await fetch(awsUrl.toString(), { cache: "no-store" });
-
     const data = await res.json();
 
     if (!res.ok) {
@@ -252,26 +97,11 @@ export async function GET(request: NextRequest) {
       ? data.filter((row): row is RadarRow => !!row && typeof row === "object")
       : [];
 
-    const rankedRows = withStreamlitRanking(rows);
+    if (rows.some((row) => isScannerSignalRow(asSignalRecord(row)))) {
+      return NextResponse.json(sortSignalRows(rows.map((row) => normalizeRadarSignal(row))));
+    }
 
-    // Attach TradingView mapping
-    const enriched = rankedRows.map((stock) => {
-      const name = resolveName(stock);
-      const cleanedFromMap = TICKER_CORRECTIONS[name];
-      const cleaned = cleanedFromMap || name.replace(/&/g, "").replace(/\s+/g, "");
-
-      const tvSymbol = `${DEFAULT_EXCHANGE}:${cleaned}`;
-
-      return {
-        ...stock,
-        Name: name,
-        TV_Symbol: tvSymbol,
-        Chart: `https://www.tradingview.com/chart/?symbol=${tvSymbol}`
-      };
-    });
-
-    return NextResponse.json(enriched);
-
+    return NextResponse.json(normalizeLegacyRows(rows));
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(

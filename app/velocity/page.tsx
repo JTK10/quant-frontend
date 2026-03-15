@@ -3,14 +3,18 @@ import AutoRefresh from "../components/AutoRefresh";
 import DatePicker from "../components/DatePicker";
 import { resolveDate, type DateSearchParams } from "../utils/date";
 import { getInternalApiUrl } from "../utils/internalApi";
+import { toNumber, toText } from "../utils/scanner";
 
 export const dynamic = "force-dynamic";
 
 type VelocityStock = {
   Name: string;
   Price: number;
-  OI: number;
+  Confidence: number;
+  RVOL: number;
+  RiskReward: string;
   Break: string;
+  ModuleLabel: string;
   Time: string;
   Chart: string;
   Side: "BULLISH" | "BEARISH";
@@ -25,29 +29,20 @@ type VelocityData = {
 
 const EMPTY_DATA: VelocityData = { bias: "NEUTRAL", bulls: [], bears: [], asOf: null };
 
-function toNum(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value.replace(/[%+,]/g, "").trim());
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-function toText(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
 function normalizeStock(raw: unknown): VelocityStock {
   const row = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const sideRaw = toText(row.Side).toUpperCase();
   const side: VelocityStock["Side"] = sideRaw === "BEARISH" ? "BEARISH" : "BULLISH";
+
   return {
     Name: toText(row.Name) || toText(row.Symbol) || "UNKNOWN",
-    Price: toNum(row.Price ?? row.SignalPrice ?? row.lastPrice ?? row.Close),
-    OI: toNum(row.OI ?? row.OI_Change),
-    Break: toText(row.Break ?? row.BreakType ?? row.Status),
-    Time: toText(row.Time ?? row.Signal_Generated_At ?? row.SnapshotTime),
+    Price: toNumber(row.Price ?? row.Entry ?? row.SignalPrice),
+    Confidence: toNumber(row.Confidence ?? row.Score),
+    RVOL: toNumber(row.RVOL),
+    RiskReward: toText(row.RiskReward, "-"),
+    Break: toText(row.Break ?? row.BreakType, "INSIDE"),
+    ModuleLabel: toText(row.ModuleLabel ?? row.Module, "SCANNER"),
+    Time: toText(row.Time ?? row.Signal_Generated_At, "-"),
     Chart: toText(row.Chart),
     Side: side,
   };
@@ -62,7 +57,7 @@ function normalizeVelocityData(raw: unknown): VelocityData {
   const computedBias: VelocityData["bias"] =
     bulls.length + bears.length === 0
       ? "NEUTRAL"
-      : bulls.length > bears.length
+      : bulls.reduce((sum, item) => sum + item.Confidence, 0) >= bears.reduce((sum, item) => sum + item.Confidence, 0)
         ? "BULLISH"
         : "BEARISH";
 
@@ -92,10 +87,9 @@ async function getVelocityData(dateStr: string): Promise<VelocityData> {
 export default async function VelocityPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
   const data = await getVelocityData(dateStr);
-  const scanRows = [...data.bulls, ...data.bears].sort((a, b) => Math.abs(b.OI) - Math.abs(a.OI));
-  const bias = data.bias;
-  const isBull = bias === "BULLISH";
-  const isBear = bias === "BEARISH";
+  const scanRows = [...data.bulls, ...data.bears].sort((a, b) => b.Confidence - a.Confidence);
+  const isBull = data.bias === "BULLISH";
+  const isBear = data.bias === "BEARISH";
   const biasCol = isBull
     ? "var(--color-brand-bull)"
     : isBear
@@ -108,10 +102,10 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-1 h-5 rounded-full inline-block" style={{ background: "var(--color-brand-accent)" }} />
-            <h1 className="text-2xl font-bold tracking-wide text-white">Market Velocity</h1>
+            <h1 className="text-2xl font-bold tracking-wide text-white">Signal Pulse</h1>
           </div>
           <p className="font-mono text-xs tracking-widest" style={{ color: "var(--color-brand-muted)" }}>
-            MOMENTUM SCANNER
+            BULL VS BEAR CONVICTION
             <span className="ml-2" style={{ color: "var(--color-brand-accent)" }}>{dateStr}</span>
             {data.asOf && <span className="ml-2">AS OF {data.asOf}</span>}
           </p>
@@ -136,9 +130,9 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="font-mono text-[9px] tracking-[0.25em] mb-1" style={{ color: "var(--color-brand-muted)" }}>
-              MARKET BIAS
+              TAPE BIAS
             </div>
-            <div className="text-4xl font-bold tracking-wider" style={{ color: biasCol }}>{bias}</div>
+            <div className="text-4xl font-bold tracking-wider" style={{ color: biasCol }}>{data.bias}</div>
           </div>
           <div className="flex items-center gap-8">
             <div className="text-center">
@@ -162,94 +156,111 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         className="rounded-xl border overflow-hidden"
         style={{ background: "var(--color-brand-surface)", borderColor: "var(--color-brand-border)" }}
       >
-        <div
-          className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest"
-          style={{
-            gridTemplateColumns: "5.5rem minmax(11rem,2fr) 7rem 5.5rem 6.5rem 6rem 4.5rem",
-            borderColor: "var(--color-brand-border)",
-            background: "rgba(255,255,255,0.08)",
-            color: "var(--color-brand-muted)",
-          }}
-        >
-          <span>SIDE</span>
-          <span>ASSET</span>
-          <span>BREAK</span>
-          <span>TIME</span>
-          <span className="text-right">PRICE</span>
-          <span className="text-right">OI</span>
-          <span>CHART</span>
-        </div>
+        <div className="overflow-x-auto">
+          <div
+            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[980px]"
+            style={{
+              gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 5.5rem 6.5rem 6rem 5.5rem 5rem 4.5rem",
+              borderColor: "var(--color-brand-border)",
+              background: "rgba(255,255,255,0.08)",
+              color: "var(--color-brand-muted)",
+            }}
+          >
+            <span>SIDE</span>
+            <span>ASSET</span>
+            <span>MODULE</span>
+            <span>BREAK</span>
+            <span>TIME</span>
+            <span className="text-right">ENTRY</span>
+            <span className="text-right">CONF</span>
+            <span className="text-right">RVOL</span>
+            <span className="text-right">R:R</span>
+            <span>CHART</span>
+          </div>
 
-        <div className="overflow-auto" style={{ maxHeight: "560px" }}>
-          {scanRows.map((stock, i) => {
-            const bull = stock.Side === "BULLISH";
-            const sideColor = bull ? "var(--color-brand-bull)" : "var(--color-brand-bear)";
-            const sideBg = bull ? "var(--color-brand-bullbg)" : "var(--color-brand-bearbg)";
+          <div className="overflow-auto" style={{ maxHeight: "640px" }}>
+            {scanRows.map((stock, index) => {
+              const bull = stock.Side === "BULLISH";
+              const sideColor = bull ? "var(--color-brand-bull)" : "var(--color-brand-bear)";
+              const sideBg = bull ? "var(--color-brand-bullbg)" : "var(--color-brand-bearbg)";
 
-            return (
-              <div
-                key={`${stock.Name}-${stock.Side}-${i}`}
-                className="grid gap-3 px-5 py-2.5 border-b items-center hover:bg-white/5 transition-colors"
-                style={{
-                  gridTemplateColumns: "5.5rem minmax(11rem,2fr) 7rem 5.5rem 6.5rem 6rem 4.5rem",
-                  borderColor: "rgba(47,71,108,0.4)",
-                }}
-              >
-                <div>
-                  <span
-                    className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 rounded"
-                    style={{ color: sideColor, background: sideBg }}
-                  >
-                    {stock.Side === "BULLISH" ? "BULL" : "BEAR"}
-                  </span>
-                </div>
-
-                <div className="font-semibold text-sm truncate" style={{ color: "var(--color-brand-text)" }} title={stock.Name}>
-                  {stock.Name}
-                </div>
-
-                <div className="font-mono text-[10px] truncate" style={{ color: "var(--color-brand-muted)" }} title={stock.Break}>
-                  {stock.Break || "-"}
-                </div>
-
-                <div className="font-mono text-[10px] tabular-nums" style={{ color: "var(--color-brand-muted)" }}>
-                  {stock.Time || "-"}
-                </div>
-
-                <div className="font-mono text-sm tabular-nums text-right" style={{ color: "var(--color-brand-text)" }}>
-                  {"\u20B9"}{stock.Price.toFixed(2)}
-                </div>
-
-                <div className="font-mono text-[11px] font-semibold text-right" style={{ color: sideColor }}>
-                  {stock.OI > 0 ? "+" : ""}{stock.OI.toFixed(2)}%
-                </div>
-
-                <div>
-                  {stock.Chart ? (
-                    <Link
-                      href={stock.Chart}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
-                      style={{ color: "var(--color-brand-accent)" }}
+              return (
+                <div
+                  key={`${stock.Name}-${stock.Side}-${stock.Time}-${index}`}
+                  className="grid gap-3 px-5 py-2.5 border-b items-center min-w-[980px] hover:bg-white/5 transition-colors"
+                  style={{
+                    gridTemplateColumns: "5.5rem minmax(12rem,2fr) 7rem 7rem 5.5rem 6.5rem 6rem 5.5rem 5rem 4.5rem",
+                    borderColor: "rgba(47,71,108,0.4)",
+                  }}
+                >
+                  <div>
+                    <span
+                      className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 rounded"
+                      style={{ color: sideColor, background: sideBg }}
                     >
-                      CHART
-                    </Link>
-                  ) : (
-                    <span className="font-mono text-[10px]" style={{ color: "var(--color-brand-muted)" }}>
-                      -
+                      {bull ? "BULL" : "BEAR"}
                     </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                  </div>
 
-          {scanRows.length === 0 && (
-            <div className="p-8 text-center font-mono text-xs" style={{ color: "var(--color-brand-muted)" }}>
-              NO SIGNALS
-            </div>
-          )}
+                  <div className="font-semibold text-sm truncate" style={{ color: "var(--color-brand-text)" }} title={stock.Name}>
+                    {stock.Name}
+                  </div>
+
+                  <div className="font-mono text-[10px]" style={{ color: "var(--color-brand-text)" }}>
+                    {stock.ModuleLabel}
+                  </div>
+
+                  <div className="font-mono text-[10px] truncate" style={{ color: "var(--color-brand-muted)" }} title={stock.Break}>
+                    {stock.Break}
+                  </div>
+
+                  <div className="font-mono text-[10px] tabular-nums" style={{ color: "var(--color-brand-muted)" }}>
+                    {stock.Time}
+                  </div>
+
+                  <div className="font-mono text-sm tabular-nums text-right" style={{ color: "var(--color-brand-text)" }}>
+                    {stock.Price ? `INR ${stock.Price.toFixed(2)}` : "-"}
+                  </div>
+
+                  <div className="font-mono text-[11px] font-semibold text-right" style={{ color: sideColor }}>
+                    {stock.Confidence.toFixed(0)}
+                  </div>
+
+                  <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
+                    {stock.RVOL ? `${stock.RVOL.toFixed(1)}x` : "-"}
+                  </div>
+
+                  <div className="font-mono text-[11px] font-semibold text-right" style={{ color: "var(--color-brand-text)" }}>
+                    {stock.RiskReward}
+                  </div>
+
+                  <div>
+                    {stock.Chart ? (
+                      <Link
+                        href={stock.Chart}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
+                        style={{ color: "var(--color-brand-accent)" }}
+                      >
+                        CHART
+                      </Link>
+                    ) : (
+                      <span className="font-mono text-[10px]" style={{ color: "var(--color-brand-muted)" }}>
+                        -
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {scanRows.length === 0 && (
+              <div className="p-8 text-center font-mono text-xs" style={{ color: "var(--color-brand-muted)" }}>
+                NO SIGNALS
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

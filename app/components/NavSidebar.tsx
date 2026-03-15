@@ -9,8 +9,8 @@ const NAV_GROUPS = [
     label: 'LIVE INTELLIGENCE',
     items: [
       { href: '/',         icon: Activity,    label: 'Smart Radar' },
-      { href: '/velocity', icon: BarChart3,   label: 'Market Velocity' },
-      { href: '/sector',   icon: LayoutGrid,  label: 'Sector View' },
+      { href: '/velocity', icon: BarChart3,   label: 'Signal Pulse' },
+      { href: '/sector',   icon: LayoutGrid,  label: 'Sector Rotation' },
     ],
   },
   {
@@ -18,7 +18,7 @@ const NAV_GROUPS = [
     items: [
       { href: '/swing',     icon: LineChart,  label: 'Swing Engine' },
       { href: '/analytics', icon: PieChart,   label: 'Analytics' },
-      { href: '/ai-signals',icon: Cpu,        label: 'AI Signals' },
+      { href: '/ai-signals',icon: Cpu,        label: 'AI Verdicts' },
     ],
   },
 ];
