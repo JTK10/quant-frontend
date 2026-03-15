@@ -4,44 +4,24 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import type { RadarStock } from '../types/radar';
 import {
-  formatModuleLabel,
-  parseSignalTime,
   resolveSignalSide,
-  toBoolean,
   toNumber,
   toText,
 } from '../utils/scanner';
 
-type SortKey = 'rank' | 'asset' | 'module' | 'side' | 'time' | 'entry' | 'target' | 'rr' | 'conf' | 'pcr';
+type SortKey = 'rank' | 'asset' | 'side' | 'conf' | 'rvol' | 'pcr' | 'atm';
 type SortDirection = 'asc' | 'desc';
 
 interface ScannerRow {
   stock: RadarStock;
   rank: number;
   asset: string;
-  module: string;
   side: string;
-  time: string;
-  entry: number;
-  target: number;
-  rr: string;
-  rrValue: number;
   confidence: number;
+  rvol: number;
   pcr: number;
-  sector: string;
-  breakType: string;
-  theme: boolean;
+  atmStrike: string;
   chart: string;
-}
-
-function parseRiskReward(value: string): number {
-  const match = value.match(/(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)/);
-  if (!match) return 0;
-
-  const numerator = Number(match[1]);
-  const denominator = Number(match[2]);
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || numerator === 0) return 0;
-  return denominator / numerator;
 }
 
 function confidenceColor(value: number) {
@@ -73,25 +53,17 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
     () =>
       data.map((stock, index) => {
         const asset = toText(stock.Name) || 'UNKNOWN';
-        const rr = toText(stock.RiskReward, '-');
         const rankValue = toNumber(stock.SignalRank ?? stock.SmartRank);
 
         return {
           stock,
           rank: rankValue || data.length - index,
           asset,
-          module: formatModuleLabel(stock.Module),
           side: resolveSignalSide(stock),
-          time: toText(stock.Time ?? stock.Fired_At, '-'),
-          entry: toNumber(stock.Entry ?? stock['Current Price'] ?? stock.Price),
-          target: toNumber(stock.Target1 ?? stock.Target),
-          rr,
-          rrValue: parseRiskReward(rr),
           confidence: toNumber(stock.Confidence ?? stock.Signal_Generated_Score),
+          rvol: toNumber(stock.RVOL),
           pcr: toNumber(stock.PCR),
-          sector: toText(stock.Sector, 'OTHER'),
-          breakType: toText(stock.Break ?? stock.BreakType, 'INSIDE'),
-          theme: toBoolean(stock.Sector_Theme),
+          atmStrike: toText(stock.ATM_Strike, '-'),
           chart: toText(stock.Chart),
         };
       }),
@@ -105,22 +77,16 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
       switch (sortKey) {
         case 'asset':
           return factor * a.asset.localeCompare(b.asset);
-        case 'module':
-          return factor * a.module.localeCompare(b.module);
         case 'side':
           return factor * a.side.localeCompare(b.side);
-        case 'time':
-          return factor * (parseSignalTime(a.time) - parseSignalTime(b.time));
-        case 'entry':
-          return factor * (a.entry - b.entry);
-        case 'target':
-          return factor * (a.target - b.target);
-        case 'rr':
-          return factor * (a.rrValue - b.rrValue);
         case 'conf':
           return factor * (a.confidence - b.confidence);
+        case 'rvol':
+          return factor * (a.rvol - b.rvol);
         case 'pcr':
           return factor * (a.pcr - b.pcr);
+        case 'atm':
+          return factor * a.atmStrike.localeCompare(b.atmStrike);
         case 'rank':
         default:
           return factor * (a.rank - b.rank);
@@ -147,7 +113,7 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
       return;
     }
 
-    const textLike = key === 'asset' || key === 'module' || key === 'side';
+    const textLike = key === 'asset' || key === 'side' || key === 'atm';
     setSortKey(key);
     setSortDirection(textLike ? 'asc' : 'desc');
   };
@@ -167,25 +133,22 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
       >
         <div className="overflow-x-auto">
           <div
-            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[1024px]"
+            className="grid gap-3 px-5 py-2.5 border-b font-mono text-[9px] tracking-widest min-w-[880px]"
             style={{
-              gridTemplateColumns: '3rem minmax(15rem,2.4fr) 6rem 5.5rem 5rem 6.5rem 6.5rem 5rem 8rem 5rem 4.5rem',
+              gridTemplateColumns: '5.5rem minmax(14rem,2.4fr) 7rem 7rem 6rem 6.5rem 7rem',
               borderColor: 'var(--color-brand-border)',
               background: 'rgba(0,0,0,0.2)',
               color: 'var(--color-brand-muted)',
             }}
           >
+            <span>TRADINGVIEW</span>
             {[
-              { key: 'rank' as const, label: '#' },
               { key: 'asset' as const, label: 'ASSET' },
-              { key: 'module' as const, label: 'MODULE' },
-              { key: 'side' as const, label: 'SIDE' },
-              { key: 'time' as const, label: 'TIME' },
-              { key: 'entry' as const, label: 'ENTRY' },
-              { key: 'target' as const, label: 'TARGET' },
-              { key: 'rr' as const, label: 'R:R' },
-              { key: 'conf' as const, label: 'CONF' },
-              { key: 'pcr' as const, label: 'PCR' },
+              { key: 'side' as const, label: 'DIRECTION' },
+              { key: 'conf' as const, label: 'CONFIDENCE' },
+              { key: 'rvol' as const, label: 'RVOL' },
+              { key: 'pcr' as const, label: 'PCR LIVE' },
+              { key: 'atm' as const, label: 'ATM STRIKE' },
             ].map((col, index) => (
               <button
                 key={`${col.label}-${index}`}
@@ -197,7 +160,6 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                 {col.label} {sortTag(col.key)}
               </button>
             ))}
-            <span>CHART</span>
           </div>
 
           <div className="overflow-y-auto" style={{ maxHeight: '720px' }}>
@@ -210,15 +172,33 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
 
               return (
                 <div
-                  key={`${row.asset}-${row.time}-${index}`}
-                  className="grid gap-3 px-5 py-3 border-b items-center min-w-[1024px] hover:bg-white/[0.02] transition-colors"
+                  key={`${row.asset}-${index}`}
+                  className="grid gap-3 px-5 py-3 border-b items-center min-w-[880px] hover:bg-white/[0.02] transition-colors"
                   style={{
-                    gridTemplateColumns: '3rem minmax(15rem,2.4fr) 6rem 5.5rem 5rem 6.5rem 6.5rem 5rem 8rem 5rem 4.5rem',
+                    gridTemplateColumns: '5.5rem minmax(14rem,2.4fr) 7rem 7rem 6rem 6.5rem 7rem',
                     borderColor: 'rgba(26,40,64,0.6)',
                   }}
                 >
-                  <div className="font-mono text-[10px]" style={{ color: 'var(--color-brand-muted)' }}>
-                    #{index + 1}
+                  <div>
+                    {row.chart ? (
+                      <Link
+                        href={row.chart}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-full border px-3 py-1 font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
+                        style={{
+                          color: 'var(--color-brand-accent)',
+                          borderColor: 'rgba(60,130,246,0.28)',
+                          background: 'rgba(60,130,246,0.08)',
+                        }}
+                      >
+                        TV
+                      </Link>
+                    ) : (
+                      <span className="font-mono text-[10px]" style={{ color: 'var(--color-brand-muted)' }}>
+                        -
+                      </span>
+                    )}
                   </div>
 
                   <div className="min-w-0">
@@ -229,29 +209,9 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                     >
                       {row.asset}
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      <span
-                        className="font-mono text-[9px] tracking-wider px-1.5 py-0.5 rounded"
-                        style={{ background: 'var(--color-brand-accentbg)', color: 'var(--color-brand-accent)' }}
-                      >
-                        {row.breakType}
-                      </span>
-                      <span className="font-mono text-[9px]" style={{ color: 'var(--color-brand-muted)' }}>
-                        {row.sector}
-                      </span>
-                      {row.theme && (
-                        <span
-                          className="font-mono text-[9px] tracking-wider px-1.5 py-0.5 rounded"
-                          style={{ background: 'rgba(214,153,26,0.14)', color: 'var(--color-brand-gold)' }}
-                        >
-                          THEME
-                        </span>
-                      )}
+                    <div className="font-mono text-[10px] mt-1" style={{ color: 'var(--color-brand-muted)' }}>
+                      #{index + 1}
                     </div>
-                  </div>
-
-                  <div className="font-mono text-[10px]" style={{ color: 'var(--color-brand-text)' }}>
-                    {row.module}
                   </div>
 
                   <div>
@@ -261,22 +221,6 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                     >
                       {sideBull ? 'BULL' : 'BEAR'}
                     </span>
-                  </div>
-
-                  <div className="font-mono text-[10px] tabular-nums" style={{ color: 'var(--color-brand-muted)' }}>
-                    {row.time}
-                  </div>
-
-                  <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
-                    {row.entry ? `INR ${row.entry.toFixed(2)}` : '-'}
-                  </div>
-
-                  <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
-                    {row.target ? `INR ${row.target.toFixed(2)}` : '-'}
-                  </div>
-
-                  <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
-                    {row.rr}
                   </div>
 
                   <div className="flex items-center gap-1.5">
@@ -289,25 +233,15 @@ export default function SmartRadarPremium({ data }: { data: RadarStock[] }) {
                   </div>
 
                   <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
+                    {row.rvol ? `${row.rvol.toFixed(1)}x` : '-'}
+                  </div>
+
+                  <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
                     {row.pcr ? row.pcr.toFixed(2) : '-'}
                   </div>
 
-                  <div>
-                    {row.chart ? (
-                      <Link
-                        href={row.chart}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-mono text-[10px] tracking-wider transition-colors hover:opacity-90"
-                        style={{ color: 'var(--color-brand-accent)' }}
-                      >
-                        CHART
-                      </Link>
-                    ) : (
-                      <span className="font-mono text-[10px]" style={{ color: 'var(--color-brand-muted)' }}>
-                        -
-                      </span>
-                    )}
+                  <div className="font-mono text-sm tabular-nums" style={{ color: 'var(--color-brand-text)' }}>
+                    {row.atmStrike || '-'}
                   </div>
                 </div>
               );
