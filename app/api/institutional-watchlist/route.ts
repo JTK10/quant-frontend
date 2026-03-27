@@ -32,6 +32,17 @@ function normalizeWatchlistItem(raw: RawWatchlistItem): WatchlistItem | null {
   };
 }
 
+async function parseJsonSafe(response: Response): Promise<unknown> {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
   try {
     const baseUrl = process.env.AWS_API_URL;
@@ -56,7 +67,11 @@ export async function GET() {
     awsUrl.searchParams.set("secret", secret);
 
     const response = await fetch(awsUrl.toString(), { cache: "no-store" });
-    const payload: unknown = await response.json();
+    if (!response.ok) {
+      return NextResponse.json([]);
+    }
+
+    const payload: unknown = await parseJsonSafe(response);
     const payloadRecord =
       payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
     const rawItems: unknown[] = Array.isArray(payload)
