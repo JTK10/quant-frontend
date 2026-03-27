@@ -37,7 +37,7 @@ function normalizeWatchlistItem(raw: RawWatchlistItem): WatchlistItem | null {
 
   return {
     SK: symbol,
-    Direction: directionRaw,
+    Direction: directionRaw as "LONG" | "SHORT",
     StoredAt: storedAt,
   };
 }
@@ -46,7 +46,8 @@ function normalizeUnknownItem(item: unknown): WatchlistItem | null {
   if (!item || typeof item !== "object") return null;
 
   const row = item as Record<string, unknown>;
-  const isDynamoShape = row.SK && typeof row.SK === "object" && "S" in (row.SK as Record<string, unknown>);
+  const isDynamoShape =
+    row.SK && typeof row.SK === "object" && "S" in (row.SK as Record<string, unknown>);
 
   if (isDynamoShape) {
     const dynamoItem = row as unknown as DynamoLikeItem;
@@ -64,7 +65,6 @@ function normalizeUnknownItem(item: unknown): WatchlistItem | null {
 async function parseJsonSafe(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
-
   try {
     return JSON.parse(text);
   } catch {
@@ -98,8 +98,8 @@ export async function GET(request: NextRequest) {
     const partitionKey = `PCR_WATCHLIST#${date}`;
 
     const awsUrl = new URL(baseUrl);
+    awsUrl.searchParams.set("route", "institutional-watchlist");
     awsUrl.searchParams.set("pk", partitionKey);
-    awsUrl.searchParams.set("PK", partitionKey);
     awsUrl.searchParams.set("KeyConditionExpression", "PK = :pk");
     awsUrl.searchParams.set(
       "ExpressionAttributeValues",
@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
     awsUrl.searchParams.set("secret", secret);
 
     const response = await fetch(awsUrl.toString(), { cache: "no-store" });
+
     if (!response.ok) {
       return NextResponse.json([]);
     }
