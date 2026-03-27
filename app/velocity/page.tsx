@@ -27,6 +27,12 @@ type VelocityData = {
   asOf: string | null;
 };
 
+type WatchlistItem = {
+  SK: string;
+  Direction: "LONG" | "SHORT";
+  StoredAt: string;
+};
+
 const EMPTY_DATA: VelocityData = { bias: "NEUTRAL", bulls: [], bears: [], asOf: null };
 
 function normalizeStock(raw: unknown): VelocityStock {
@@ -84,9 +90,52 @@ async function getVelocityData(dateStr: string): Promise<VelocityData> {
   }
 }
 
+function normalizeWatchlist(raw: unknown): WatchlistItem[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((item) => (item && typeof item === "object" ? (item as Record<string, unknown>) : {}))
+    .map((row) => {
+      const directionRaw = toText(row.Direction).toUpperCase();
+      const direction: WatchlistItem["Direction"] = directionRaw === "SHORT" ? "SHORT" : "LONG";
+
+      return {
+        SK: toText(row.SK) || "UNKNOWN",
+        Direction: direction,
+        StoredAt: toText(row.StoredAt),
+      };
+    })
+    .filter((row) => row.SK && row.StoredAt);
+}
+
+async function getInstitutionalWatchlist(dateStr: string): Promise<WatchlistItem[]> {
+  try {
+    const url = await getInternalApiUrl(`/api/institutional-watchlist?date=${encodeURIComponent(dateStr)}`);
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return [];
+    const raw = await res.json();
+    return normalizeWatchlist(raw);
+  } catch {
+    return [];
+  }
+}
+
+function formatDetectedAt(dateTime: string): string {
+  const parsed = new Date(dateTime);
+  if (Number.isNaN(parsed.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(parsed);
+}
+
 export default async function VelocityPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
-  const data = await getVelocityData(dateStr);
+  const [data, watchlist] = await Promise.all([getVelocityData(dateStr), getInstitutionalWatchlist(dateStr)]);
   const scanRows = [...data.bulls, ...data.bears].sort((a, b) => b.Confidence - a.Confidence);
   const isBull = data.bias === "BULLISH";
   const isBear = data.bias === "BEARISH";
@@ -115,6 +164,69 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
           <AutoRefresh interval={30000} />
         </div>
       </div>
+
+      <section
+        className="rounded-xl border mb-6 overflow-hidden"
+        style={{ background: "var(--color-brand-surface)", borderColor: "var(--color-brand-border)" }}
+      >
+        <div className="px-5 py-4 border-b" style={{ borderColor: "var(--color-brand-border)" }}>
+          <h2 className="text-lg font-semibold text-white tracking-wide">⚡ Institutional Smart Money Watchlist</h2>
+          <p className="font-mono text-[10px] tracking-widest mt-1" style={{ color: "var(--color-brand-muted)" }}>
+            PRE-POSITIONED CANDIDATES
+          </p>
+        </div>
+
+        {watchlist.length > 0 ? (
+          <div className="overflow-x-auto">
+            <div
+              className="grid gap-2 px-5 py-2 border-b font-mono text-[9px] tracking-[0.18em] min-w-[520px]"
+              style={{
+                gridTemplateColumns: "minmax(10rem,1fr) 8rem 10rem",
+                borderColor: "var(--color-brand-border)",
+                background: "rgba(255,255,255,0.05)",
+                color: "var(--color-brand-muted)",
+              }}
+            >
+              <span>STOCK SYMBOL</span>
+              <span>DIRECTION</span>
+              <span>TIME DETECTED</span>
+            </div>
+
+            <div className="divide-y" style={{ borderColor: "rgba(47,71,108,0.35)" }}>
+              {watchlist.map((item, index) => {
+                const isLong = item.Direction === "LONG";
+                return (
+                  <div
+                    key={`${item.SK}-${item.StoredAt}-${index}`}
+                    className="grid gap-2 px-5 py-3 items-center min-w-[520px] hover:bg-white/5 transition-colors"
+                    style={{ gridTemplateColumns: "minmax(10rem,1fr) 8rem 10rem" }}
+                  >
+                    <span className="font-semibold text-[13px] tracking-wide" style={{ color: "var(--color-brand-text)" }}>
+                      {item.SK}
+                    </span>
+                    <span
+                      className="inline-flex w-fit font-mono text-[10px] tracking-widest px-2 py-0.5 rounded"
+                      style={{
+                        color: isLong ? "var(--color-brand-bull)" : "var(--color-brand-bear)",
+                        background: isLong ? "rgba(5,217,143,0.14)" : "rgba(230,85,115,0.14)",
+                      }}
+                    >
+                      {item.Direction}
+                    </span>
+                    <span className="font-mono text-[11px]" style={{ color: "var(--color-brand-muted)" }}>
+                      {formatDetectedAt(item.StoredAt)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="px-5 py-8 text-center font-mono text-xs" style={{ color: "var(--color-brand-muted)" }}>
+            Scanning market for institutional momentum... Data populates between 09:20 - 09:40 AM IST.
+          </div>
+        )}
+      </section>
 
       <div
         className="rounded-xl border px-6 py-5 mb-6 relative overflow-hidden"
