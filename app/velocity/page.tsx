@@ -108,9 +108,9 @@ function normalizeWatchlist(raw: unknown): WatchlistItem[] {
     .filter((row) => row.SK && row.StoredAt);
 }
 
-async function getInstitutionalWatchlist(): Promise<WatchlistItem[]> {
+async function getInstitutionalWatchlist(dateStr: string): Promise<WatchlistItem[]> {
   try {
-    const url = await getInternalApiUrl("/api/institutional-watchlist");
+    const url = await getInternalApiUrl(`/api/institutional-watchlist?date=${encodeURIComponent(dateStr)}`);
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return [];
     const raw = await res.json();
@@ -135,7 +135,7 @@ function formatDetectedAt(dateTime: string): string {
 
 export default async function VelocityPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
-  const [data, watchlist] = await Promise.all([getVelocityData(dateStr), getInstitutionalWatchlist()]);
+  const [data, watchlist] = await Promise.all([getVelocityData(dateStr), getInstitutionalWatchlist(dateStr)]);
   const scanRows = [...data.bulls, ...data.bears].sort((a, b) => b.Confidence - a.Confidence);
   const isBull = data.bias === "BULLISH";
   const isBear = data.bias === "BEARISH";
