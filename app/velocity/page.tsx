@@ -4,6 +4,7 @@ import DatePicker from "../components/DatePicker";
 import { resolveDate, type DateSearchParams } from "../utils/date";
 import { getInternalApiUrl } from "../utils/internalApi";
 import { toNumber, toText } from "../utils/scanner";
+import { getTradingViewUrl } from "../utils/tradingview";
 
 export const dynamic = "force-dynamic";
 
@@ -165,6 +166,7 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         </div>
       </div>
 
+      {/* ── Institutional Watchlist ── */}
       <section
         className="rounded-xl border mb-6 overflow-hidden"
         style={{ background: "var(--color-brand-surface)", borderColor: "var(--color-brand-border)" }}
@@ -179,14 +181,15 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         {watchlist.length > 0 ? (
           <div className="overflow-x-auto">
             <div
-              className="grid gap-2 px-5 py-2 border-b font-mono text-[9px] tracking-[0.18em] min-w-[520px]"
+              className="grid gap-2 px-5 py-2 border-b font-mono text-[9px] tracking-[0.18em] min-w-[640px]"
               style={{
-                gridTemplateColumns: "minmax(10rem,1fr) 8rem 10rem",
+                gridTemplateColumns: "5rem minmax(10rem,1fr) 8rem 10rem",
                 borderColor: "var(--color-brand-border)",
                 background: "rgba(255,255,255,0.05)",
                 color: "var(--color-brand-muted)",
               }}
             >
+              <span>TRADINGVIEW</span>
               <span>STOCK SYMBOL</span>
               <span>DIRECTION</span>
               <span>TIME DETECTED</span>
@@ -195,15 +198,34 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
             <div className="divide-y" style={{ borderColor: "rgba(47,71,108,0.35)" }}>
               {watchlist.map((item, index) => {
                 const isLong = item.Direction === "LONG";
+                const chartUrl = getTradingViewUrl(item.SK);
+
                 return (
                   <div
                     key={`${item.SK}-${item.StoredAt}-${index}`}
-                    className="grid gap-2 px-5 py-3 items-center min-w-[520px] hover:bg-white/5 transition-colors"
-                    style={{ gridTemplateColumns: "minmax(10rem,1fr) 8rem 10rem" }}
+                    className="grid gap-2 px-5 py-3 items-center min-w-[640px] hover:bg-white/5 transition-colors"
+                    style={{ gridTemplateColumns: "5rem minmax(10rem,1fr) 8rem 10rem" }}
                   >
+                    <div>
+                      <Link
+                        href={chartUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] tracking-wider transition-colors hover:opacity-90"
+                        style={{
+                          color: "var(--color-brand-accent)",
+                          borderColor: "rgba(60,130,246,0.28)",
+                          background: "rgba(60,130,246,0.08)",
+                        }}
+                      >
+                        TV
+                      </Link>
+                    </div>
+
                     <span className="font-semibold text-[13px] tracking-wide" style={{ color: "var(--color-brand-text)" }}>
                       {item.SK}
                     </span>
+
                     <span
                       className="inline-flex w-fit font-mono text-[10px] tracking-widest px-2 py-0.5 rounded"
                       style={{
@@ -213,6 +235,7 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
                     >
                       {item.Direction}
                     </span>
+
                     <span className="font-mono text-[11px]" style={{ color: "var(--color-brand-muted)" }}>
                       {formatDetectedAt(item.StoredAt)}
                     </span>
@@ -228,6 +251,7 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         )}
       </section>
 
+      {/* ── Tape Bias ── */}
       <div
         className="rounded-xl border px-6 py-5 mb-6 relative overflow-hidden"
         style={{
@@ -264,6 +288,7 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         </div>
       </div>
 
+      {/* ── Scanner Table ── */}
       <div
         className="rounded-xl border overflow-hidden"
         style={{ background: "var(--color-brand-surface)", borderColor: "var(--color-brand-border)" }}
