@@ -1,157 +1,85 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&family=Orbitron:wght@400;500;600;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Space Grotesk", sans-serif;
+  --font-sans: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
-  --font-display: "Orbitron", sans-serif;
+  --font-display: "Inter", "SF Pro Display", sans-serif;
 
-  --color-bg: #070b12;
-  --color-surface: #0c1220;
-  --color-surface2: #111928;
-  --color-border: #1c2d45;
-  --color-border2: #243550;
-  --color-muted: #4a6580;
-  --color-muted2: #6b8aaa;
-  --color-text: #c8daf0;
-  --color-text2: #e8f0fc;
-  --color-bull: #00e89a;
-  --color-bullbg: rgba(0, 232, 154, 0.08);
-  --color-bullborder: rgba(0, 232, 154, 0.25);
-  --color-bear: #ff3b6b;
-  --color-bearbg: rgba(255, 59, 107, 0.08);
-  --color-bearborder: rgba(255, 59, 107, 0.25);
-  --color-accent: #2d8eff;
-  --color-accentbg: rgba(45, 142, 255, 0.1);
-  --color-gold: #f5a623;
-  --color-goldbg: rgba(245, 166, 35, 0.1);
-  --color-purple: #9b6fff;
-  --color-purplebg: rgba(155, 111, 255, 0.1);
+  --color-bg: #121212;
+  --color-surface: #1e1e1e;
+  --color-surface2: #242424;
+  --color-border: #333333;
+  --color-border2: #3f3f3f;
+  --color-muted: #9d8f77;
+  --color-muted2: #b7a68a;
+  --color-text: #e0d2bd;
+  --color-text2: #ffe2b8;
+  --color-bull: #ffb347;
+  --color-bullbg: rgba(255, 179, 71, 0.16);
+  --color-bullborder: rgba(255, 179, 71, 0.42);
+  --color-bear: #d97706;
+  --color-bearbg: rgba(217, 119, 6, 0.18);
+  --color-bearborder: rgba(217, 119, 6, 0.42);
+  --color-accent: #ff9f1c;
+  --color-accentbg: rgba(255, 159, 28, 0.18);
+  --color-gold: #ffd089;
+  --color-goldbg: rgba(255, 208, 137, 0.18);
+  --color-purple: #f59e0b;
+  --color-purplebg: rgba(245, 158, 11, 0.18);
+  --color-shadow: rgba(0, 0, 0, 0.55);
 }
 
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at top left, rgba(45, 142, 255, 0.12), transparent 30%),
-    radial-gradient(circle at top right, rgba(0, 232, 154, 0.08), transparent 24%),
-    linear-gradient(180deg, #09101a 0%, #070b12 100%);
+    radial-gradient(circle at 0% -10%, rgba(255, 159, 28, 0.14), transparent 38%),
+    radial-gradient(circle at 100% 0%, rgba(217, 119, 6, 0.15), transparent 32%),
+    linear-gradient(180deg, #121212 0%, #171717 100%);
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
-  );
-  z-index: 9999;
-}
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border2); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+@keyframes fade-in { from { opacity: 0; transform: translateY(8px);} to {opacity: 1; transform: translateY(0);} }
+@keyframes pulse-glow { 0%,100% {opacity:1;} 50% {opacity:.35;} }
+@keyframes bar-fill { from { width: 0; } }
+@keyframes ping { 75%,100% { transform: scale(2); opacity: 0; } }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+.fade-in { animation: fade-in .35s ease both; }
+.animate-ping { animation: ping 1.6s cubic-bezier(0,0,.2,1) infinite; }
+.pulse-glow { animation: pulse-glow 1.4s ease-in-out infinite; }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-border2);
-  border-radius: 999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted);
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse-glow {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.35;
-  }
-}
-
-@keyframes bar-fill {
-  from {
-    width: 0;
-  }
-}
-
-@keyframes ping {
-  75%,
-  100% {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-
-.fade-in {
-  animation: fade-in 0.35s ease both;
-}
-
-.animate-ping {
-  animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-.pulse-glow {
-  animation: pulse-glow 1.4s ease-in-out infinite;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  filter: invert(0.5) sepia(1) hue-rotate(180deg);
-}
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; filter: invert(0.8) sepia(1) saturate(0.65) hue-rotate(345deg); }
 
 .glass {
   border: 1px solid var(--color-border);
-  background: rgba(12, 18, 32, 0.82);
-  backdrop-filter: blur(12px);
+  background: rgba(30, 30, 30, 0.88);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px -14px var(--color-shadow);
+}
+
+.surface-card {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 10px 24px -16px var(--color-shadow);
+}
+
+.soft-gradient {
+  background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(24, 24, 24, 0.95) 100%);
 }

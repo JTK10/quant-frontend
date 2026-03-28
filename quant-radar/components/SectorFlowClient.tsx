@@ -77,7 +77,7 @@ export default function SectorFlowClient({ sectors }: { sectors: SectorData[] })
                   <div
                     key={`${sector.key}-${signal.sym}-${signal.time}`}
                     className="flex flex-col gap-3 rounded-2xl border px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
-                    style={{ borderColor: "var(--color-border)", background: "rgba(255, 255, 255, 0.02)" }}
+                    style={{ borderColor: "var(--color-border)", background: "rgba(30, 30, 30, 0.7)" }}
                   >
                     <div>
                       <div className="text-sm font-semibold" style={{ color: "var(--color-text2)" }}>
@@ -111,8 +111,8 @@ export default function SectorFlowClient({ sectors }: { sectors: SectorData[] })
                         className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 font-mono text-[10px] tracking-[0.16em]"
                         style={{
                           color: "var(--color-accent)",
-                          borderColor: "rgba(45, 142, 255, 0.35)",
-                          background: "rgba(45, 142, 255, 0.1)",
+                          borderColor: "var(--color-bullborder)",
+                          background: "var(--color-accentbg)",
                         }}
                       >
                         TV <ExternalLink size={10} />

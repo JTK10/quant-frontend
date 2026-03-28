@@ -20,10 +20,10 @@ export function DatePicker() {
 
   return (
     <label
-      className="inline-flex items-center gap-2 rounded-xl border px-3 py-2"
-      style={{ borderColor: "var(--color-border)", background: "rgba(0, 0, 0, 0.2)" }}
+      className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 shadow-sm"
+      style={{ borderColor: "var(--color-border)", background: "rgba(30,30,30,0.94)" }}
     >
-      <span className="font-mono text-[9px] tracking-[0.25em]" style={{ color: "var(--color-muted)" }}>
+      <span className="font-mono text-[9px] tracking-[0.15em]" style={{ color: "var(--color-muted)" }}>
         DATE
       </span>
       <input
@@ -44,7 +44,7 @@ export function DatePicker() {
         style={{
           color: "var(--color-text2)",
           borderColor: "var(--color-border2)",
-          background: "rgba(255, 255, 255, 0.02)",
+          background: "var(--color-surface2)",
         }}
       />
     </label>
@@ -77,11 +77,14 @@ export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
     <button
       type="button"
       onClick={() => setEnabled((current) => !current)}
-      className="rounded-xl border px-3 py-2 font-mono text-[10px] tracking-[0.22em] transition-opacity hover:opacity-80"
+      className="rounded-xl border px-3 py-2 font-mono text-[10px] tracking-[0.15em] transition-all hover:-translate-y-px"
       style={{
         color: enabled ? "var(--color-accent)" : "var(--color-muted)",
-        borderColor: enabled ? "rgba(45, 142, 255, 0.35)" : "var(--color-border)",
-        background: enabled ? "rgba(45, 142, 255, 0.1)" : "rgba(255, 255, 255, 0.03)",
+        borderColor: enabled ? "var(--color-bullborder)" : "var(--color-border)",
+        background: enabled
+          ? "linear-gradient(180deg, rgba(255,159,28,0.2) 0%, rgba(217,119,6,0.16) 100%)"
+          : "rgba(30,30,30,0.9)",
+        boxShadow: enabled ? "0 10px 20px -16px rgba(255,159,28,0.6)" : "0 8px 16px -16px rgba(0,0,0,0.8)",
       }}
     >
       {enabled ? `AUTO ${Math.round(interval / 1000)}S` : "AUTO OFF"}
