@@ -20,6 +20,7 @@ export function DatePicker() {
 
   return (
     <label
+      /* Resolved: Kept the shadow-sm and translucent white background for the glassmorphism look */
       className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 shadow-sm"
       style={{ borderColor: "var(--color-border)", background: "rgba(255,255,255,0.9)" }}
     >
@@ -44,6 +45,7 @@ export function DatePicker() {
         style={{
           color: "var(--color-text2)",
           borderColor: "var(--color-border2)",
+          /* Resolved: Kept the light blue tinted background for the input field */
           background: "#f8fbff",
         }}
       />
@@ -77,14 +79,18 @@ export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
     <button
       type="button"
       onClick={() => setEnabled((current) => !current)}
+      /* Resolved: Kept the hover translate animation and 10px font size */
       className="rounded-xl border px-3 py-2 font-mono text-[10px] tracking-[0.15em] transition-all hover:-translate-y-px"
       style={{
         color: enabled ? "var(--color-accent)" : "var(--color-muted)",
         borderColor: enabled ? "rgba(37, 99, 235, 0.35)" : "var(--color-border)",
+        /* Resolved: Kept the advanced gradients and dynamic shadows based on state */
         background: enabled
           ? "linear-gradient(180deg, rgba(54,91,216,0.16) 0%, rgba(54,91,216,0.1) 100%)"
           : "rgba(255,255,255,0.88)",
-        boxShadow: enabled ? "0 10px 20px -16px rgba(54, 91, 216, 0.7)" : "0 8px 16px -16px rgba(21,37,72,0.5)",
+        boxShadow: enabled 
+          ? "0 10px 20px -16px rgba(54, 91, 216, 0.7)" 
+          : "0 8px 16px -16px rgba(21,37,72,0.5)",
       }}
     >
       {enabled ? `AUTO ${Math.round(interval / 1000)}S` : "AUTO OFF"}

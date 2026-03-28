@@ -72,6 +72,7 @@ export default function NavSidebar() {
 
   return (
     <aside
+      /* Resolved: Kept w-72 width and semi-transparent gradient background from feature branch */
       className="w-full border-b px-4 py-4 lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:border-b-0 lg:border-r lg:px-5 lg:py-6"
       style={{
         background: "linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(242, 247, 255, 0.9) 100%)",
@@ -103,6 +104,7 @@ export default function NavSidebar() {
             >
               QUANT RADAR
             </div>
+            {/* Resolved: Retained "SIGNAL DESK" branding */}
             <div className="font-mono text-[9px] tracking-[0.2em]" style={{ color: "var(--color-muted)" }}>
               SIGNAL DESK
             </div>
@@ -121,6 +123,7 @@ export default function NavSidebar() {
             <Link
               key={href}
               href={href}
+              /* Resolved: Maintained the hover:-translate-y-px animation and complex shadows */
               className="min-w-[170px] rounded-2xl border px-3 py-3 transition-all hover:-translate-y-px lg:min-w-0"
               style={{
                 borderColor: active ? `${color}45` : "var(--color-border)",
@@ -157,6 +160,7 @@ export default function NavSidebar() {
       </nav>
 
       <div className="mt-4">
+        {/* Resolved: Kept the white/90 translucent footer box */}
         <div className="rounded-2xl border bg-white/90 px-4 py-3 shadow-sm" style={{ borderColor: "var(--color-border)" }}>
           <div className="font-mono text-[9px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
             NSE F&O

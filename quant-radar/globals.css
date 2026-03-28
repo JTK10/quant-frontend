@@ -6,6 +6,7 @@
   --font-mono: "IBM Plex Mono", monospace;
   --font-display: "Inter", "SF Pro Display", sans-serif;
 
+  /* Resolved: Kept the custom color palette and shadow variables from the feature branch */
   --color-bg: #f3f6fb;
   --color-surface: #ffffff;
   --color-surface2: #eef3fb;
@@ -43,6 +44,7 @@ html {
 body {
   min-height: 100vh;
   overflow-x: hidden;
+  /* Resolved: Kept the ambient radial gradients for the app's background */
   background:
     radial-gradient(circle at 0% -10%, rgba(54, 91, 216, 0.13), transparent 30%),
     radial-gradient(circle at 100% 0%, rgba(115, 82, 219, 0.1), transparent 25%),
@@ -136,6 +138,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.2);
 }
 
+/* Resolved: Retained the custom utility classes introduced in the feature branch for consistent card and glass styling */
 .glass {
   border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.88);

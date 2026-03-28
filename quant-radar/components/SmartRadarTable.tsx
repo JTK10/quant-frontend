@@ -141,6 +141,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                     : value === "BEAR"
                       ? "var(--color-bearbg)"
                       : "var(--color-accentbg)"
+                  /* Resolved: Kept transparent white background and dynamic active shadow */
                   : "rgba(255,255,255,0.85)",
               boxShadow: filter === value ? "0 8px 18px -14px rgba(54,91,216,0.65)" : "none",
             }}
@@ -158,6 +159,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
         <table className="min-w-[1040px] w-full">
           <thead
             className="sticky top-0 z-10"
+            /* Resolved: Maintained the stronger 8px blur and slight blue tint for the sticky header */
             style={{ background: "rgba(245, 249, 255, 0.97)", backdropFilter: "blur(8px)" }}
           >
             <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
@@ -187,6 +189,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                           setAscending(false);
                         }
                       }}
+                      /* Resolved: Kept the tighter 0.12em tracking */
                       className="font-mono text-[10px] tracking-[0.12em]"
                       style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
                     >
@@ -213,6 +216,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                 <Fragment key={rowId}>
                   <tr
                     onClick={() => setExpanded((current) => (current === rowId ? null : rowId))}
+                    /* Resolved: Used the subtle indigo overlay for row hover and active states */
                     className="cursor-pointer transition-colors hover:bg-indigo-50/30"
                     style={{
                       borderBottom: isOpen ? "none" : "1px solid var(--color-border)",
