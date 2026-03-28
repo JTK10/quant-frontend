@@ -91,7 +91,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div
-          className="rounded-3xl border px-8 py-10 text-center"
+          className="rounded-3xl border bg-white px-8 py-10 text-center shadow-sm"
           style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
         >
           <div className="font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
@@ -141,7 +141,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                     : value === "BEAR"
                       ? "var(--color-bearbg)"
                       : "var(--color-accentbg)"
-                  : "rgba(255, 255, 255, 0.03)",
+                  : "var(--color-surface)",
             }}
           >
             {value}
@@ -157,7 +157,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
         <table className="min-w-[1040px] w-full">
           <thead
             className="sticky top-0 z-10"
-            style={{ background: "rgba(12, 18, 32, 0.96)", backdropFilter: "blur(10px)" }}
+            style={{ background: "rgba(248, 250, 252, 0.96)", backdropFilter: "blur(6px)" }}
           >
             <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
               {[
@@ -186,7 +186,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                           setAscending(false);
                         }
                       }}
-                      className="font-mono text-[10px] tracking-[0.24em]"
+                      className="font-mono text-[10px] tracking-[0.14em]"
                       style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
                     >
                       {label} {active ? (ascending ? "UP" : "DOWN") : ""}
@@ -212,10 +212,10 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                 <Fragment key={rowId}>
                   <tr
                     onClick={() => setExpanded((current) => (current === rowId ? null : rowId))}
-                    className="cursor-pointer transition-colors hover:bg-white/[0.03]"
+                    className="cursor-pointer transition-colors hover:bg-slate-50"
                     style={{
-                      borderBottom: isOpen ? "none" : "1px solid rgba(28, 45, 69, 0.6)",
-                      background: isOpen ? "rgba(45, 142, 255, 0.04)" : "transparent",
+                      borderBottom: isOpen ? "none" : "1px solid var(--color-border)",
+                      background: isOpen ? "rgba(37, 99, 235, 0.06)" : "transparent",
                     }}
                   >
                     <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-muted2)" }}>
@@ -287,8 +287,8 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                         className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 font-mono text-[10px] tracking-[0.18em]"
                         style={{
                           color: "var(--color-accent)",
-                          borderColor: "rgba(45, 142, 255, 0.35)",
-                          background: "rgba(45, 142, 255, 0.1)",
+                          borderColor: "rgba(37, 99, 235, 0.35)",
+                          background: "rgba(37, 99, 235, 0.1)",
                         }}
                       >
                         TV <ExternalLink size={10} />
@@ -297,7 +297,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                   </tr>
 
                   {isOpen ? (
-                    <tr style={{ borderBottom: "1px solid rgba(28, 45, 69, 0.6)" }}>
+                    <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                       <td colSpan={11} className="px-4 py-4">
                         <div className="grid gap-4 lg:grid-cols-4">
                           <InfoCard title="TRADE LEVELS">
