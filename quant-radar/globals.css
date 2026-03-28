@@ -1,32 +1,33 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&family=Orbitron:wght@400;500;600;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Space Grotesk", sans-serif;
+  --font-sans: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
-  --font-display: "Orbitron", sans-serif;
+  --font-display: "Inter", "SF Pro Display", sans-serif;
 
-  --color-bg: #070b12;
-  --color-surface: #0c1220;
-  --color-surface2: #111928;
-  --color-border: #1c2d45;
-  --color-border2: #243550;
-  --color-muted: #4a6580;
-  --color-muted2: #6b8aaa;
-  --color-text: #c8daf0;
-  --color-text2: #e8f0fc;
-  --color-bull: #00e89a;
-  --color-bullbg: rgba(0, 232, 154, 0.08);
-  --color-bullborder: rgba(0, 232, 154, 0.25);
-  --color-bear: #ff3b6b;
-  --color-bearbg: rgba(255, 59, 107, 0.08);
-  --color-bearborder: rgba(255, 59, 107, 0.25);
-  --color-accent: #2d8eff;
-  --color-accentbg: rgba(45, 142, 255, 0.1);
-  --color-gold: #f5a623;
-  --color-goldbg: rgba(245, 166, 35, 0.1);
-  --color-purple: #9b6fff;
-  --color-purplebg: rgba(155, 111, 255, 0.1);
+  --color-bg: #f3f6fb;
+  --color-surface: #ffffff;
+  --color-surface2: #eef3fb;
+  --color-border: #dbe4f1;
+  --color-border2: #c5d2e4;
+  --color-muted: #6b7a90;
+  --color-muted2: #4f5f78;
+  --color-text: #223148;
+  --color-text2: #0f172a;
+  --color-bull: #0f9d5a;
+  --color-bullbg: rgba(15, 157, 90, 0.1);
+  --color-bullborder: rgba(15, 157, 90, 0.26);
+  --color-bear: #d14343;
+  --color-bearbg: rgba(209, 67, 67, 0.1);
+  --color-bearborder: rgba(209, 67, 67, 0.27);
+  --color-accent: #365bd8;
+  --color-accentbg: rgba(54, 91, 216, 0.12);
+  --color-gold: #c57c1f;
+  --color-goldbg: rgba(197, 124, 31, 0.12);
+  --color-purple: #7352db;
+  --color-purplebg: rgba(115, 82, 219, 0.12);
+  --color-shadow: rgba(21, 37, 72, 0.08);
 }
 
 *,
@@ -43,27 +44,12 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at top left, rgba(45, 142, 255, 0.12), transparent 30%),
-    radial-gradient(circle at top right, rgba(0, 232, 154, 0.08), transparent 24%),
-    linear-gradient(180deg, #09101a 0%, #070b12 100%);
+    radial-gradient(circle at 0% -10%, rgba(54, 91, 216, 0.13), transparent 30%),
+    radial-gradient(circle at 100% 0%, rgba(115, 82, 219, 0.1), transparent 25%),
+    linear-gradient(180deg, #f8fbff 0%, #edf2f9 100%);
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
-  );
-  z-index: 9999;
 }
 
 a {
@@ -147,11 +133,22 @@ textarea {
 
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  filter: invert(0.5) sepia(1) hue-rotate(180deg);
+  filter: invert(0.2);
 }
 
 .glass {
   border: 1px solid var(--color-border);
-  background: rgba(12, 18, 32, 0.82);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px -14px var(--color-shadow);
+}
+
+.surface-card {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 10px 24px -16px var(--color-shadow);
+}
+
+.soft-gradient {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 249, 255, 0.92) 100%);
 }
