@@ -106,7 +106,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="m-3 flex h-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-3xl border bg-white shadow-[0_16px_40px_-28px_rgba(31,45,70,0.45)] lg:m-4">
       <div
         className="flex flex-wrap items-center gap-2 border-b px-4 py-3"
         style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
@@ -116,7 +116,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
             key={value}
             type="button"
             onClick={() => setFilter(value)}
-            className="rounded-xl border px-3 py-1.5 font-mono text-[10px] tracking-[0.18em]"
+            className="rounded-full border px-3 py-1.5 font-mono text-[10px] tracking-[0.14em] transition-all"
             style={{
               color:
                 filter === value
@@ -141,7 +141,9 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                     : value === "BEAR"
                       ? "var(--color-bearbg)"
                       : "var(--color-accentbg)"
-                  : "var(--color-surface)",
+                  /* Resolved: Kept transparent white background and dynamic active shadow */
+                  : "rgba(255,255,255,0.85)",
+              boxShadow: filter === value ? "0 8px 18px -14px rgba(54,91,216,0.65)" : "none",
             }}
           >
             {value}
@@ -157,7 +159,8 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
         <table className="min-w-[1040px] w-full">
           <thead
             className="sticky top-0 z-10"
-            style={{ background: "rgba(248, 250, 252, 0.96)", backdropFilter: "blur(6px)" }}
+            /* Resolved: Maintained the stronger 8px blur and slight blue tint for the sticky header */
+            style={{ background: "rgba(245, 249, 255, 0.97)", backdropFilter: "blur(8px)" }}
           >
             <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
               {[
@@ -186,7 +189,8 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                           setAscending(false);
                         }
                       }}
-                      className="font-mono text-[10px] tracking-[0.14em]"
+                      /* Resolved: Kept the tighter 0.12em tracking */
+                      className="font-mono text-[10px] tracking-[0.12em]"
                       style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
                     >
                       {label} {active ? (ascending ? "UP" : "DOWN") : ""}
@@ -212,10 +216,11 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                 <Fragment key={rowId}>
                   <tr
                     onClick={() => setExpanded((current) => (current === rowId ? null : rowId))}
-                    className="cursor-pointer transition-colors hover:bg-slate-50"
+                    /* Resolved: Used the subtle indigo overlay for row hover and active states */
+                    className="cursor-pointer transition-colors hover:bg-indigo-50/30"
                     style={{
                       borderBottom: isOpen ? "none" : "1px solid var(--color-border)",
-                      background: isOpen ? "rgba(37, 99, 235, 0.06)" : "transparent",
+                      background: isOpen ? "rgba(54, 91, 216, 0.08)" : "transparent",
                     }}
                   >
                     <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-muted2)" }}>

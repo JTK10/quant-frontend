@@ -72,39 +72,41 @@ export default function NavSidebar() {
 
   return (
     <aside
-      className="w-full border-b px-4 py-4 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:border-b-0 lg:border-r lg:px-5 lg:py-6"
+      /* Resolved: Kept w-72 width and semi-transparent gradient background from feature branch */
+      className="w-full border-b px-4 py-4 lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:border-b-0 lg:border-r lg:px-5 lg:py-6"
       style={{
-        background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)",
+        background: "linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(242, 247, 255, 0.9) 100%)",
         borderColor: "var(--color-border)",
       }}
     >
       <div className="mb-4 flex items-center justify-between gap-3 lg:block">
         <Link href="/" className="flex items-center gap-3">
           <div
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl"
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl shadow-sm"
             style={{
-              background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
-              border: "1px solid rgba(37, 99, 235, 0.25)",
+              background: "linear-gradient(135deg, #e9f0ff 0%, #d9e6ff 100%)",
+              border: "1px solid rgba(54, 91, 216, 0.28)",
             }}
           >
             <div
               className="absolute inset-0 rounded-xl"
               style={{
                 background:
-                  "conic-gradient(from 0deg, transparent 0deg, rgba(37, 99, 235, 0.25) 45deg, transparent 90deg)",
+                  "conic-gradient(from 0deg, transparent 0deg, rgba(54, 91, 216, 0.25) 45deg, transparent 90deg)",
               }}
             />
-            <Activity size={16} style={{ color: "#2563eb", position: "relative" }} />
+            <Activity size={16} style={{ color: "var(--color-accent)", position: "relative" }} />
           </div>
           <div>
             <div
-              className="text-sm font-semibold tracking-[0.14em]"
+              className="text-sm font-semibold tracking-[0.1em]"
               style={{ fontFamily: "var(--font-display)", color: "var(--color-text2)" }}
             >
-              JT RADAR
+              QUANT RADAR
             </div>
+            {/* Resolved: Retained "SIGNAL DESK" branding */}
             <div className="font-mono text-[9px] tracking-[0.2em]" style={{ color: "var(--color-muted)" }}>
-              QUANT DASHBOARD
+              SIGNAL DESK
             </div>
           </div>
         </Link>
@@ -121,11 +123,12 @@ export default function NavSidebar() {
             <Link
               key={href}
               href={href}
-              className="min-w-[170px] rounded-2xl border px-3 py-3 transition-colors hover:bg-slate-50 lg:min-w-0"
+              /* Resolved: Maintained the hover:-translate-y-px animation and complex shadows */
+              className="min-w-[170px] rounded-2xl border px-3 py-3 transition-all hover:-translate-y-px lg:min-w-0"
               style={{
                 borderColor: active ? `${color}45` : "var(--color-border)",
-                background: active ? `${color}12` : "var(--color-surface)",
-                boxShadow: active ? `inset 2px 0 0 ${color}` : "0 1px 2px rgba(15, 23, 42, 0.03)",
+                background: active ? `${color}12` : "rgba(255, 255, 255, 0.78)",
+                boxShadow: active ? `inset 2px 0 0 ${color}, 0 10px 24px -18px rgba(54, 91, 216, 0.45)` : "0 8px 20px -18px rgba(31, 45, 70, 0.4)",
               }}
             >
               <div className="flex items-center gap-3">
@@ -143,7 +146,7 @@ export default function NavSidebar() {
                     {label}
                   </div>
                   <div
-                    className="truncate font-mono text-[9px] tracking-[0.18em]"
+                    className="truncate font-mono text-[9px] tracking-[0.14em]"
                     style={{ color: active ? color : "var(--color-muted)" }}
                   >
                     {sub}
@@ -157,7 +160,8 @@ export default function NavSidebar() {
       </nav>
 
       <div className="mt-4">
-        <div className="rounded-2xl border bg-white px-4 py-3 shadow-sm" style={{ borderColor: "var(--color-border)" }}>
+        {/* Resolved: Kept the white/90 translucent footer box */}
+        <div className="rounded-2xl border bg-white/90 px-4 py-3 shadow-sm" style={{ borderColor: "var(--color-border)" }}>
           <div className="font-mono text-[9px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
             NSE F&O
           </div>

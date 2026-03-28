@@ -23,25 +23,27 @@ export default function PageHeader({
       style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
     >
       <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-80"
+        className="pointer-events-none absolute inset-y-0 left-0 w-full"
         style={{
-          background: `radial-gradient(circle at left center, ${accentColor}18 0%, transparent 70%)`,
+          background: `radial-gradient(circle at 8% center, ${accentColor}16 0%, transparent 45%)`,
         }}
       />
 
       <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div
-            className="mb-3 inline-flex items-center rounded-full border px-3 py-1.5 font-mono text-[10px] tracking-[0.14em]"
+            /* Resolved: Kept the shadow-sm and 0.13em tracking for the badge */
+            className="mb-3 inline-flex items-center rounded-full border px-3 py-1.5 font-mono text-[10px] tracking-[0.13em] shadow-sm"
             style={{
               color: accentColor,
               borderColor: `${accentColor}55`,
-              background: `${accentColor}15`,
+              background: `${accentColor}10`,
             }}
           >
             {badge}
           </div>
-          <h1 className="text-2xl font-semibold lg:text-3xl" style={{ color: "var(--color-text2)" }}>
+          {/* Resolved: Retained the tighter letterSpacing (-0.02em) for a more modern heading look */}
+          <h1 className="text-2xl font-semibold lg:text-3xl" style={{ color: "var(--color-text2)", letterSpacing: "-0.02em" }}>
             {title}
           </h1>
           <p
