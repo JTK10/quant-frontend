@@ -10,7 +10,7 @@ const NAV_GROUPS = [
     items: [
       { href: '/', icon: Activity, label: 'Smart Radar' },
       { href: '/velocity', icon: BarChart3, label: 'Signal Pulse' },
-      { href: '/sector', icon: LayoutGrid, label: 'Sector Rotation' },
+      { href: '/sector', icon: LayoutGrid, label: 'Sector Sentiment' },
     ],
   },
   {
