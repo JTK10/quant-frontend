@@ -1,6 +1,7 @@
 import AutoRefresh from '../components/AutoRefresh';
 import DatePicker from '../components/DatePicker';
 import SectorSkyline from '../components/SectorSkyline';
+import SectorSentiment from '../components/SectorSentiment';
 import { resolveDate, type DateSearchParams } from '../utils/date';
 import { getInternalApiUrl } from '../utils/internalApi';
 import type { RadarStock, SectorStrength } from '../types/radar';
@@ -397,8 +398,13 @@ export default async function SectorPage({ searchParams }: { searchParams: DateS
         <Pill label="LIVE SIGNALS" value={totalSignals.toString()} />
       </div>
 
-      <div className="mb-8">
-        <SectorSkyline sectors={liveSectors} />
+      <div className="grid gap-6 mb-8 xl:grid-cols-[1fr,1.5fr]">
+        <div className="rounded-[30px] border px-6 py-6" style={{ background: 'var(--color-brand-surface)', borderColor: 'var(--color-brand-border)' }}>
+          <SectorSentiment />
+        </div>
+        <div>
+          <SectorSkyline sectors={liveSectors} />
+        </div>
       </div>
 
       {sectors.length === 0 ? (
