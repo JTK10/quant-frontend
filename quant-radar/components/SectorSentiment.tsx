@@ -20,9 +20,9 @@ export default function SectorSentiment() {
   const [data,        setData]        = useState(MOCK);
   const [loading,     setLoading]     = useState(false);
   const [isMock,      setIsMock]      = useState(true);
-  const [scanTime,    setScanTime]    = useState("11:15");
-  const [updatedAt,   setUpdatedAt]   = useState(null);
-  const [animated,    setAnimated]    = useState(false);
+  const [scanTime,    setScanTime]    = useState<string>("11:15");
+  const [updatedAt,   setUpdatedAt]   = useState<Date | null>(null);
+  const [animated,    setAnimated]    = useState<boolean>(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -179,7 +179,7 @@ function ColHeader() {
   );
 }
 
-function SectionLabel({ color, arrow, label }) {
+function SectionLabel({ color, arrow, label }: { color: string; arrow: string; label: string }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 6,
@@ -193,7 +193,7 @@ function SectionLabel({ color, arrow, label }) {
   );
 }
 
-function SectorRow({ item, type, animated, rank }) {
+function SectorRow({ item, type, animated, rank }: { item: any; type: string; animated: boolean; rank: number }) {
   const isBull     = type === "BULL";
   const pct        = isBull ? item.bull_pct : item.bear_pct;
   const oppPct     = isBull ? item.bear_pct : item.bull_pct;
@@ -296,7 +296,7 @@ function SectorRow({ item, type, animated, rank }) {
   );
 }
 
-function Pill({ color, label, count }) {
+function Pill({ color, label, count }: { color: string; label: string; count: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1 }}>
       <span style={{ fontSize: 12, fontWeight: 500, color, fontFamily: "var(--font-mono)" }}>
