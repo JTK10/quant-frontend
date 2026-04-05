@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },
-  { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "PCR Watchlist", color: "#00e89a" },
+  { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "Flow Watchlist", color: "#00e89a" },
   { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
   { href: "/ai", icon: Brain, label: "AI Analysis", sub: "ML Top Picks", color: "#a855f7" },
 ];

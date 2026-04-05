@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { PulseRow } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "score";
+type SortKey = "time" | "name" | "score" | "oflow";
 
 function shortTime(value: string): string {
   if (!value) return "-";
@@ -24,8 +24,11 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
         case "name":
           return a.Name.localeCompare(b.Name);
         case "score":
-        default:
           return a.Confidence - b.Confidence;
+        case "oflow":
+          return (a.PCR || 0) - (b.PCR || 0);
+        default:
+          return 0;
       }
     })();
     return ascending ? cmp : -cmp;
@@ -35,6 +38,7 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
     ["time", "TIME"],
     ["name", "NAME"],
     ["score", "SCORE"],
+    ["oflow", "O.FLOW"],
   ];
 
   const isBull = type === "BULL";
@@ -61,7 +65,7 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
         <div
           className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5"
           style={{
-            gridTemplateColumns: "40px 1fr 40px 32px",
+            gridTemplateColumns: "40px 1fr 40px 48px 32px",
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
             backdropFilter: "blur(6px)",
@@ -99,7 +103,7 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
             key={`${row.Symbol}-${row.Time}-${idx}`}
             className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors"
             style={{
-              gridTemplateColumns: "40px 1fr 40px 32px",
+              gridTemplateColumns: "40px 1fr 40px 48px 32px",
               borderColor: "var(--color-border)",
             }}
           >
@@ -116,6 +120,9 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
             </div>
             <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-gold)" }}>
               {row.Confidence ? row.Confidence.toFixed(1) : "-"}
+            </span>
+            <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
+              {row.PCR ? row.PCR.toFixed(2) : "-"}
             </span>
             <div className="text-right">
               <a

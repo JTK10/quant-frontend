@@ -29,7 +29,7 @@ export default async function PulsePage({ searchParams }: { searchParams: DateSe
     <div className="flex h-screen flex-col overflow-hidden">
       <PageHeader
         title="Watchlist"
-        subtitle="PCR CONFIRMED · LIVE SIGNALS"
+        subtitle="FLOW CONFIRMED · LIVE SIGNALS"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="var(--color-bull)"

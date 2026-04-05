@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { RadarSignal } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "break" | "side" | "score" | "rank";
+type SortKey = "time" | "name" | "break" | "side" | "score" | "rank" | "oflow";
 
 function shortTime(value: string): string {
   if (!value) return "-";
@@ -38,6 +38,8 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
           return a.Side.localeCompare(b.Side);
         case "score":
           return a.Confidence - b.Confidence;
+        case "oflow":
+          return (a.PCR || 0) - (b.PCR || 0);
         case "rank":
         default:
           return a.SignalRank - b.SignalRank;
@@ -70,6 +72,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
     ["break", "TYPE"],
     ["side", "SIDE"],
     ["score", "SCORE"],
+    ["oflow", "O.FLOW"],
   ];
 
   return (
@@ -111,7 +114,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
         <div
           className="sticky top-0 z-10 grid items-center gap-1 border-b px-3 py-2 md:px-4"
           style={{
-            gridTemplateColumns: "52px 1fr 68px 52px 48px 36px",
+            gridTemplateColumns: "52px 1fr 68px 52px 48px 48px 36px",
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
             backdropFilter: "blur(6px)",
@@ -156,7 +159,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                 onClick={() => setExpanded((c) => (c === rowId ? null : rowId))}
                 className="grid cursor-pointer items-center gap-1 border-b px-3 py-2.5 transition-colors md:px-4"
                 style={{
-                  gridTemplateColumns: "52px 1fr 68px 52px 48px 36px",
+                  gridTemplateColumns: "52px 1fr 68px 52px 48px 48px 36px",
                   borderColor: isOpen ? "transparent" : "var(--color-border)",
                   background: isOpen ? "rgba(45, 142, 255, 0.04)" : "transparent",
                 }}
@@ -214,6 +217,11 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                   {signal.Confidence.toFixed(1)}
                 </span>
 
+                {/* O.FLOW */}
+                <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
+                  {signal.PCR ? signal.PCR.toFixed(2) : "-"}
+                </span>
+
                 {/* TV LINK */}
                 <div className="text-right">
                   <a
@@ -244,7 +252,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                     <DetailCell label="STOP" value={signal.SL ? `₹${signal.SL.toFixed(2)}` : "-"} color="var(--color-bear)" />
                     <DetailCell label="TARGET 1" value={signal.Target1 ? `₹${signal.Target1.toFixed(2)}` : "-"} color="var(--color-bull)" />
                     <DetailCell label="R:R" value={signal.RR || "-"} color="var(--color-text)" />
-                    <DetailCell label="PCR" value={signal.PCR ? signal.PCR.toFixed(2) : "-"} color="var(--color-text)" />
+                    <DetailCell label="O.FLOW" value={signal.PCR ? signal.PCR.toFixed(2) : "-"} color="var(--color-text)" />
                     <DetailCell label="RVOL" value={signal.RVOL ? `${signal.RVOL.toFixed(1)}x` : "-"} color="var(--color-text)" />
                     <DetailCell label="SECTOR" value={signal.Sector || "-"} color="var(--color-accent)" />
                     <DetailCell
