@@ -31,7 +31,7 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
     <div className="flex h-screen flex-col overflow-hidden">
       <PageHeader
         title="Smart Radar"
-        subtitle="BREAKOUT · RETEST · PCR CONFIRMED"
+        subtitle="SMART MONEY FLOW"
         badge="LIVE SCAN"
         dateStr={dateStr}
         accentColor="var(--color-accent)"
