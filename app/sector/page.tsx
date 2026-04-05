@@ -4,7 +4,7 @@ import SectorSkyline from '../components/SectorSkyline';
 import { resolveDate, type DateSearchParams } from '../utils/date';
 import { getInternalApiUrl } from '../utils/internalApi';
 import type { RadarStock, SectorStrength } from '../types/radar';
-import { buildSectorData } from '../utils/sectorSkyline';
+import { buildSectorData, compareSectorStrength } from '../utils/sectorSkyline';
 import { resolveSignalSide, toNumber } from '../utils/scanner';
 import { getTradingViewUrl } from '../utils/tradingview';
 
@@ -13,6 +13,18 @@ export const dynamic = 'force-dynamic';
 async function getRadarStocks(dateStr: string): Promise<RadarStock[]> {
   try {
     const url = await getInternalApiUrl(`/api/radar?date=${encodeURIComponent(dateStr)}`);
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const raw = await res.json();
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+async function getSectorSentiment(dateStr: string) {
+  try {
+    const url = await getInternalApiUrl(`/api/sector?date=${encodeURIComponent(dateStr)}`);
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return [];
     const raw = await res.json();
@@ -282,8 +294,27 @@ function SectorCard({ sec }: { sec: SectorStrength }) {
 
 export default async function SectorPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
-  const stocks = await getRadarStocks(dateStr);
+  const [stocks, backendSectors] = await Promise.all([
+    getRadarStocks(dateStr),
+    getSectorSentiment(dateStr)
+  ]);
   const sectors = buildSectorData(stocks);
+
+  // Merge backend sector sentiment logic
+  if (backendSectors?.length > 0) {
+    backendSectors.forEach((bs: any) => {
+      const match = sectors.find(s => s.key === bs.sector || s.name.toUpperCase() === String(bs.sector).toUpperCase());
+      if (match) {
+        match.strength = typeof bs.strength === 'number' ? bs.strength : match.strength;
+        match.avgEdge = typeof bs.strength === 'number' ? bs.strength : match.avgEdge;
+        match.bullishCount = bs.bull_count ?? match.bullishCount;
+        match.bearishCount = bs.bear_count ?? match.bearishCount;
+        match.bullRatio = bs.bull_pct ?? match.bullRatio;
+      }
+    });
+    sectors.sort(compareSectorStrength);
+  }
+
   const liveSectors = sectors.filter((sector) => (sector.count ?? sector.stocks.length) > 0);
   const bullSectors = liveSectors.filter((sector) => sector.strength > 0).length;
   const bearSectors = liveSectors.filter((sector) => sector.strength < 0).length;

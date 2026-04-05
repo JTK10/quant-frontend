@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     const awsUrl = new URL(baseUrl);
-    awsUrl.searchParams.set("route", "sector-heatmap");
+    awsUrl.searchParams.set("route", "sector-sentiment");
     const date =
       request.nextUrl.searchParams.get("date") ??
       new Date().toISOString().split("T")[0];
