@@ -200,7 +200,7 @@ export function buildTradingViewUrl(symbol: string, name?: string): string {
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(cleaned)}&interval=5`;
 }
 
-type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap";
+type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment";
 
 export async function fetchBackendRoute(route: BackendRoute, dateStr: string): Promise<unknown> {
   const rawApiUrl = process.env.AWS_API_URL;
