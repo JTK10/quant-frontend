@@ -1,99 +1,56 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
-import { Fragment, type ReactNode, useState } from "react";
+import { Fragment, useState } from "react";
 import type { RadarSignal } from "@/utils/backend";
 
-type SortKey = "rank" | "name" | "side" | "module" | "break" | "entry" | "conf" | "rvol" | "pcr" | "move" | "time";
-
-function formatPrice(value: number): string {
-  return value ? `Rs. ${value.toFixed(2)}` : "-";
-}
-
-function formatPct(value: number): string {
-  return value ? `${value > 0 ? "+" : ""}${value.toFixed(2)}%` : "-";
-}
+type SortKey = "time" | "name" | "break" | "side" | "score" | "rank";
 
 function shortTime(value: string): string {
-  if (!value) {
-    return "-";
-  }
-
-  if (value.includes("T")) {
-    return value.slice(11, 16);
-  }
-
+  if (!value) return "-";
+  if (value.includes("T")) return value.slice(11, 16);
   return value.length > 5 ? value.slice(0, 5) : value;
 }
 
-function sideTone(side: RadarSignal["Side"]) {
-  if (side === "BULL") {
-    return {
-      color: "var(--color-bull)",
-      bg: "var(--color-bullbg)",
-      border: "var(--color-bullborder)",
-    };
-  }
-
-  if (side === "BEAR") {
-    return {
-      color: "var(--color-bear)",
-      bg: "var(--color-bearbg)",
-      border: "var(--color-bearborder)",
-    };
-  }
-
-  return {
-    color: "var(--color-muted)",
-    bg: "rgba(255, 255, 255, 0.04)",
-    border: "var(--color-border)",
-  };
+function breakLabel(bt: string): "DIRECT" | "RETEST" | "-" {
+  if (!bt || bt === "INSIDE") return "-";
+  return bt.toUpperCase().includes("RETEST") ? "RETEST" : "DIRECT";
 }
 
 export default function SmartRadarTable({ signals }: { signals: RadarSignal[] }) {
-  const [expanded, setExpanded] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [ascending, setAscending] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "BULL" | "BEAR">("ALL");
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  const filtered = signals.filter((signal) => filter === "ALL" || signal.Side === filter);
-  const sorted = [...filtered].sort((left, right) => {
-    const compare = (() => {
+  const filtered = signals.filter((s) => filter === "ALL" || s.Side === filter);
+
+  const sorted = [...filtered].sort((a, b) => {
+    const cmp = (() => {
       switch (sortKey) {
-        case "name":
-          return left.Name.localeCompare(right.Name);
-        case "side":
-          return left.Side.localeCompare(right.Side);
-        case "module":
-          return left.Module.localeCompare(right.Module);
-        case "break":
-          return (left.BreakType || "").localeCompare(right.BreakType || "");
-        case "entry":
-          return left.Entry - right.Entry;
-        case "conf":
-          return left.Confidence - right.Confidence;
-        case "rvol":
-          return left.RVOL - right.RVOL;
-        case "pcr":
-          return left.PCR - right.PCR;
-        case "move":
-          return left.DayMovePct - right.DayMovePct;
         case "time":
-          return (left.FiredAt || left.EntryTime).localeCompare(right.FiredAt || right.EntryTime);
+          return (a.FiredAt || a.EntryTime).localeCompare(b.FiredAt || b.EntryTime);
+        case "name":
+          return a.Name.localeCompare(b.Name);
+        case "break":
+          return (a.BreakType || "").localeCompare(b.BreakType || "");
+        case "side":
+          return a.Side.localeCompare(b.Side);
+        case "score":
+          return a.Confidence - b.Confidence;
         case "rank":
         default:
-          return left.SignalRank - right.SignalRank;
+          return a.SignalRank - b.SignalRank;
       }
     })();
-
-    return ascending ? compare : -compare;
+    return ascending ? cmp : -cmp;
   });
 
   if (!signals.length) {
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div
-          className="rounded-3xl border bg-white px-8 py-10 text-center shadow-sm"
+          className="rounded-2xl border px-8 py-10 text-center"
           style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
         >
           <div className="font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
@@ -107,281 +64,219 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
     );
   }
 
+  const headers: [SortKey, string][] = [
+    ["time", "TIME"],
+    ["name", "NAME"],
+    ["break", "TYPE"],
+    ["side", "SIDE"],
+    ["score", "SCORE"],
+  ];
+
   return (
     <div className="flex h-full flex-col">
+      {/* ── Filter bar ─────────────────────────────────────────────── */}
       <div
-        className="flex flex-wrap items-center gap-2 border-b px-4 py-3"
+        className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5 md:px-4"
         style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
       >
-        {(["ALL", "BULL", "BEAR"] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFilter(value)}
-            className="rounded-xl border px-3 py-1.5 font-mono text-[10px] tracking-[0.18em]"
-            style={{
-              color:
-                filter === value
-                  ? value === "BULL"
-                    ? "var(--color-bull)"
-                    : value === "BEAR"
-                      ? "var(--color-bear)"
-                      : "var(--color-accent)"
-                  : "var(--color-muted)",
-              borderColor:
-                filter === value
-                  ? value === "BULL"
-                    ? "var(--color-bullborder)"
-                    : value === "BEAR"
-                      ? "var(--color-bearborder)"
-                      : "rgba(45, 142, 255, 0.35)"
-                  : "var(--color-border)",
-              background:
-                filter === value
-                  ? value === "BULL"
-                    ? "var(--color-bullbg)"
-                    : value === "BEAR"
-                      ? "var(--color-bearbg)"
-                      : "var(--color-accentbg)"
-                  : "var(--color-surface)",
-            }}
-          >
-            {value}
-          </button>
-        ))}
+        {(["ALL", "BULL", "BEAR"] as const).map((v) => {
+          const active = filter === v;
+          const c =
+            v === "BULL" ? "var(--color-bull)" : v === "BEAR" ? "var(--color-bear)" : "var(--color-accent)";
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setFilter(v)}
+              className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em]"
+              style={{
+                color: active ? c : "var(--color-muted)",
+                borderColor: active ? `${c}55` : "var(--color-border)",
+                background: active ? `${c}12` : "transparent",
+              }}
+            >
+              {v}
+            </button>
+          );
+        })}
 
         <span className="ml-auto font-mono text-[10px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
           {sorted.length} SIGNALS
         </span>
       </div>
 
+      {/* ── Table ───────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-auto">
-        <table className="min-w-[1040px] w-full">
-          <thead
-            className="sticky top-0 z-10"
-            style={{ background: "rgba(248, 250, 252, 0.96)", backdropFilter: "blur(6px)" }}
-          >
-            <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-              {[
-                ["time", "TIME"],
-                ["name", "STOCK"],
-                ["side", "SIDE"],
-                ["module", "MODULE"],
-                ["break", "BREAK"],
-                ["entry", "ENTRY"],
-                ["conf", "CONF"],
-                ["rvol", "RVOL"],
-                ["pcr", "PCR"],
-                ["move", "MOVE"],
-                ["rank", "RANK"],
-              ].map(([key, label]) => {
-                const typedKey = key as SortKey;
-                const active = sortKey === typedKey;
-                return (
-                  <th key={key} className="px-3 py-3 text-left">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (sortKey === typedKey) {
-                          setAscending((current) => !current);
-                        } else {
-                          setSortKey(typedKey);
-                          setAscending(false);
-                        }
-                      }}
-                      className="font-mono text-[10px] tracking-[0.14em]"
-                      style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
-                    >
-                      {label} {active ? (ascending ? "UP" : "DOWN") : ""}
-                    </button>
-                  </th>
-                );
-              })}
-              <th
-                className="px-3 py-3 text-right font-mono text-[10px] tracking-[0.24em]"
-                style={{ color: "var(--color-muted)" }}
+        {/* Header */}
+        <div
+          className="sticky top-0 z-10 grid items-center gap-1 border-b px-3 py-2 md:px-4"
+          style={{
+            gridTemplateColumns: "52px 1fr 68px 52px 48px 36px",
+            borderColor: "var(--color-border)",
+            background: "rgba(10, 14, 23, 0.95)",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          {headers.map(([key, label]) => {
+            const active = sortKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  if (sortKey === key) setAscending((c) => !c);
+                  else {
+                    setSortKey(key);
+                    setAscending(false);
+                  }
+                }}
+                className="text-left font-mono text-[9px] tracking-[0.14em]"
+                style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
               >
-                CHART
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((signal, index) => {
-              const rowId = `${signal.Symbol || signal.Name}-${signal.FiredAt}-${index}`;
-              const tone = sideTone(signal.Side);
-              const isOpen = expanded === rowId;
+                {label}
+                {active ? (ascending ? " ↑" : " ↓") : ""}
+              </button>
+            );
+          })}
+          <span className="font-mono text-[9px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>
+            TV
+          </span>
+        </div>
 
-              return (
-                <Fragment key={rowId}>
-                  <tr
-                    onClick={() => setExpanded((current) => (current === rowId ? null : rowId))}
-                    className="cursor-pointer transition-colors hover:bg-slate-50"
+        {/* Rows */}
+        {sorted.map((signal, idx) => {
+          const rowId = `${signal.Symbol || signal.Name}-${signal.FiredAt}-${idx}`;
+          const isOpen = expanded === rowId;
+          const isBull = signal.Side === "BULL";
+          const bt = breakLabel(signal.BreakType);
+
+          return (
+            <Fragment key={rowId}>
+              <div
+                onClick={() => setExpanded((c) => (c === rowId ? null : rowId))}
+                className="grid cursor-pointer items-center gap-1 border-b px-3 py-2.5 transition-colors md:px-4"
+                style={{
+                  gridTemplateColumns: "52px 1fr 68px 52px 48px 36px",
+                  borderColor: isOpen ? "transparent" : "var(--color-border)",
+                  background: isOpen ? "rgba(45, 142, 255, 0.04)" : "transparent",
+                }}
+              >
+                {/* TIME */}
+                <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                  {shortTime(signal.FiredAt || signal.EntryTime)}
+                </span>
+
+                {/* NAME + symbol */}
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-semibold" style={{ color: "var(--color-text2)" }}>
+                    {signal.Name}
+                  </div>
+                  <div
+                    className="truncate font-mono text-[9px] tracking-[0.14em]"
+                    style={{ color: "var(--color-muted)" }}
+                  >
+                    {signal.Symbol}
+                  </div>
+                </div>
+
+                {/* BREAK TYPE */}
+                {bt !== "-" ? (
+                  <span
+                    className="inline-flex justify-center rounded-md border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]"
                     style={{
-                      borderBottom: isOpen ? "none" : "1px solid var(--color-border)",
-                      background: isOpen ? "rgba(37, 99, 235, 0.06)" : "transparent",
+                      color: bt === "RETEST" ? "var(--color-purple)" : "var(--color-gold)",
+                      borderColor: bt === "RETEST" ? "rgba(168,85,247,0.25)" : "rgba(245,158,11,0.25)",
+                      background: bt === "RETEST" ? "rgba(168,85,247,0.08)" : "rgba(245,158,11,0.08)",
                     }}
                   >
-                    <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-muted2)" }}>
-                      {shortTime(signal.FiredAt || signal.EntryTime)}
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="text-sm font-semibold" style={{ color: "var(--color-text2)" }}>
-                        {signal.Name}
-                      </div>
-                      <div className="font-mono text-[10px] tracking-[0.18em]" style={{ color: "var(--color-muted)" }}>
-                        {signal.Symbol || signal.Sector}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span
-                        className="inline-flex rounded-full border px-2 py-1 font-mono text-[10px] tracking-[0.2em]"
-                        style={{ color: tone.color, background: tone.bg, borderColor: tone.border }}
-                      >
-                        {signal.Side}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-text2)" }}>
-                      {signal.Module}
-                    </td>
-                    <td className="px-3 py-3">
-                      {signal.BreakType ? (
-                        <span
-                          className="inline-flex rounded-full border px-2 py-1 font-mono text-[10px] tracking-[0.18em]"
-                          style={{
-                            color: signal.BreakType.toUpperCase().includes("RETEST") ? "var(--color-purple)" : "var(--color-gold)",
-                            borderColor: signal.BreakType.toUpperCase().includes("RETEST") ? "rgba(168, 85, 247, 0.35)" : "rgba(245, 158, 11, 0.35)",
-                            background: signal.BreakType.toUpperCase().includes("RETEST") ? "rgba(168, 85, 247, 0.1)" : "rgba(245, 158, 11, 0.1)",
-                          }}
-                        >
-                          {signal.BreakType.toUpperCase().includes("RETEST") ? "RETEST" : "DIRECT"}
-                        </span>
-                      ) : (
-                        <span className="font-mono text-xs" style={{ color: "var(--color-muted)" }}>-</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-text2)" }}>
-                      {formatPrice(signal.Entry)}
-                    </td>
-                    <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-gold)" }}>
-                      {signal.Confidence.toFixed(1)}
-                    </td>
-                    <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-text)" }}>
-                      {signal.RVOL ? `${signal.RVOL.toFixed(1)}x` : "-"}
-                    </td>
-                    <td
-                      className="px-3 py-3 font-mono text-xs"
-                      style={{
-                        color:
-                          signal.PCR < 0.65
-                            ? "var(--color-bull)"
-                            : signal.PCR > 1.2
-                              ? "var(--color-bear)"
-                              : "var(--color-text)",
-                      }}
-                    >
-                      {signal.PCR ? signal.PCR.toFixed(2) : "-"}
-                    </td>
-                    <td
-                      className="px-3 py-3 font-mono text-xs"
-                      style={{
-                        color:
-                          signal.DayMovePct > 0
-                            ? "var(--color-bull)"
-                            : signal.DayMovePct < 0
-                              ? "var(--color-bear)"
-                              : "var(--color-muted)",
-                      }}
-                    >
-                      {formatPct(signal.DayMovePct)}
-                    </td>
-                    <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-accent)" }}>
-                      {signal.SignalRank.toFixed(1)}
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <a
-                        href={signal.Chart}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(event) => event.stopPropagation()}
-                        className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 font-mono text-[10px] tracking-[0.18em]"
-                        style={{
-                          color: "var(--color-accent)",
-                          borderColor: "rgba(37, 99, 235, 0.35)",
-                          background: "rgba(37, 99, 235, 0.1)",
-                        }}
-                      >
-                        TV <ExternalLink size={10} />
-                      </a>
-                    </td>
-                  </tr>
+                    {bt}
+                  </span>
+                ) : (
+                  <span className="font-mono text-[10px] text-center" style={{ color: "var(--color-muted)" }}>
+                    -
+                  </span>
+                )}
 
-                  {isOpen ? (
-                    <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                      <td colSpan={12} className="px-4 py-4">
-                        <div className="grid gap-4 lg:grid-cols-4">
-                          <InfoCard title="TRADE LEVELS">
-                            <InfoRow label="Entry" value={formatPrice(signal.Entry)} tone="var(--color-text2)" />
-                            <InfoRow label="Stop" value={formatPrice(signal.SL)} tone="var(--color-bear)" />
-                            <InfoRow label="Target 1" value={formatPrice(signal.Target1)} tone="var(--color-bull)" />
-                            <InfoRow label="Target 2" value={formatPrice(signal.Target2)} tone="rgba(0, 232, 154, 0.65)" />
-                            <InfoRow label="R:R" value={signal.RR || "-"} tone="var(--color-text)" />
-                          </InfoCard>
+                {/* SIDE */}
+                <span
+                  className="inline-flex justify-center rounded-md border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.14em]"
+                  style={{
+                    color: isBull ? "var(--color-bull)" : "var(--color-bear)",
+                    borderColor: isBull ? "var(--color-bullborder)" : "var(--color-bearborder)",
+                    background: isBull ? "var(--color-bullbg)" : "var(--color-bearbg)",
+                  }}
+                >
+                  {signal.Side === "BULL" ? "BUY" : "SELL"}
+                </span>
 
-                          <InfoCard title="OPTIONS">
-                            <InfoRow label="PCR" value={signal.PCR ? signal.PCR.toFixed(3) : "-"} tone="var(--color-text)" />
-                            <InfoRow label="PCR signal" value={signal.PCRSignal || "-"} tone="var(--color-text)" />
-                            <InfoRow label="ATM strike" value={signal.ATMStrike || "-"} tone="var(--color-text2)" />
-                            <InfoRow label="Max pain" value={signal.MaxPain || "-"} tone="var(--color-text)" />
-                            <InfoRow label="Strike rec" value={signal.StrikeRec || "-"} tone="var(--color-gold)" />
-                          </InfoCard>
+                {/* SCORE */}
+                <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-gold)" }}>
+                  {signal.Confidence.toFixed(1)}
+                </span>
 
-                          <InfoCard title="MARKET CONTEXT">
-                            <InfoRow label="Sector" value={signal.Sector || "-"} tone="var(--color-text2)" />
-                            <InfoRow label="RVOL" value={signal.RVOL ? `${signal.RVOL.toFixed(1)}x` : "-"} tone="var(--color-text)" />
-                            <InfoRow label="RS score" value={signal.RSScore ? signal.RSScore.toFixed(1) : "-"} tone="var(--color-text)" />
-                            <InfoRow label="Move" value={formatPct(signal.DayMovePct)} tone="var(--color-gold)" />
-                            <InfoRow label="PE OI surge" value={signal.PEOISurge ? `${signal.PEOISurge.toFixed(1)}%` : "-"} tone="var(--color-text)" />
-                          </InfoCard>
+                {/* TV LINK */}
+                <div className="text-right">
+                  <a
+                    href={signal.Chart}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center rounded-md border p-1"
+                    style={{
+                      color: "var(--color-accent)",
+                      borderColor: "rgba(45,142,255,0.20)",
+                      background: "rgba(45,142,255,0.06)",
+                    }}
+                  >
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
+              </div>
 
-                          <InfoCard title="NOTES">
-                            <InfoRow label="Direction" value={signal.Direction || signal.Side} tone="var(--color-text2)" />
-                            <InfoRow label="Break" value={signal.BreakType || "-"} tone="var(--color-text)" />
-                            <InfoRow label="Fired" value={signal.FiredAt || "-"} tone="var(--color-muted2)" />
-                            <InfoRow label="Theme" value={signal.SectorTheme ? "Yes" : "No"} tone="var(--color-purple)" />
-                            <p className="mt-3 text-xs" style={{ color: "var(--color-muted2)" }}>
-                              {signal.Notes || "No notes available."}
-                            </p>
-                          </InfoCard>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+              {/* ── Expanded detail ─────────────────────────────────── */}
+              {isOpen && (
+                <div
+                  className="border-b px-3 pb-4 pt-2 md:px-4"
+                  style={{ borderColor: "var(--color-border)", background: "rgba(45, 142, 255, 0.02)" }}
+                >
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <DetailCell label="ENTRY" value={signal.Entry ? `₹${signal.Entry.toFixed(2)}` : "-"} color="var(--color-text2)" />
+                    <DetailCell label="STOP" value={signal.SL ? `₹${signal.SL.toFixed(2)}` : "-"} color="var(--color-bear)" />
+                    <DetailCell label="TARGET 1" value={signal.Target1 ? `₹${signal.Target1.toFixed(2)}` : "-"} color="var(--color-bull)" />
+                    <DetailCell label="R:R" value={signal.RR || "-"} color="var(--color-text)" />
+                    <DetailCell label="PCR" value={signal.PCR ? signal.PCR.toFixed(2) : "-"} color="var(--color-text)" />
+                    <DetailCell label="RVOL" value={signal.RVOL ? `${signal.RVOL.toFixed(1)}x` : "-"} color="var(--color-text)" />
+                    <DetailCell label="SECTOR" value={signal.Sector || "-"} color="var(--color-accent)" />
+                    <DetailCell
+                      label="MOVE"
+                      value={signal.DayMovePct ? `${signal.DayMovePct > 0 ? "+" : ""}${signal.DayMovePct.toFixed(2)}%` : "-"}
+                      color={signal.DayMovePct > 0 ? "var(--color-bull)" : signal.DayMovePct < 0 ? "var(--color-bear)" : "var(--color-muted)"}
+                    />
+                  </div>
+                  {signal.Notes && (
+                    <p className="mt-2 font-mono text-[10px]" style={{ color: "var(--color-muted2)" }}>
+                      {signal.Notes}
+                    </p>
+                  )}
+                </div>
+              )}
+            </Fragment>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function InfoCard({ title, children }: { title: string; children: ReactNode }) {
+function DetailCell({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="rounded-2xl border p-4" style={{ borderColor: "var(--color-border)" }}>
-      <div className="mb-2 font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
-        {title}
+    <div className="rounded-lg border px-2.5 py-2" style={{ borderColor: "var(--color-border)" }}>
+      <div className="font-mono text-[8px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
+        {label}
       </div>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function InfoRow({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 font-mono text-xs">
-      <span style={{ color: "var(--color-muted)" }}>{label}</span>
-      <span style={{ color: tone }}>{value}</span>
+      <div className="mt-0.5 font-mono text-xs font-semibold" style={{ color }}>
+        {value}
+      </div>
     </div>
   );
 }

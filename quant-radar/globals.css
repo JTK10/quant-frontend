@@ -6,27 +6,32 @@
   --font-mono: "IBM Plex Mono", monospace;
   --font-display: "Inter", "SF Pro Display", sans-serif;
 
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-surface2: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-border2: #cbd5e1;
-  --color-muted: #64748b;
-  --color-muted2: #475569;
-  --color-text: #1e293b;
-  --color-text2: #0f172a;
-  --color-bull: #16a34a;
-  --color-bullbg: rgba(22, 163, 74, 0.1);
-  --color-bullborder: rgba(22, 163, 74, 0.3);
-  --color-bear: #dc2626;
-  --color-bearbg: rgba(220, 38, 38, 0.08);
-  --color-bearborder: rgba(220, 38, 38, 0.3);
-  --color-accent: #2563eb;
-  --color-accentbg: rgba(37, 99, 235, 0.12);
-  --color-gold: #d97706;
-  --color-goldbg: rgba(217, 119, 6, 0.12);
-  --color-purple: #7c3aed;
-  --color-purplebg: rgba(124, 58, 237, 0.12);
+  /* ── Dark prop-desk palette ──────────────────────────────────────────── */
+  --color-bg: #0a0e17;
+  --color-surface: #111827;
+  --color-surface2: #1a2233;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border2: rgba(255, 255, 255, 0.10);
+  --color-muted: #4b5563;
+  --color-muted2: #6b7280;
+  --color-text: #d1d5db;
+  --color-text2: #f3f4f6;
+
+  /* ── Bull / Bear ─────────────────────────────────────────────────────── */
+  --color-bull: #00e89a;
+  --color-bullbg: rgba(0, 232, 154, 0.08);
+  --color-bullborder: rgba(0, 232, 154, 0.20);
+  --color-bear: #ff3b6b;
+  --color-bearbg: rgba(255, 59, 107, 0.08);
+  --color-bearborder: rgba(255, 59, 107, 0.20);
+
+  /* ── Accent palette ──────────────────────────────────────────────────── */
+  --color-accent: #2d8eff;
+  --color-accentbg: rgba(45, 142, 255, 0.10);
+  --color-gold: #f59e0b;
+  --color-goldbg: rgba(245, 158, 11, 0.10);
+  --color-purple: #a855f7;
+  --color-purplebg: rgba(168, 85, 247, 0.10);
 }
 
 *,
@@ -42,7 +47,7 @@ html {
 body {
   min-height: 100vh;
   overflow-x: hidden;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -61,8 +66,8 @@ textarea {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -70,12 +75,12 @@ textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border2);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 @keyframes fade-in {
@@ -129,11 +134,15 @@ textarea {
 
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  filter: invert(0.2);
+  filter: invert(0.8);
+}
+
+input[type="date"] {
+  color-scheme: dark;
 }
 
 .glass {
   border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(17, 24, 39, 0.92);
   backdrop-filter: blur(6px);
 }

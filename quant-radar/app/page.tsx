@@ -11,10 +11,7 @@ async function getSignals(dateStr: string): Promise<RadarSignal[]> {
   try {
     const url = await getInternalApiUrl(`/api/radar?date=${encodeURIComponent(dateStr)}`);
     const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) {
-      return [];
-    }
-
+    if (!response.ok) return [];
     return response.json();
   } catch {
     return [];
@@ -25,18 +22,16 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
   const dateStr = await resolveDate(searchParams);
   const signals = await getSignals(dateStr);
 
-  const bulls = signals.filter((signal) => signal.Side === "BULL").length;
-  const bears = signals.filter((signal) => signal.Side === "BEAR").length;
-  const directBreaks = signals.filter((signal) => signal.BreakType && !signal.BreakType.toUpperCase().includes("RETEST")).length;
-  const retestBreaks = signals.filter((signal) => signal.BreakType && signal.BreakType.toUpperCase().includes("RETEST")).length;
-  const highConviction = signals.filter((signal) => signal.Confidence >= 4).length;
-  const optionsReady = signals.filter((signal) => signal.HasOptions).length;
+  const bulls = signals.filter((s) => s.Side === "BULL").length;
+  const bears = signals.filter((s) => s.Side === "BEAR").length;
+  const direct = signals.filter((s) => s.BreakType && !s.BreakType.toUpperCase().includes("RETEST")).length;
+  const retest = signals.filter((s) => s.BreakType && s.BreakType.toUpperCase().includes("RETEST")).length;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <PageHeader
         title="Smart Radar"
-        subtitle="BREAKOUT RETEST SIGNALS · PCR CONFIRMED"
+        subtitle="BREAKOUT · RETEST · PCR CONFIRMED"
         badge="LIVE SCAN"
         dateStr={dateStr}
         accentColor="var(--color-accent)"
@@ -45,14 +40,15 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
         <AutoRefresh interval={30000} />
       </PageHeader>
 
-      <div className="grid grid-cols-2 border-b bg-white md:grid-cols-7" style={{ borderColor: "var(--color-border)" }}>
-        <SummaryStat label="Total signals" value={String(signals.length)} color="var(--color-text2)" />
-        <SummaryStat label="Bullish" value={String(bulls)} color="var(--color-bull)" />
-        <SummaryStat label="Bearish" value={String(bears)} color="var(--color-bear)" />
-        <SummaryStat label="Direct" value={String(directBreaks)} color="var(--color-gold)" />
-        <SummaryStat label="Retest" value={String(retestBreaks)} color="var(--color-purple)" />
-        <SummaryStat label="High conv >= 4" value={String(highConviction)} color="var(--color-gold)" />
-        <SummaryStat label="With options" value={String(optionsReady)} color="var(--color-purple)" />
+      <div
+        className="grid grid-cols-3 border-b md:grid-cols-5"
+        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+      >
+        <Stat label="SIGNALS" value={String(signals.length)} color="var(--color-text2)" />
+        <Stat label="BUY" value={String(bulls)} color="var(--color-bull)" />
+        <Stat label="SELL" value={String(bears)} color="var(--color-bear)" />
+        <Stat label="DIRECT" value={String(direct)} color="var(--color-gold)" />
+        <Stat label="RETEST" value={String(retest)} color="var(--color-purple)" />
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -62,13 +58,13 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
   );
 }
 
-function SummaryStat({ label, value, color }: { label: string; value: string; color: string }) {
+function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="border-r px-4 py-3 last:border-r-0" style={{ borderColor: "var(--color-border)" }}>
-      <div className="font-mono text-[9px] tracking-[0.15em]" style={{ color: "var(--color-muted)" }}>
-        {label.toUpperCase()}
+    <div className="border-r px-3 py-2.5 last:border-r-0" style={{ borderColor: "var(--color-border)" }}>
+      <div className="font-mono text-[8px] tracking-[0.18em]" style={{ color: "var(--color-muted)" }}>
+        {label}
       </div>
-      <div className="mt-1 text-xl font-bold" style={{ color }}>
+      <div className="mt-0.5 text-lg font-bold" style={{ color }}>
         {value}
       </div>
     </div>

@@ -276,7 +276,7 @@ export function normalizeRadarSignals(payload: unknown): RadarSignal[] {
       Sector: textify(row.Sector, "OTHER"),
       SectorTheme: truthy(row.Sector_Theme ?? row.SectorTheme),
       Direction: textify(row.Direction),
-      BreakType: textify(row.BreakType ?? row.Break),
+      BreakType: textify(row.BreakoutType ?? row.BreakType ?? row.Break),
       EntryTime: textify(row.EntryTime ?? row.Time),
       FiredAt: textify(row.Fired_At ?? row.FiredAt ?? row.Time),
       HasOptions: truthy(row.HasOptions) || Boolean(pcr || atmStrike || maxPain),

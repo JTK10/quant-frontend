@@ -44,7 +44,7 @@ export function DatePicker() {
         style={{
           color: "var(--color-text2)",
           borderColor: "var(--color-border2)",
-          background: "#ffffff",
+          background: "var(--color-surface2)",
         }}
       />
     </label>

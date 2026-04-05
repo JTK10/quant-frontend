@@ -6,10 +6,10 @@ import { Activity, BarChart2, Brain, ChevronRight, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2563eb" },
-  { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "PCR Watchlist", color: "#16a34a" },
-  { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#d97706" },
-  { href: "/ai", icon: Brain, label: "AI Analysis", sub: "ML Top Picks", color: "#7c3aed" },
+  { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },
+  { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "PCR Watchlist", color: "#00e89a" },
+  { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
+  { href: "/ai", icon: Brain, label: "AI Analysis", sub: "ML Top Picks", color: "#a855f7" },
 ];
 
 function LiveClock() {
@@ -39,10 +39,10 @@ function LiveClock() {
   }, []);
 
   return (
-    <div className="rounded-2xl border bg-white px-4 py-3 shadow-sm" style={{ borderColor: "var(--color-border)" }}>
+    <div className="rounded-xl border px-3 py-2.5" style={{ borderColor: "var(--color-border)", background: "var(--color-surface2)" }}>
       <div className="mb-1 flex items-center justify-between">
-        <span className="font-mono text-[9px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
-          IST TIME
+        <span className="font-mono text-[8px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
+          IST
         </span>
         <span
           className="inline-flex items-center gap-1.5 font-mono text-[8px] tracking-[0.2em]"
@@ -57,7 +57,7 @@ function LiveClock() {
               style={{ background: marketOpen ? "var(--color-bull)" : "var(--color-bear)" }}
             />
           </span>
-          {marketOpen ? "OPEN" : "CLOSED"}
+          {marketOpen ? "MKT OPEN" : "CLOSED"}
         </span>
       </div>
       <div className="font-mono text-sm font-semibold" style={{ color: "var(--color-text2)" }}>
@@ -72,97 +72,90 @@ export default function NavSidebar() {
 
   return (
     <aside
-      className="w-full border-b px-4 py-4 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:border-b-0 lg:border-r lg:px-5 lg:py-6"
+      className="w-full border-b px-3 py-3 lg:sticky lg:top-0 lg:h-screen lg:w-56 lg:border-b-0 lg:border-r lg:px-3 lg:py-4"
       style={{
-        background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)",
+        background: "var(--color-bg)",
         borderColor: "var(--color-border)",
       }}
     >
-      <div className="mb-4 flex items-center justify-between gap-3 lg:block">
-        <Link href="/" className="flex items-center gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3 lg:block">
+        <Link href="/" className="flex items-center gap-2.5">
           <div
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl"
+            className="flex h-8 w-8 items-center justify-center rounded-lg"
             style={{
-              background: "linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)",
-              border: "1px solid rgba(37, 99, 235, 0.25)",
+              background: "rgba(45, 142, 255, 0.10)",
+              border: "1px solid rgba(45, 142, 255, 0.20)",
             }}
           >
-            <div
-              className="absolute inset-0 rounded-xl"
-              style={{
-                background:
-                  "conic-gradient(from 0deg, transparent 0deg, rgba(37, 99, 235, 0.25) 45deg, transparent 90deg)",
-              }}
-            />
-            <Activity size={16} style={{ color: "#2563eb", position: "relative" }} />
+            <Activity size={14} style={{ color: "#2d8eff" }} />
           </div>
           <div>
             <div
-              className="text-sm font-semibold tracking-[0.14em]"
-              style={{ fontFamily: "var(--font-display)", color: "var(--color-text2)" }}
+              className="text-xs font-bold tracking-[0.12em]"
+              style={{ color: "var(--color-text2)" }}
             >
               JT RADAR
             </div>
-            <div className="font-mono text-[9px] tracking-[0.2em]" style={{ color: "var(--color-muted)" }}>
-              QUANT DASHBOARD
+            <div className="font-mono text-[8px] tracking-[0.18em]" style={{ color: "var(--color-muted)" }}>
+              PROP TERMINAL
             </div>
           </div>
         </Link>
       </div>
 
-      <div className="mb-4 hidden lg:block">
+      <div className="mb-3 hidden lg:block">
         <LiveClock />
       </div>
 
-      <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+      <nav className="flex gap-1.5 overflow-x-auto lg:flex-col lg:overflow-visible">
         {NAV_ITEMS.map(({ href, icon: Icon, label, sub, color }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
             <Link
               key={href}
               href={href}
-              className="min-w-[170px] rounded-2xl border px-3 py-3 transition-colors hover:bg-slate-50 lg:min-w-0"
+              className="min-w-[140px] rounded-lg border px-2.5 py-2 transition-colors lg:min-w-0"
               style={{
-                borderColor: active ? `${color}45` : "var(--color-border)",
-                background: active ? `${color}12` : "var(--color-surface)",
-                boxShadow: active ? `inset 2px 0 0 ${color}` : "0 1px 2px rgba(15, 23, 42, 0.03)",
+                borderColor: active ? `${color}30` : "var(--color-border)",
+                background: active ? `${color}0c` : "transparent",
+                boxShadow: active ? `inset 2px 0 0 ${color}` : "none",
               }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <div
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg"
                   style={{
-                    borderColor: active ? `${color}55` : "var(--color-border)",
-                    background: active ? `${color}1c` : "#f8fafc",
+                    borderColor: active ? `${color}40` : "var(--color-border)",
+                    background: active ? `${color}14` : "var(--color-surface)",
                   }}
                 >
-                  <Icon size={14} style={{ color: active ? color : "var(--color-muted)" }} />
+                  <Icon size={13} style={{ color: active ? color : "var(--color-muted)" }} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold" style={{ color: "var(--color-text2)" }}>
+                  <div className="truncate text-xs font-semibold" style={{ color: "var(--color-text2)" }}>
                     {label}
                   </div>
                   <div
-                    className="truncate font-mono text-[9px] tracking-[0.18em]"
+                    className="truncate font-mono text-[8px] tracking-[0.16em]"
                     style={{ color: active ? color : "var(--color-muted)" }}
                   >
                     {sub}
                   </div>
                 </div>
-                {active ? <ChevronRight size={14} style={{ color }} /> : null}
+                {active ? <ChevronRight size={12} style={{ color }} /> : null}
               </div>
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-4">
-        <div className="rounded-2xl border bg-white px-4 py-3 shadow-sm" style={{ borderColor: "var(--color-border)" }}>
-          <div className="font-mono text-[9px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
+      <div className="mt-3 hidden lg:block">
+        <div className="rounded-lg border px-3 py-2" style={{ borderColor: "var(--color-border)" }}>
+          <div className="font-mono text-[8px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
             NSE F&O
           </div>
-          <div className="mt-1 text-sm font-semibold" style={{ color: "var(--color-text2)" }}>
-            Intraday signal terminal
+          <div className="mt-0.5 text-[11px] font-semibold" style={{ color: "var(--color-text2)" }}>
+            Intraday Terminal
           </div>
         </div>
       </div>
