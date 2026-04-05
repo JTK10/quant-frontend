@@ -112,9 +112,8 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-1 border-b px-3 py-2 md:px-4"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[60px_1fr_75px_60px_60px_60px_40px] lg:grid-cols-[80px_1fr_100px_80px_80px_80px_50px] min-w-[600px] lg:min-w-0"
           style={{
-            gridTemplateColumns: "52px 1fr 68px 52px 48px 48px 36px",
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
             backdropFilter: "blur(6px)",
@@ -157,9 +156,8 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
             <Fragment key={rowId}>
               <div
                 onClick={() => setExpanded((c) => (c === rowId ? null : rowId))}
-                className="grid cursor-pointer items-center gap-1 border-b px-3 py-2.5 transition-colors md:px-4"
+                className="grid cursor-pointer items-center gap-2 border-b px-3 py-2.5 transition-colors md:px-4 grid-cols-[60px_1fr_75px_60px_60px_60px_40px] lg:grid-cols-[80px_1fr_100px_80px_80px_80px_50px] min-w-[600px] lg:min-w-0"
                 style={{
-                  gridTemplateColumns: "52px 1fr 68px 52px 48px 48px 36px",
                   borderColor: isOpen ? "transparent" : "var(--color-border)",
                   background: isOpen ? "rgba(45, 142, 255, 0.04)" : "transparent",
                 }}

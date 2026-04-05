@@ -63,9 +63,8 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
       <div className="flex-1 overflow-auto">
         {/* Table Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[50px_1fr_50px_60px_40px] xl:grid-cols-[60px_1fr_60px_80px_40px] min-w-[350px] xl:min-w-0"
           style={{
-            gridTemplateColumns: "40px 1fr 40px 48px 32px",
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
             backdropFilter: "blur(6px)",
@@ -101,9 +100,8 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
         {sorted.map((row, idx) => (
           <div
             key={`${row.Symbol}-${row.Time}-${idx}`}
-            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[50px_1fr_50px_60px_40px] xl:grid-cols-[60px_1fr_60px_80px_40px] min-w-[350px] xl:min-w-0"
             style={{
-              gridTemplateColumns: "40px 1fr 40px 48px 32px",
               borderColor: "var(--color-border)",
             }}
           >
