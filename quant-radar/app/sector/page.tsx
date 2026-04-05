@@ -1,6 +1,7 @@
 import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import SectorFlowClient from "@/components/SectorFlowClient";
+import SectorSentiment from "@/components/SectorSentiment";
 import type { SectorData } from "@/utils/backend";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
 import { getInternalApiUrl } from "@/utils/internalApi";
@@ -60,8 +61,13 @@ export default async function SectorPage({ searchParams }: { searchParams: DateS
         />
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <SectorFlowClient sectors={sectors} />
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-[320px] xl:w-[380px] flex-shrink-0 border-r overflow-y-auto p-4" style={{ borderColor: "var(--color-border)" }}>
+          <SectorSentiment />
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <SectorFlowClient sectors={sectors} />
+        </div>
       </div>
     </div>
   );
