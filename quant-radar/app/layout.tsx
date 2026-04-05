@@ -5,7 +5,7 @@ import NavSidebar from "@/components/NavSidebar";
 
 export const metadata: Metadata = {
   title: "Quant Radar",
-  description: "NSE intraday radar, pulse, sector flow, and AI analysis terminal.",
+  description: "Quant Radar intraday signals, pulse, sector flow, and AI analysis terminal.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

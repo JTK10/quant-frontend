@@ -132,7 +132,7 @@ export default function NavSidebar() {
               className="text-xs font-bold tracking-[0.2em] leading-none"
               style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text2)' }}
             >
-              JT RADAR
+              QUANT RADAR
             </div>
             <div
               className="font-mono text-[8px] tracking-[0.3em] mt-0.5"
@@ -209,13 +209,13 @@ export default function NavSidebar() {
       {/* Footer */}
       <div className="px-4 py-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
         <div className="font-mono text-[8px] tracking-widest mb-1.5" style={{ color: 'var(--color-muted)' }}>
-          NSE F&O · INTRADAY
+          F&O DESK · INTRADAY
         </div>
         <div
           className="text-[9px] font-mono"
           style={{ color: 'rgba(74,101,128,0.6)' }}
         >
-          © JT Capital Research
+          © Quant Capital Research
         </div>
       </div>
 

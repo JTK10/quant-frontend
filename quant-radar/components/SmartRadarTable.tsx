@@ -45,7 +45,7 @@ function sideTone(side: RadarSignal["Side"]) {
 
   return {
     color: "var(--color-muted)",
-    bg: "rgba(255, 255, 255, 0.04)",
+    bg: "rgba(30, 30, 30, 0.8)",
     border: "var(--color-border)",
   };
 }
@@ -91,7 +91,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
     return (
       <div className="flex h-full items-center justify-center p-8">
         <div
-          className="rounded-3xl border bg-white px-8 py-10 text-center shadow-sm"
+          className="rounded-3xl border px-8 py-10 text-center shadow-sm"
           style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
         >
           <div className="font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
@@ -106,7 +106,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="m-3 flex h-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-3xl border shadow-[0_16px_40px_-28px_rgba(0,0,0,0.8)] lg:m-4" style={{ background: "var(--color-surface)" }}>
       <div
         className="flex flex-wrap items-center gap-2 border-b px-4 py-3"
         style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
@@ -116,7 +116,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
             key={value}
             type="button"
             onClick={() => setFilter(value)}
-            className="rounded-xl border px-3 py-1.5 font-mono text-[10px] tracking-[0.18em]"
+            className="rounded-full border px-3 py-1.5 font-mono text-[10px] tracking-[0.14em] transition-all"
             style={{
               color:
                 filter === value
@@ -132,7 +132,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                     ? "var(--color-bullborder)"
                     : value === "BEAR"
                       ? "var(--color-bearborder)"
-                      : "rgba(45, 142, 255, 0.35)"
+                      : "var(--color-bullborder)"
                   : "var(--color-border)",
               background:
                 filter === value
@@ -141,7 +141,8 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                     : value === "BEAR"
                       ? "var(--color-bearbg)"
                       : "var(--color-accentbg)"
-                  : "var(--color-surface)",
+                  : "rgba(30,30,30,0.88)",
+              boxShadow: filter === value ? "0 8px 18px -14px rgba(255,159,28,0.55)" : "none",
             }}
           >
             {value}
@@ -157,7 +158,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
         <table className="min-w-[1040px] w-full">
           <thead
             className="sticky top-0 z-10"
-            style={{ background: "rgba(248, 250, 252, 0.96)", backdropFilter: "blur(6px)" }}
+            style={{ background: "rgba(24, 24, 24, 0.97)", backdropFilter: "blur(8px)" }}
           >
             <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
               {[
@@ -186,7 +187,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                           setAscending(false);
                         }
                       }}
-                      className="font-mono text-[10px] tracking-[0.14em]"
+                      className="font-mono text-[10px] tracking-[0.12em]"
                       style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
                     >
                       {label} {active ? (ascending ? "UP" : "DOWN") : ""}
@@ -212,10 +213,10 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                 <Fragment key={rowId}>
                   <tr
                     onClick={() => setExpanded((current) => (current === rowId ? null : rowId))}
-                    className="cursor-pointer transition-colors hover:bg-slate-50"
+                    className="cursor-pointer transition-colors hover:bg-amber-950/20"
                     style={{
                       borderBottom: isOpen ? "none" : "1px solid var(--color-border)",
-                      background: isOpen ? "rgba(37, 99, 235, 0.06)" : "transparent",
+                      background: isOpen ? "rgba(255, 159, 28, 0.12)" : "transparent",
                     }}
                   >
                     <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-muted2)" }}>

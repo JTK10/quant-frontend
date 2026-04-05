@@ -61,7 +61,7 @@ function PickCard({ pick, rank }: { pick: AiPick; rank: number }) {
             {pick.AI_Win_Probability.toFixed(1)}%
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full" style={{ background: "rgba(255, 255, 255, 0.06)" }}>
+        <div className="h-2 overflow-hidden rounded-full" style={{ background: "rgba(51, 51, 51, 0.9)" }}>
           <div
             className="h-full rounded-full"
             style={{
@@ -86,8 +86,8 @@ function PickCard({ pick, rank }: { pick: AiPick; rank: number }) {
         className="mt-4 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 font-mono text-[10px] tracking-[0.18em]"
         style={{
           color: "var(--color-accent)",
-          borderColor: "rgba(45, 142, 255, 0.35)",
-          background: "rgba(45, 142, 255, 0.1)",
+          borderColor: "var(--color-bullborder)",
+          background: "var(--color-accentbg)",
         }}
       >
         OPEN CHART <ExternalLink size={10} />
@@ -176,8 +176,8 @@ function AIAnalysisPageContent() {
           className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 font-mono text-[10px] tracking-[0.2em] disabled:opacity-60"
           style={{
             color: "var(--color-purple)",
-            borderColor: "rgba(155, 111, 255, 0.35)",
-            background: "rgba(155, 111, 255, 0.12)",
+            borderColor: "var(--color-bullborder)",
+            background: "var(--color-accentbg)",
           }}
         >
           <Cpu size={12} className={loading ? "animate-spin" : ""} />
@@ -192,8 +192,8 @@ function AIAnalysisPageContent() {
               className="flex h-20 w-20 items-center justify-center rounded-3xl border"
               style={{
                 color: "var(--color-purple)",
-                borderColor: "rgba(155, 111, 255, 0.35)",
-                background: "rgba(155, 111, 255, 0.12)",
+                borderColor: "var(--color-bullborder)",
+                background: "var(--color-accentbg)",
               }}
             >
               <Brain size={34} />
@@ -212,8 +212,8 @@ function AIAnalysisPageContent() {
               className="inline-flex items-center gap-2 rounded-2xl border px-6 py-3 font-mono text-sm tracking-[0.18em]"
               style={{
                 color: "var(--color-purple)",
-                borderColor: "rgba(155, 111, 255, 0.35)",
-                background: "rgba(155, 111, 255, 0.12)",
+                borderColor: "var(--color-bullborder)",
+                background: "var(--color-accentbg)",
               }}
             >
               <Zap size={14} /> RUN AI ANALYSIS

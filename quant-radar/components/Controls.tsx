@@ -20,8 +20,8 @@ export function DatePicker() {
 
   return (
     <label
-      className="inline-flex items-center gap-2 rounded-xl border px-3 py-2"
-      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+      className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 shadow-sm"
+      style={{ borderColor: "var(--color-border)", background: "rgba(30,30,30,0.94)" }}
     >
       <span className="font-mono text-[9px] tracking-[0.15em]" style={{ color: "var(--color-muted)" }}>
         DATE
@@ -44,7 +44,7 @@ export function DatePicker() {
         style={{
           color: "var(--color-text2)",
           borderColor: "var(--color-border2)",
-          background: "#ffffff",
+          background: "var(--color-surface2)",
         }}
       />
     </label>
@@ -77,11 +77,14 @@ export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
     <button
       type="button"
       onClick={() => setEnabled((current) => !current)}
-      className="rounded-xl border px-3 py-2 font-mono text-[10px] tracking-[0.15em] transition-opacity hover:opacity-80"
+      className="rounded-xl border px-3 py-2 font-mono text-[10px] tracking-[0.15em] transition-all hover:-translate-y-px"
       style={{
         color: enabled ? "var(--color-accent)" : "var(--color-muted)",
-        borderColor: enabled ? "rgba(37, 99, 235, 0.35)" : "var(--color-border)",
-        background: enabled ? "rgba(37, 99, 235, 0.12)" : "var(--color-surface)",
+        borderColor: enabled ? "var(--color-bullborder)" : "var(--color-border)",
+        background: enabled
+          ? "linear-gradient(180deg, rgba(255,159,28,0.2) 0%, rgba(217,119,6,0.16) 100%)"
+          : "rgba(30,30,30,0.9)",
+        boxShadow: enabled ? "0 10px 20px -16px rgba(255,159,28,0.6)" : "0 8px 16px -16px rgba(0,0,0,0.8)",
       }}
     >
       {enabled ? `AUTO ${Math.round(interval / 1000)}S` : "AUTO OFF"}

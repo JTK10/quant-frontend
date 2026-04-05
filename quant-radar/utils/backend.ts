@@ -197,7 +197,7 @@ export function normalizeSignalSide(value: unknown): "BULL" | "BEAR" | "NEUTRAL"
 export function buildTradingViewUrl(symbol: string, name?: string): string {
   const token = textify(symbol) || textify(name) || "NIFTY";
   const cleaned = token.replace(/\s+/g, "").toUpperCase();
-  return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(cleaned)}&interval=5`;
+  return `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(cleaned)}&interval=5`;
 }
 
 type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap";

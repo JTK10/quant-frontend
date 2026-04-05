@@ -28,7 +28,7 @@ The frontend sends those automatically through `/api/radar`, `/api/pulse`, `/api
 
 ## Local Run
 
-From inside [`quant-radar`](c:\Users\RK\Desktop\PROJECT NSE\quant-radar):
+From inside [`quant-radar`](c:\Users\RK\Desktop\PROJECT QUANT\quant-radar):
 
 ```bash
 npm install
@@ -64,6 +64,6 @@ Any Node host:
 
 The original raw revamp files are still in this folder, but the app now uses the proper Next.js structure under:
 
-- [`app`](c:\Users\RK\Desktop\PROJECT NSE\quant-radar\app)
-- [`components`](c:\Users\RK\Desktop\PROJECT NSE\quant-radar\components)
-- [`utils`](c:\Users\RK\Desktop\PROJECT NSE\quant-radar\utils)
+- [`app`](c:\Users\RK\Desktop\PROJECT QUANT\quant-radar\app)
+- [`components`](c:\Users\RK\Desktop\PROJECT QUANT\quant-radar\components)
+- [`utils`](c:\Users\RK\Desktop\PROJECT QUANT\quant-radar\utils)

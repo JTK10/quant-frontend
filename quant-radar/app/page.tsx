@@ -43,7 +43,10 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
         <AutoRefresh interval={30000} />
       </PageHeader>
 
-      <div className="grid grid-cols-2 border-b bg-white md:grid-cols-5" style={{ borderColor: "var(--color-border)" }}>
+      <div
+        className="grid grid-cols-2 gap-3 border-b px-4 py-3 md:grid-cols-5 lg:px-6"
+        style={{ borderColor: "var(--color-border)", background: "rgba(30, 30, 30, 0.9)" }}
+      >
         <SummaryStat label="Total signals" value={String(signals.length)} color="var(--color-text2)" />
         <SummaryStat label="Bullish" value={String(bulls)} color="var(--color-bull)" />
         <SummaryStat label="Bearish" value={String(bears)} color="var(--color-bear)" />
@@ -60,7 +63,10 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
 
 function SummaryStat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="border-r px-4 py-3 last:border-r-0" style={{ borderColor: "var(--color-border)" }}>
+    <div
+      className="rounded-2xl border px-4 py-3 shadow-sm"
+      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+    >
       <div className="font-mono text-[9px] tracking-[0.15em]" style={{ color: "var(--color-muted)" }}>
         {label.toUpperCase()}
       </div>

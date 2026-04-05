@@ -63,8 +63,8 @@ function PulseCard({ row }: { row: PulseRow }) {
         className="mt-4 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 font-mono text-[10px] tracking-[0.18em]"
         style={{
           color: "var(--color-accent)",
-          borderColor: "rgba(45, 142, 255, 0.35)",
-          background: "rgba(45, 142, 255, 0.1)",
+          borderColor: "var(--color-bullborder)",
+          background: "var(--color-accentbg)",
         }}
       >
         OPEN CHART <ExternalLink size={10} />
@@ -77,7 +77,7 @@ function EmptyState({ title }: { title: string }) {
   return (
     <div
       className="rounded-2xl border px-6 py-8 text-center"
-      style={{ borderColor: "var(--color-border)", background: "rgba(255, 255, 255, 0.02)" }}
+      style={{ borderColor: "var(--color-border)", background: "rgba(30, 30, 30, 0.7)" }}
     >
       <div className="font-mono text-[10px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
         {title}

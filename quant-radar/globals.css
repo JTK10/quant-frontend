@@ -6,134 +6,80 @@
   --font-mono: "IBM Plex Mono", monospace;
   --font-display: "Inter", "SF Pro Display", sans-serif;
 
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-surface2: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-border2: #cbd5e1;
-  --color-muted: #64748b;
-  --color-muted2: #475569;
-  --color-text: #1e293b;
-  --color-text2: #0f172a;
-  --color-bull: #16a34a;
-  --color-bullbg: rgba(22, 163, 74, 0.1);
-  --color-bullborder: rgba(22, 163, 74, 0.3);
-  --color-bear: #dc2626;
-  --color-bearbg: rgba(220, 38, 38, 0.08);
-  --color-bearborder: rgba(220, 38, 38, 0.3);
-  --color-accent: #2563eb;
-  --color-accentbg: rgba(37, 99, 235, 0.12);
-  --color-gold: #d97706;
-  --color-goldbg: rgba(217, 119, 6, 0.12);
-  --color-purple: #7c3aed;
-  --color-purplebg: rgba(124, 58, 237, 0.12);
+  --color-bg: #121212;
+  --color-surface: #1e1e1e;
+  --color-surface2: #242424;
+  --color-border: #333333;
+  --color-border2: #3f3f3f;
+  --color-muted: #9d8f77;
+  --color-muted2: #b7a68a;
+  --color-text: #e0d2bd;
+  --color-text2: #ffe2b8;
+  --color-bull: #ffb347;
+  --color-bullbg: rgba(255, 179, 71, 0.16);
+  --color-bullborder: rgba(255, 179, 71, 0.42);
+  --color-bear: #d97706;
+  --color-bearbg: rgba(217, 119, 6, 0.18);
+  --color-bearborder: rgba(217, 119, 6, 0.42);
+  --color-accent: #ff9f1c;
+  --color-accentbg: rgba(255, 159, 28, 0.18);
+  --color-gold: #ffd089;
+  --color-goldbg: rgba(255, 208, 137, 0.18);
+  --color-purple: #f59e0b;
+  --color-purplebg: rgba(245, 158, 11, 0.18);
+  --color-shadow: rgba(0, 0, 0, 0.55);
 }
 
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
   min-height: 100vh;
   overflow-x: hidden;
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background:
+    radial-gradient(circle at 0% -10%, rgba(255, 159, 28, 0.14), transparent 38%),
+    radial-gradient(circle at 100% 0%, rgba(217, 119, 6, 0.15), transparent 32%),
+    linear-gradient(180deg, #121212 0%, #171717 100%);
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border2); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+@keyframes fade-in { from { opacity: 0; transform: translateY(8px);} to {opacity: 1; transform: translateY(0);} }
+@keyframes pulse-glow { 0%,100% {opacity:1;} 50% {opacity:.35;} }
+@keyframes bar-fill { from { width: 0; } }
+@keyframes ping { 75%,100% { transform: scale(2); opacity: 0; } }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+.fade-in { animation: fade-in .35s ease both; }
+.animate-ping { animation: ping 1.6s cubic-bezier(0,0,.2,1) infinite; }
+.pulse-glow { animation: pulse-glow 1.4s ease-in-out infinite; }
 
-::-webkit-scrollbar-thumb {
-  background: var(--color-border2);
-  border-radius: 999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted);
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse-glow {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.35;
-  }
-}
-
-@keyframes bar-fill {
-  from {
-    width: 0;
-  }
-}
-
-@keyframes ping {
-  75%,
-  100% {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-
-.fade-in {
-  animation: fade-in 0.35s ease both;
-}
-
-.animate-ping {
-  animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-.pulse-glow {
-  animation: pulse-glow 1.4s ease-in-out infinite;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  filter: invert(0.2);
-}
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; filter: invert(0.8) sepia(1) saturate(0.65) hue-rotate(345deg); }
 
 .glass {
   border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(6px);
+  background: rgba(30, 30, 30, 0.88);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 24px -14px var(--color-shadow);
+}
+
+.surface-card {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 10px 24px -16px var(--color-shadow);
+}
+
+.soft-gradient {
+  background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(24, 24, 24, 0.95) 100%);
 }
