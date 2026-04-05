@@ -27,6 +27,8 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
 
   const bulls = signals.filter((signal) => signal.Side === "BULL").length;
   const bears = signals.filter((signal) => signal.Side === "BEAR").length;
+  const directBreaks = signals.filter((signal) => signal.BreakType && !signal.BreakType.toUpperCase().includes("RETEST")).length;
+  const retestBreaks = signals.filter((signal) => signal.BreakType && signal.BreakType.toUpperCase().includes("RETEST")).length;
   const highConviction = signals.filter((signal) => signal.Confidence >= 4).length;
   const optionsReady = signals.filter((signal) => signal.HasOptions).length;
 
@@ -43,10 +45,12 @@ export default async function RadarPage({ searchParams }: { searchParams: DateSe
         <AutoRefresh interval={30000} />
       </PageHeader>
 
-      <div className="grid grid-cols-2 border-b bg-white md:grid-cols-5" style={{ borderColor: "var(--color-border)" }}>
+      <div className="grid grid-cols-2 border-b bg-white md:grid-cols-7" style={{ borderColor: "var(--color-border)" }}>
         <SummaryStat label="Total signals" value={String(signals.length)} color="var(--color-text2)" />
         <SummaryStat label="Bullish" value={String(bulls)} color="var(--color-bull)" />
         <SummaryStat label="Bearish" value={String(bears)} color="var(--color-bear)" />
+        <SummaryStat label="Direct" value={String(directBreaks)} color="var(--color-gold)" />
+        <SummaryStat label="Retest" value={String(retestBreaks)} color="var(--color-purple)" />
         <SummaryStat label="High conv >= 4" value={String(highConviction)} color="var(--color-gold)" />
         <SummaryStat label="With options" value={String(optionsReady)} color="var(--color-purple)" />
       </div>

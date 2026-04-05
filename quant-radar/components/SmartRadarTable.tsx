@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { Fragment, type ReactNode, useState } from "react";
 import type { RadarSignal } from "@/utils/backend";
 
-type SortKey = "rank" | "name" | "side" | "module" | "entry" | "conf" | "rvol" | "pcr" | "move" | "time";
+type SortKey = "rank" | "name" | "side" | "module" | "break" | "entry" | "conf" | "rvol" | "pcr" | "move" | "time";
 
 function formatPrice(value: number): string {
   return value ? `Rs. ${value.toFixed(2)}` : "-";
@@ -66,6 +66,8 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
           return left.Side.localeCompare(right.Side);
         case "module":
           return left.Module.localeCompare(right.Module);
+        case "break":
+          return (left.BreakType || "").localeCompare(right.BreakType || "");
         case "entry":
           return left.Entry - right.Entry;
         case "conf":
@@ -165,6 +167,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                 ["name", "STOCK"],
                 ["side", "SIDE"],
                 ["module", "MODULE"],
+                ["break", "BREAK"],
                 ["entry", "ENTRY"],
                 ["conf", "CONF"],
                 ["rvol", "RVOL"],
@@ -240,6 +243,22 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                     <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-text2)" }}>
                       {signal.Module}
                     </td>
+                    <td className="px-3 py-3">
+                      {signal.BreakType ? (
+                        <span
+                          className="inline-flex rounded-full border px-2 py-1 font-mono text-[10px] tracking-[0.18em]"
+                          style={{
+                            color: signal.BreakType.toUpperCase().includes("RETEST") ? "var(--color-purple)" : "var(--color-gold)",
+                            borderColor: signal.BreakType.toUpperCase().includes("RETEST") ? "rgba(168, 85, 247, 0.35)" : "rgba(245, 158, 11, 0.35)",
+                            background: signal.BreakType.toUpperCase().includes("RETEST") ? "rgba(168, 85, 247, 0.1)" : "rgba(245, 158, 11, 0.1)",
+                          }}
+                        >
+                          {signal.BreakType.toUpperCase().includes("RETEST") ? "RETEST" : "DIRECT"}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-xs" style={{ color: "var(--color-muted)" }}>-</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 font-mono text-xs" style={{ color: "var(--color-text2)" }}>
                       {formatPrice(signal.Entry)}
                     </td>
@@ -298,7 +317,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
 
                   {isOpen ? (
                     <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
-                      <td colSpan={11} className="px-4 py-4">
+                      <td colSpan={12} className="px-4 py-4">
                         <div className="grid gap-4 lg:grid-cols-4">
                           <InfoCard title="TRADE LEVELS">
                             <InfoRow label="Entry" value={formatPrice(signal.Entry)} tone="var(--color-text2)" />
