@@ -13,7 +13,7 @@ function shortTime(value: string): string {
 }
 
 function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BEAR" }) {
-  const [sortKey, setSortKey] = useState<SortKey>("score");
+  const [sortKey, setSortKey] = useState<SortKey>("time");
   const [ascending, setAscending] = useState(false);
 
   const sorted = [...signals].sort((a, b) => {
