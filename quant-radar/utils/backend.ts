@@ -446,7 +446,7 @@ export function normalizeInstitutionalWatchlist(payload: unknown): PulseData {
       Price: 0,
       Confidence: 0,
       RVOL: 0,
-      PCR: 0,
+      PCR: numberify(item.PCR),
       PCRAtOpen: 0,
       ATMStrike: "-",
       RR: "-",

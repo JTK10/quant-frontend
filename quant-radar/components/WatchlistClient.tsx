@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { PulseRow } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "score" | "oflow";
+type SortKey = "time" | "name" | "oflow";
 
 function shortTime(value: string): string {
   if (!value) return "-";
@@ -23,8 +23,6 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
           return (a.Time || "").localeCompare(b.Time || "");
         case "name":
           return a.Name.localeCompare(b.Name);
-        case "score":
-          return a.Confidence - b.Confidence;
         case "oflow":
           return (a.PCR || 0) - (b.PCR || 0);
         default:
@@ -37,8 +35,7 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
   const headers: [SortKey, string][] = [
     ["time", "TIME"],
     ["name", "NAME"],
-    ["score", "SCORE"],
-    ["oflow", "O.FLOW"],
+    ["oflow", "PCR"],
   ];
 
   const isBull = type === "BULL";
@@ -63,7 +60,7 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
       <div className="flex-1 overflow-auto">
         {/* Table Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[50px_1fr_50px_60px_40px] xl:grid-cols-[60px_1fr_60px_80px_40px] min-w-[350px] xl:min-w-0"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[50px_1fr_60px_40px] xl:grid-cols-[60px_1fr_80px_40px] min-w-[300px] xl:min-w-0"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -83,7 +80,7 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
                     setAscending(false);
                   }
                 }}
-                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "score" ? "text-right" : ""}`}
+                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "oflow" ? "text-right" : ""}`}
                 style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
               >
                 {label}
@@ -100,7 +97,7 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
         {sorted.map((row, idx) => (
           <div
             key={`${row.Symbol}-${row.Time}-${idx}`}
-            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[50px_1fr_50px_60px_40px] xl:grid-cols-[60px_1fr_60px_80px_40px] min-w-[350px] xl:min-w-0"
+            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[50px_1fr_60px_40px] xl:grid-cols-[60px_1fr_80px_40px] min-w-[300px] xl:min-w-0"
             style={{
               borderColor: "var(--color-border)",
             }}
@@ -116,9 +113,6 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
                 {row.Symbol}
               </div>
             </div>
-            <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-gold)" }}>
-              {row.Confidence ? row.Confidence.toFixed(1) : "-"}
-            </span>
             <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
               {row.PCR ? row.PCR.toFixed(2) : "-"}
             </span>
