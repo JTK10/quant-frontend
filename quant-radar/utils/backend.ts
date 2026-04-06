@@ -200,9 +200,9 @@ export function buildTradingViewUrl(symbol: string, name?: string): string {
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(cleaned)}&interval=5`;
 }
 
-type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment";
+type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist";
 
-export async function fetchBackendRoute(route: BackendRoute, dateStr: string): Promise<unknown> {
+export async function fetchBackendRoute(route: BackendRoute, dateStr: string, extraParams: Record<string, string> = {}): Promise<unknown> {
   const rawApiUrl = process.env.AWS_API_URL;
   const secret = process.env.RADAR_SECRET;
 
@@ -217,6 +217,10 @@ export async function fetchBackendRoute(route: BackendRoute, dateStr: string): P
   const url = new URL(rawApiUrl);
   url.searchParams.set("route", route);
   url.searchParams.set("date", dateStr);
+  
+  Object.entries(extraParams).forEach(([k, v]) => {
+    url.searchParams.set(k, v);
+  });
 
   const response = await fetch(url.toString(), {
     cache: "no-store",
@@ -421,5 +425,49 @@ export function normalizeAiPayload(payload: unknown, dateStr: string): AiPayload
     date: textify(root.date, dateStr),
     total_signals_analyzed: numberify(root.total_signals_analyzed),
     top_ai_picks: picks,
+  };
+}
+
+export function normalizeInstitutionalWatchlist(payload: unknown): PulseData {
+  const rows = toArray(payload);
+  const bulls: PulseRow[] = [];
+  const bears: PulseRow[] = [];
+  
+  for (const item of rows) {
+    const symbol = textify(item.SK);
+    const side = normalizeSignalSide(item.Direction);
+    const time = textify(item.StoredAt);
+    
+    const pulseRow: PulseRow = {
+      Name: symbol,
+      Symbol: symbol,
+      Side: side === "BEAR" ? "BEAR" : "BULL",
+      Module: "PCR",
+      Price: 0,
+      Confidence: 0,
+      RVOL: 0,
+      PCR: 0,
+      PCRAtOpen: 0,
+      ATMStrike: "-",
+      RR: "-",
+      RSScore: 0,
+      Time: time,
+      Break: "-",
+      Chart: buildTradingViewUrl(symbol, symbol)
+    };
+    
+    if (side === "BEAR") {
+      bears.push(pulseRow);
+    } else {
+      bulls.push(pulseRow);
+    }
+  }
+  
+  return {
+    watchlist: [],
+    bulls,
+    bears,
+    bias: bulls.length >= bears.length ? "BULLISH" : "BEARISH",
+    asOf: rows.length > 0 ? textify(rows[0].StoredAt) : null,
   };
 }

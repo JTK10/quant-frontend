@@ -14,28 +14,13 @@ type SectorItem = {
   scan_time: string;
 };
 
-const MOCK: SectorItem[] = [
-  { sector:"BANKING",   bull_count:16, bear_count:4,  total:20, bull_pct:0.800, bear_pct:0.200, strength:0.800, is_top_bull:true,  is_top_bear:false, scan_time:"11:15" },
-  { sector:"AUTO",      bull_count:13, bear_count:5,  total:18, bull_pct:0.722, bear_pct:0.278, strength:0.722, is_top_bull:true,  is_top_bear:false, scan_time:"11:15" },
-  { sector:"IT",        bull_count:11, bear_count:7,  total:18, bull_pct:0.611, bear_pct:0.389, strength:0.611, is_top_bull:false, is_top_bear:false, scan_time:"11:15" },
-  { sector:"NBFC",      bull_count:9,  bear_count:6,  total:15, bull_pct:0.600, bear_pct:0.400, strength:0.600, is_top_bull:false, is_top_bear:false, scan_time:"11:15" },
-  { sector:"ENERGY",    bull_count:8,  bear_count:6,  total:14, bull_pct:0.571, bear_pct:0.429, strength:0.571, is_top_bull:false, is_top_bear:false, scan_time:"11:15" },
-  { sector:"INFRA",     bull_count:7,  bear_count:7,  total:14, bull_pct:0.500, bear_pct:0.500, strength:0.500, is_top_bull:false, is_top_bear:false, scan_time:"11:15" },
-  { sector:"INSURANCE", bull_count:4,  bear_count:6,  total:10, bull_pct:0.400, bear_pct:0.600, strength:0.600, is_top_bull:false, is_top_bear:false, scan_time:"11:15" },
-  { sector:"REALTY",    bull_count:4,  bear_count:8,  total:12, bull_pct:0.333, bear_pct:0.667, strength:0.667, is_top_bull:false, is_top_bear:false, scan_time:"11:15" },
-  { sector:"FMCG",      bull_count:5,  bear_count:11, total:16, bull_pct:0.313, bear_pct:0.688, strength:0.688, is_top_bull:false, is_top_bear:true,  scan_time:"11:15" },
-  { sector:"PHARMA",    bull_count:4,  bear_count:11, total:15, bull_pct:0.267, bear_pct:0.733, strength:0.733, is_top_bull:false, is_top_bear:true,  scan_time:"11:15" },
-  { sector:"METALS",    bull_count:3,  bear_count:11, total:14, bull_pct:0.214, bear_pct:0.786, strength:0.786, is_top_bull:false, is_top_bear:false, scan_time:"11:15" },
-];
-
 const BULL = "#00e89a";
 const BEAR = "#ff3b6b";
 
 export default function SectorSentiment() {
-  const [data, setData]           = useState<SectorItem[]>(MOCK);
+  const [data, setData]           = useState<SectorItem[]>([]);
   const [loading, setLoading]     = useState(false);
-  const [isMock, setIsMock]       = useState(true);
-  const [scanTime, setScanTime]   = useState<string>("11:15");
+  const [scanTime, setScanTime]   = useState<string>("");
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [animated, setAnimated]   = useState<boolean>(false);
 
@@ -46,14 +31,15 @@ export default function SectorSentiment() {
       const res = await fetch(`/api/sector-sentiment?date=${date}`);
       if (res.ok) {
         const json = await res.json();
-        if (Array.isArray(json) && json.length > 0) {
+        if (Array.isArray(json)) {
           setData(json);
-          setIsMock(false);
-          if (json[0]?.scan_time) setScanTime(json[0].scan_time);
+          if (json.length > 0 && json[0]?.scan_time) {
+            setScanTime(json[0].scan_time);
+          }
           setUpdatedAt(new Date());
         }
       }
-    } catch { /* keep mock */ }
+    } catch { /* Error loading data */ }
     finally { setLoading(false); }
   }, []);
 
@@ -82,9 +68,8 @@ export default function SectorSentiment() {
         <div>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[10px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
-              {scanTime} IST
+              {scanTime ? `${scanTime} IST` : "AWAITING DATA"}
             </span>
-            {isMock && <span className="font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)", opacity: 0.5 }}>DEMO</span>}
             {loading && <span className="font-mono text-[9px]" style={{ color: "var(--color-muted)", opacity: 0.5 }}>updating…</span>}
           </div>
         </div>
