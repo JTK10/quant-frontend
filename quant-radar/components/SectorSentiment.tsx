@@ -51,20 +51,22 @@ export default function SectorSentiment() {
 
   useEffect(() => {
     setAnimated(false);
-    const t = setTimeout(() => setAnimated(true), 80);
+    const t = setTimeout(() => setAnimated(true), 150);
     return () => clearTimeout(t);
   }, [data]);
 
-  const bullSectors = [...data].filter(d => d.bull_pct >= d.bear_pct).sort((a, b) => b.bull_pct - a.bull_pct);
-  const bearSectors = [...data].filter(d => d.bear_pct > d.bull_pct).sort((a, b) => b.bear_pct - a.bear_pct);
-  const totalBull = bullSectors.reduce((s, d) => s + d.bull_count, 0);
-  const totalBear = bearSectors.reduce((s, d) => s + d.bear_count, 0);
+  // Sort by strength descending regardless of direction
+  const sortedData = [...data].sort((a, b) => b.strength - a.strength);
+  const totalBull = data.filter(d => d.bull_pct >= d.bear_pct).length;
+  const totalBear = data.filter(d => d.bear_pct > d.bull_pct).length;
   const grandTotal = data.reduce((s, d) => s + d.total, 0);
 
+  const yTicks = [100, 80, 60, 40, 20, 0];
+
   return (
-    <div>
+    <div className="flex flex-col h-full font-sans">
       {/* ── Header ── */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-10">
         <div>
           <div className="flex items-center gap-3">
             <span className="font-mono text-[10px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
@@ -74,169 +76,116 @@ export default function SectorSentiment() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 border border-[rgba(255,255,255,0.05)] bg-[#0a0e17] px-3 py-1.5 rounded shadow-sm">
           <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full" style={{ background: BULL }} />
-            <span className="font-mono text-[11px] font-semibold" style={{ color: BULL }}>
-              {bullSectors.length} bull
-            </span>
-            <span className="font-mono text-[10px]" style={{ color: "var(--color-muted2)" }}>
-              {totalBull} stocks
+            <span className="inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_8px_rgba(0,232,154,0.4)]" style={{ background: BULL }} />
+            <span className="font-mono text-[10px] font-semibold tracking-wide" style={{ color: BULL }}>
+              {totalBull} BULLISH
             </span>
           </div>
+          <div className="w-px h-3" style={{ background: "rgba(255,255,255,0.15)" }} />
           <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full" style={{ background: BEAR }} />
-            <span className="font-mono text-[11px] font-semibold" style={{ color: BEAR }}>
-              {bearSectors.length} bear
-            </span>
-            <span className="font-mono text-[10px]" style={{ color: "var(--color-muted2)" }}>
-              {totalBear} stocks
+            <span className="inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_8px_rgba(255,59,107,0.4)]" style={{ background: BEAR }} />
+            <span className="font-mono text-[10px] font-semibold tracking-wide" style={{ color: BEAR }}>
+              {totalBear} BEARISH
             </span>
           </div>
-          <button
-            onClick={load}
-            className="rounded-lg border px-2 py-1 font-mono text-[9px] tracking-[0.14em]"
-            style={{ color: "var(--color-muted)", borderColor: "var(--color-border)", background: "transparent" }}
-          >
-            refresh
-          </button>
         </div>
       </div>
 
-      {/* ── Bullish ── */}
-      {bullSectors.length > 0 && (
-        <section className="mb-5">
-          <SectionLabel color={BULL} arrow="▲" label="BULLISH SECTORS" />
-          {bullSectors.map((item) => (
-            <SectorRow key={item.sector} item={item} type="BULL" animated={animated} />
-          ))}
-        </section>
-      )}
-
-      {/* ── Bearish ── */}
-      {bearSectors.length > 0 && (
-        <section className="mb-5">
-          <SectionLabel color={BEAR} arrow="▼" label="BEARISH SECTORS" />
-          {bearSectors.map((item) => (
-            <SectorRow key={item.sector} item={item} type="BEAR" animated={animated} />
-          ))}
-        </section>
-      )}
-
       {data.length === 0 && !loading && (
-        <p className="text-center font-mono text-[11px] py-8" style={{ color: "var(--color-muted)" }}>
-          No sector data available for today
+        <p className="text-center font-mono text-[11px] py-12" style={{ color: "var(--color-muted)" }}>
+          No sector data available
         </p>
       )}
 
+      {/* ── Chart Area ── */}
+      {data.length > 0 && (
+        <div className="flex-1 min-h-[400px] flex w-full relative mb-16">
+          
+          {/* Y Axis Labels */}
+          <div className="flex flex-col justify-between h-[300px] text-right pr-4 shrink-0 w-[45px]">
+            {yTicks.map(val => (
+              <span key={val} className="text-[10px] font-mono translate-y-[5px] font-semibold" style={{ color: "var(--color-muted)" }}>
+                {val === 0 ? "0" : val}
+              </span>
+            ))}
+          </div>
+
+          {/* Chart Core */}
+          <div className="flex-1 relative h-[300px] border-l border-b" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+            
+            {/* Horizontal Grid Lines */}
+            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
+              {yTicks.map((val, i) => (
+                <div 
+                  key={val} 
+                  className={`w-full border-t h-0 ${i === 5 ? 'border-transparent' : 'border-[rgba(255,255,255,0.03)]'}`} 
+                />
+              ))}
+            </div>
+
+            {/* Bars Container */}
+            <div className="absolute inset-0 flex items-end justify-around px-2 z-10 bottom-[1px]">
+              {sortedData.map(item => {
+                const isBull = item.bull_pct >= item.bear_pct;
+                const color = isBull ? BULL : BEAR;
+                const val = item.strength * 100;
+                const cleanSector = item.sector.replace("NIFTY_", "").replace("_", " ");
+
+                return (
+                  <div key={item.sector} className="flex flex-col items-center h-full group relative w-full px-[2%] max-w-[60px]">
+                    
+                    {/* Bar */}
+                    <div className="flex-1 flex items-end justify-center w-full relative">
+                      {/* Tooltip on hover */}
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#141a27] border border-[rgba(255,255,255,0.1)] text-[9px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-20 font-mono tracking-wider font-semibold pointer-events-none" style={{ color }}>
+                        {val.toFixed(0)}% {isBull ? 'BULL' : 'BEAR'}
+                      </div>
+                      
+                      <div 
+                        className="w-full max-w-[22px] rounded-t transition-all duration-[900ms] ease-out hover:brightness-125 cursor-pointer" 
+                        style={{ 
+                          height: animated ? `${val}%` : '0%', 
+                          backgroundColor: color,
+                          boxShadow: `inset 0 0 10px rgba(0,0,0,0.1), 0 0 8px ${color}33`,
+                          opacity: 0.95
+                        }} 
+                      />
+                    </div>
+
+                    {/* X Axis Rotated Label */}
+                    <div className="absolute top-[100%] left-1/2 w-0 h-[100px] pt-4">
+                      <span 
+                        className="absolute left-0 top-3 origin-top-left text-[9px] font-mono whitespace-nowrap tracking-widest transition-colors group-hover:text-[rgba(255,255,255,0.9)]"
+                        style={{ 
+                          transform: "rotate(90deg) translateX(0) translateY(-50%)", 
+                          color: "var(--color-muted)" 
+                        }}
+                      >
+                        {cleanSector}
+                      </span>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Footer ── */}
-      <div
-        className="flex items-center justify-between pt-3 mt-3 border-t"
-        style={{ borderColor: "var(--color-border)" }}
-      >
+      <div className="flex items-center justify-between pt-4 mt-auto border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <span className="font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>
           {grandTotal} F&O stocks tracked
         </span>
         {updatedAt && (
           <span className="font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>
-            refreshed {updatedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            updated {updatedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
       </div>
-    </div>
-  );
-}
-
-/* ── Sub-components ──────────────────────────────────────────────────── */
-
-function SectionLabel({ color, arrow, label }: { color: string; arrow: string; label: string }) {
-  return (
-    <div className="flex items-center gap-2 mb-2 mt-1">
-      <span className="font-mono text-[9px] tracking-[0.18em] font-semibold" style={{ color }}>
-        {arrow} {label}
-      </span>
-      <div className="flex-1 h-px" style={{ background: color, opacity: 0.15 }} />
-    </div>
-  );
-}
-
-function SectorRow({ item, type, animated }: { item: SectorItem; type: string; animated: boolean }) {
-  const isBull  = type === "BULL";
-  const pct     = isBull ? item.bull_pct : item.bear_pct;
-  const oppPct  = isBull ? item.bear_pct : item.bull_pct;
-  const count   = isBull ? item.bull_count : item.bear_count;
-  const isTop   = isBull ? item.is_top_bull : item.is_top_bear;
-  const barFill = isBull ? BULL : BEAR;
-  const barBg   = isBull ? "rgba(0,232,154,0.06)" : "rgba(255,59,107,0.06)";
-  const barW    = animated ? `${(pct * 100).toFixed(1)}%` : "0%";
-
-  return (
-    <div
-      className="grid items-center gap-2 py-2 border-b"
-      style={{
-        gridTemplateColumns: "80px 1fr 40px 48px",
-        borderColor: "var(--color-border)",
-      }}
-    >
-      {/* Sector name */}
-      <div className="flex items-center gap-1.5 min-w-0">
-        {isTop && (
-          <span
-            className="font-mono text-[7px] font-bold px-1 py-0.5 rounded"
-            style={{ background: barFill, color: "#0a0e17" }}
-          >
-            TOP
-          </span>
-        )}
-        <span
-          className="truncate font-mono text-[11px] font-semibold"
-          style={{ color: "var(--color-text2)" }}
-        >
-          {item.sector}
-        </span>
-      </div>
-
-      {/* Bar */}
-      <div className="h-5 rounded-sm overflow-hidden relative" style={{ background: barBg }}>
-        <div
-          className="absolute inset-y-0 left-0 rounded-sm"
-          style={{
-            width: barW,
-            background: barFill,
-            transition: "width 0.55s cubic-bezier(0.22, 1, 0.36, 1)",
-          }}
-        />
-        {/* 50% tick */}
-        <div
-          className="absolute inset-y-0"
-          style={{ left: "50%", width: "1px", background: "rgba(255,255,255,0.06)" }}
-        />
-        {/* Opp % label inside bar */}
-        {pct > 0.55 && (
-          <span
-            className="absolute left-1.5 top-0 bottom-0 flex items-center font-mono text-[8px] font-semibold"
-            style={{ color: "rgba(255,255,255,0.85)" }}
-          >
-            {(oppPct * 100).toFixed(0)}% opp
-          </span>
-        )}
-      </div>
-
-      {/* Pct */}
-      <span
-        className="text-right font-mono text-[11px] font-semibold"
-        style={{ color: barFill }}
-      >
-        {(pct * 100).toFixed(0)}%
-      </span>
-
-      {/* Count */}
-      <span
-        className="text-right font-mono text-[10px]"
-        style={{ color: "var(--color-muted2)" }}
-      >
-        {count}/{item.total}
-      </span>
     </div>
   );
 }
