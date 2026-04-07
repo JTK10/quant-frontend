@@ -112,6 +112,22 @@ export type AiPayload = {
   top_ai_picks: AiPick[];
 };
 
+export type RvolPulseItem = {
+  stock: string;
+  rms: number;
+  rvol: number;
+  chg: number;
+  color: "GREEN" | "ORANGE" | "YELLOW" | "GRAY";
+  signal: boolean;
+};
+
+export type RvolPulseData = {
+  lastUpdated: string | null;
+  longBoard: RvolPulseItem[];
+  shortBoard: RvolPulseItem[];
+};
+
+
 export function getTodayIstDate(): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: INDIA_TZ,
@@ -200,7 +216,7 @@ export function buildTradingViewUrl(symbol: string, name?: string): string {
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(cleaned)}&interval=5`;
 }
 
-type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist";
+type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse";
 
 export async function fetchBackendRoute(route: BackendRoute, dateStr: string, extraParams: Record<string, string> = {}): Promise<unknown> {
   const rawApiUrl = process.env.AWS_API_URL;
@@ -471,3 +487,24 @@ export function normalizeInstitutionalWatchlist(payload: unknown): PulseData {
     asOf: rows.length > 0 ? textify(rows[0].StoredAt) : null,
   };
 }
+
+export function normalizeRvolPulseItem(input: GenericRecord): RvolPulseItem {
+  return {
+    stock: textify(input.stock),
+    rms: numberify(input.rms),
+    rvol: numberify(input.rvol),
+    chg: numberify(input.chg),
+    color: (textify(input.color) || "GRAY") as "GREEN" | "ORANGE" | "YELLOW" | "GRAY",
+    signal: truthy(input.signal),
+  };
+}
+
+export function normalizeRvolPulseData(payload: unknown): RvolPulseData {
+  const root = toRecord(payload);
+  return {
+    lastUpdated: textify(root.lastUpdated) || null,
+    longBoard: toArray(root.longBoard).map(normalizeRvolPulseItem),
+    shortBoard: toArray(root.shortBoard).map(normalizeRvolPulseItem),
+  };
+}
+
