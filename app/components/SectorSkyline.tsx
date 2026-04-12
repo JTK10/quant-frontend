@@ -21,8 +21,10 @@ export default function SectorSkyline({ sectors }: { sectors: SectorStrength[] }
   const liveSectors = [...sectors]
     .filter((sector) => (sector.count ?? sector.stocks.length) > 0)
     .sort((a, b) => {
-      if (a.rvol !== undefined && b.rvol !== undefined) {
-        return (b.rvol || 0) - (a.rvol || 0);
+      const aRvol = a.rvol !== undefined ? a.rvol : 0;
+      const bRvol = b.rvol !== undefined ? b.rvol : 0;
+      if (aRvol !== bRvol) {
+        return bRvol - aRvol;
       }
       return compareSectorStrength(a, b);
     });
@@ -156,7 +158,7 @@ export default function SectorSkyline({ sectors }: { sectors: SectorStrength[] }
                           : { top: `calc(50% + ${towerHeight}% + 10px)` }),
                       }}
                     >
-                      {sector.rvol ? sector.rvol.toFixed(2) + 'x' : (sector.strength > 0 ? '+' : '') + sector.strength.toFixed(1)}
+                      {sector.rvol !== undefined ? sector.rvol.toFixed(2) + 'x' : (sector.strength > 0 ? '+' : '') + sector.strength.toFixed(1)}
                     </div>
                   </div>
 

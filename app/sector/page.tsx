@@ -324,8 +324,10 @@ export default async function SectorPage({ searchParams }: { searchParams: DateS
     });
 
     sectors.sort((a, b) => {
-      if (a.rvol !== undefined && b.rvol !== undefined) {
-        return b.rvol - a.rvol;
+      const aRvol = a.rvol !== undefined ? a.rvol : 0;
+      const bRvol = b.rvol !== undefined ? b.rvol : 0;
+      if (aRvol !== bRvol) {
+        return bRvol - aRvol;
       }
       return compareSectorStrength(a, b);
     });
