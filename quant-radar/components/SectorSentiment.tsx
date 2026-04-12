@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { buildTradingViewUrl } from "@/utils/backend";
 
 type SectorItem = {
   Sector: string;
@@ -65,24 +66,33 @@ export default function SectorSentiment() {
     return () => clearTimeout(t);
   }, [data]);
 
-  // Sort by RVOL descending
-  const sortedData = [...data].sort((a, b) => parseFloat(b.SectorRVOL || "0") - parseFloat(a.SectorRVOL || "0"));
-  
   // Decide bullish vs bearish sector via underlying price change (falling back to simple bull > bear count if needed)
   const isSectorBullish = (d: SectorItem) => {
     if (d.SectorChgPct) return parseFloat(d.SectorChgPct) >= 0;
     return (d.BullCount || 0) >= (d.BearCount || 0);
   };
 
-  const totalBull = data.filter(d => isSectorBullish(d)).length;
-  const totalBear = data.filter(d => !isSectorBullish(d)).length;
+  const bullishSectors = data.filter(d => isSectorBullish(d));
+  const bearishSectors = data.filter(d => !isSectorBullish(d));
+
+  // Bullish: Highest RVOL on the left (index 0)
+  bullishSectors.sort((a, b) => parseFloat(b.SectorRVOL || "0") - parseFloat(a.SectorRVOL || "0"));
+  
+  // Bearish: Lowest RVOL on the left, Highest RVOL on the far right
+  bearishSectors.sort((a, b) => parseFloat(a.SectorRVOL || "0") - parseFloat(b.SectorRVOL || "0"));
+
+  const sortedData = [...bullishSectors, ...bearishSectors];
+  
+  const totalBull = bullishSectors.length;
+  const totalBear = bearishSectors.length;
   const grandTotal = data.reduce((s, d) => s + (Number(d.StockCount) || 0), 0);
 
-  const maxRvol = Math.max(...sortedData.map(d => parseFloat(d.SectorRVOL || "0")), 1);
+  const maxRvol = Math.max(...data.map(d => parseFloat(d.SectorRVOL || "0")), 1);
 
-  // Generate dynamic Y ticks around the max RVOL value
+  // Generate dynamic Y ticks around the max RVOL value 
+  // We want ticks for: +maxY, +maxY/2, 0, -maxY/2, -maxY
   const maxY = Math.ceil(maxRvol * 2) / 2; // e.g. 2.3 -> 2.5
-  const yTicks = [maxY, maxY * 0.8, maxY * 0.6, maxY * 0.4, maxY * 0.2, 0];
+  const yTicks = [maxY, maxY / 2, 0, -(maxY / 2), -maxY];
 
   return (
     <div className="flex flex-col h-full font-sans">
@@ -122,13 +132,13 @@ export default function SectorSentiment() {
 
       {/* ── Chart Area ── */}
       {data.length > 0 && (
-        <div className="flex-1 min-h-[400px] flex w-full relative mb-16">
+        <div className="flex-1 min-h-[400px] flex w-full relative mb-24 mt-4">
           
           {/* Y Axis Labels */}
           <div className="flex flex-col justify-between h-[300px] text-right pr-4 shrink-0 w-[45px]">
-            {yTicks.map(val => (
-              <span key={val} className="text-[10px] font-mono translate-y-[5px] font-semibold" style={{ color: "var(--color-muted)" }}>
-                {val === 0 ? "0" : val.toFixed(1) + "x"}
+            {yTicks.map((val, i) => (
+              <span key={`ytick-${i}`} className="text-[10px] font-mono translate-y-[5px] font-semibold" style={{ color: "var(--color-muted)" }}>
+                {val > 0 ? `+${val.toFixed(1)}x` : val < 0 ? `${val.toFixed(1)}x` : '0'}
               </span>
             ))}
           </div>
@@ -140,44 +150,43 @@ export default function SectorSentiment() {
             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
               {yTicks.map((val, i) => (
                 <div 
-                  key={val} 
-                  className={`w-full border-t h-0 ${i === 5 ? 'border-transparent' : 'border-[rgba(255,255,255,0.03)]'}`} 
+                  key={`grid-${i}`} 
+                  className={`w-full border-t h-0 ${val === 0 ? 'border-[rgba(255,255,255,0.2)]' : 'border-[rgba(255,255,255,0.03)]'}`} 
                 />
               ))}
             </div>
 
             {/* Bars Container */}
-            <div className="absolute inset-0 flex items-end justify-around px-2 z-10 bottom-[1px]">
+            <div className="absolute inset-0 flex items-end px-2 z-10 w-full justify-around h-full">
               {sortedData.map(item => {
                 const isBull = isSectorBullish(item);
                 const color = isBull ? BULL : BEAR;
                 const rvolVal = parseFloat(item.SectorRVOL || "0");
-                const heightPct = maxY > 0 ? (rvolVal / maxY) * 100 : 0;
+                const heightPct = maxY > 0 ? (rvolVal / maxY) * 50 : 0; // max is 50%
                 const cleanSector = (item.Sector || "").replace("NIFTY_", "").replace("_", " ");
 
                 return (
-                  <div key={item.Sector} className="flex flex-col items-center h-full group relative w-full px-[2%] max-w-[60px]">
+                  <div key={item.Sector} className="relative w-full px-[2%] max-w-[60px] h-full group">
                     
                     {/* Bar */}
-                    <div className="flex-1 flex items-end justify-center w-full relative">
-                      {/* Tooltip on hover */}
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#141a27] border border-[rgba(255,255,255,0.1)] text-[9px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-20 font-mono tracking-wider font-semibold pointer-events-none" style={{ color }}>
-                        {rvolVal.toFixed(2)}x VOL
-                      </div>
-                      
-                      <div 
-                        className="w-full max-w-[22px] rounded-t transition-all duration-[900ms] ease-out hover:brightness-125 cursor-pointer" 
+                    <div 
+                        className="absolute w-full max-w-[22px] transition-all duration-[900ms] ease-out hover:brightness-125 cursor-pointer left-1/2 -translate-x-1/2" 
                         style={{ 
-                          height: animated ? `${Math.min(100, heightPct)}%` : '0%', 
+                          height: animated ? `${Math.min(50, heightPct)}%` : '0%', 
                           backgroundColor: color,
                           boxShadow: `inset 0 0 10px rgba(0,0,0,0.1), 0 0 8px ${color}33`,
-                          opacity: 0.95
+                          opacity: 0.95,
+                          ...(isBull ? { bottom: '50%', borderRadius: '4px 4px 0 0' } : { top: '50%', borderRadius: '0 0 4px 4px' })
                         }} 
-                      />
+                    >
+                      {/* Tooltip on hover */}
+                      <div className={`absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#141a27] border border-[rgba(255,255,255,0.1)] text-[9px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-20 font-mono tracking-wider font-semibold pointer-events-none ${isBull ? '-top-8' : '-bottom-8'}`} style={{ color }}>
+                        {rvolVal.toFixed(2)}x VOL
+                      </div>
                     </div>
 
                     {/* X Axis Rotated Label */}
-                    <div className="absolute top-[100%] left-1/2 w-0 h-[100px] pt-4">
+                    <div className="absolute bottom-[-100px] left-1/2 w-0 h-[100px] pt-4">
                       <span 
                         className="absolute left-0 top-3 origin-top-left text-[9px] font-mono whitespace-nowrap tracking-widest transition-colors group-hover:text-[rgba(255,255,255,0.9)]"
                         style={{ 
@@ -255,7 +264,9 @@ export default function SectorSentiment() {
                       <div key={s.Stock} className={`grid grid-cols-6 items-center px-2.5 py-3 text-[11px] font-semibold font-mono border-b border-[rgba(255,255,255,0.02)] ${idx % 2 === 0 ? '' : 'bg-[rgba(255,255,255,0.01)]'} hover:bg-[rgba(255,255,255,0.05)] transition-colors`}>
                         <div className="col-span-2 flex items-center gap-2">
                            <div className="w-4 h-4 bg-[rgba(255,255,255,0.1)] rounded flex items-center justify-center text-[8px] opacity-70">✦</div>
-                           <span className="text-[rgba(255,255,255,0.9)] truncate tracking-wide">{s.Stock}</span>
+                           <a href={buildTradingViewUrl(s.Stock)} target="_blank" rel="noopener noreferrer" className="text-[rgba(255,255,255,0.9)] truncate tracking-wide hover:text-[#00e89a] hover:underline cursor-pointer">
+                             {s.Stock}
+                           </a>
                         </div>
                         <div className="text-right text-[rgba(255,255,255,0.8)]">{s.Close}</div>
                         <div className="text-right px-2 py-0.5 rounded-full inline-block ml-auto w-fit" style={{color: 'rgba(255,255,255,0.9)', backgroundColor: s.Signal === 'up' ? 'rgba(0,232,154,0.15)' : 'rgba(255,59,107,0.15)', border: `1px solid ${s.Signal === 'up' ? 'rgba(0,232,154,0.3)' : 'rgba(255,59,107,0.3)'}`}}>
