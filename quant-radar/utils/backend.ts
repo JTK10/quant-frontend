@@ -1,4 +1,6 @@
 const INDIA_TZ = "Asia/Kolkata";
+import symbolMapData from "./symbolMap.json";
+const symbolMap: Record<string, string> = symbolMapData;
 
 type GenericRecord = Record<string, unknown>;
 
@@ -213,7 +215,11 @@ export function normalizeSignalSide(value: unknown): "BULL" | "BEAR" | "NEUTRAL"
 export function buildTradingViewUrl(symbol: string, name?: string): string {
   const token = textify(symbol) || textify(name) || "NIFTY";
   const cleaned = token.replace(/\s+/g, "").toUpperCase();
-  return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(cleaned)}&interval=5`;
+  
+  // Cross-reference with the master mapping dictionary
+  const finalSymbol = symbolMap[cleaned] || cleaned;
+  
+  return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(finalSymbol)}&interval=5`;
 }
 
 type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse";
