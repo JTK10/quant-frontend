@@ -27,7 +27,7 @@ type StockRow = {
 const BULL = "#00e89a";
 const BEAR = "#ff3b6b";
 
-export default function SectorSentiment() {
+export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
   const [data, setData]           = useState<SectorItem[]>([]);
   const [loading, setLoading]     = useState(false);
   const [scanTime, setScanTime]   = useState<string>("");
@@ -37,8 +37,8 @@ export default function SectorSentiment() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const date = new Date().toISOString().split("T")[0];
-      const res = await fetch(`/api/sector-sentiment?date=${date}`);
+      const fetchDate = dateStr || new Date().toISOString().split("T")[0];
+      const res = await fetch(`/api/sector-sentiment?date=${fetchDate}`);
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json)) {
@@ -52,7 +52,7 @@ export default function SectorSentiment() {
       }
     } catch { /* Error loading data */ }
     finally { setLoading(false); }
-  }, []);
+  }, [dateStr]);
 
   useEffect(() => {
     load();
