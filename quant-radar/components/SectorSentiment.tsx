@@ -12,6 +12,15 @@ type SectorItem = {
   BullCount?: number;
   BearCount?: number;
   SectorChgPct?: string;
+  Stocks?: string;
+};
+
+type StockRow = {
+  Stock: string;
+  Close: string;
+  ChgPct: string;
+  RVOL: string;
+  Signal: "up" | "down";
 };
 
 const BULL = "#00e89a";
@@ -185,6 +194,90 @@ export default function SectorSentiment() {
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Drilldown Tables ── */}
+      {data.length > 0 && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8 mb-12">
+          {sortedData.map(item => {
+            let stocks: StockRow[] = [];
+            try {
+               stocks = item.Stocks ? JSON.parse(item.Stocks) : [];
+               stocks.sort((a,b) => parseFloat(b.RVOL) - parseFloat(a.RVOL));
+            } catch(e) {}
+            
+            if (stocks.length === 0) return null;
+            
+            const cleanSector = (item.Sector || "").replace("NIFTY_", "").replace("_", " ");
+            const totalUp = stocks.filter(s => s.Signal === 'up').length;
+            const totalDown = stocks.filter(s => s.Signal === 'down').length;
+            const pctUp = stocks.length ? ((totalUp / stocks.length) * 100).toFixed(2) : "0.00";
+            const pctDown = stocks.length ? ((totalDown / stocks.length) * 100).toFixed(2) : "0.00";
+            
+            return (
+              <div key={item.Sector} className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#0a0e17] p-4 flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                   <h3 className="text-[13px] font-semibold text-white tracking-widest uppercase">{cleanSector}</h3>
+                   <span className="bg-[#ff1e56] text-white text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide shadow-[0_0_8px_rgba(255,30,86,0.5)]">LIVE</span>
+                   <div className="ml-auto w-32 h-7 bg-[rgba(255,255,255,0.04)] rounded-md border border-[rgba(255,255,255,0.06)] flex items-center px-2">
+                     <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">Q ...</span>
+                   </div>
+                </div>
+                
+                {/* Progress Bar Header */}
+                <div className="w-full h-1.5 rounded-full overflow-hidden mb-2 bg-[rgba(255,255,255,0.05)] flex shadow-inner">
+                   <div style={{ width: `${pctUp}%`, backgroundColor: BULL, boxShadow: `0 0 10px ${BULL}` }}></div>
+                   <div style={{ width: `${pctDown}%`, backgroundColor: BEAR, boxShadow: `0 0 10px ${BEAR}` }}></div>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-mono text-[rgba(255,255,255,0.5)] mb-4">
+                   <div className="flex items-center gap-1.5">
+                     <div className="w-2 h-2 rounded-full" style={{backgroundColor: BULL, boxShadow: `0 0 6px ${BULL}`}}></div>
+                     <span>{totalUp} stocks ({pctUp}% Up)</span>
+                   </div>
+                   <div className="flex items-center gap-1.5">
+                     <div className="w-2 h-2 rounded-full" style={{backgroundColor: BEAR, boxShadow: `0 0 6px ${BEAR}`}}></div>
+                     <span>{totalDown} stocks ({pctDown}% Down)</span>
+                   </div>
+                </div>
+                
+                {/* Table */}
+                <div className="w-full border border-[rgba(255,255,255,0.04)] rounded-lg overflow-hidden bg-[rgba(255,255,255,0.01)]">
+                  <div className="grid grid-cols-6 text-[10px] text-[rgba(255,255,255,0.4)] font-mono tracking-wider p-2.5 border-b border-[rgba(255,255,255,0.04)] bg-[rgba(255,255,255,0.02)]">
+                     <div className="col-span-2">Symbol</div>
+                     <div className="text-right">Pre C</div>
+                     <div className="text-right">%</div>
+                     <div className="text-right flex items-center justify-end gap-1">R Fact <span className="text-[8px]">▼</span></div>
+                     <div className="text-center">Signal</div>
+                  </div>
+                  <div className="flex flex-col max-h-[350px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+                    {stocks.map((s, idx) => (
+                      <div key={s.Stock} className={`grid grid-cols-6 items-center px-2.5 py-3 text-[11px] font-semibold font-mono border-b border-[rgba(255,255,255,0.02)] ${idx % 2 === 0 ? '' : 'bg-[rgba(255,255,255,0.01)]'} hover:bg-[rgba(255,255,255,0.05)] transition-colors`}>
+                        <div className="col-span-2 flex items-center gap-2">
+                           <div className="w-4 h-4 bg-[rgba(255,255,255,0.1)] rounded flex items-center justify-center text-[8px] opacity-70">✦</div>
+                           <span className="text-[rgba(255,255,255,0.9)] truncate tracking-wide">{s.Stock}</span>
+                        </div>
+                        <div className="text-right text-[rgba(255,255,255,0.8)]">{s.Close}</div>
+                        <div className="text-right px-2 py-0.5 rounded-full inline-block ml-auto w-fit" style={{color: 'rgba(255,255,255,0.9)', backgroundColor: s.Signal === 'up' ? 'rgba(0,232,154,0.15)' : 'rgba(255,59,107,0.15)', border: `1px solid ${s.Signal === 'up' ? 'rgba(0,232,154,0.3)' : 'rgba(255,59,107,0.3)'}`}}>
+                           {Number(s.ChgPct).toFixed(2)}
+                        </div>
+                        <div className="text-right font-bold text-[12px]" style={{color: Number(s.RVOL) >= 2.0 ? '#ffb020' : (Number(s.RVOL) >= 1.5 ? 'var(--color-gold)' : 'rgba(255,255,255,0.8)')}}>
+                           {Number(s.RVOL).toFixed(2)}
+                        </div>
+                        <div className="text-center flex justify-center">
+                           {s.Signal === 'up' ? (
+                             <span className="text-[16px] leading-[0]" style={{color: BULL}}>⬆</span>
+                           ) : (
+                             <span className="text-[16px] leading-[0]" style={{color: BEAR}}>⬇</span>
+                           )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
