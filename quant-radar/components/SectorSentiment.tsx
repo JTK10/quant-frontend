@@ -170,6 +170,9 @@ export default function SectorSentiment() {
                     
                     {/* Bar */}
                     <div 
+                        onClick={() => {
+                          document.getElementById(`sector-card-${item.Sector}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }}
                         className="absolute w-full max-w-[22px] transition-all duration-[900ms] ease-out hover:brightness-125 cursor-pointer left-1/2 -translate-x-1/2" 
                         style={{ 
                           height: animated ? `${Math.min(50, heightPct)}%` : '0%', 
@@ -225,7 +228,11 @@ export default function SectorSentiment() {
             const pctDown = stocks.length ? ((totalDown / stocks.length) * 100).toFixed(2) : "0.00";
             
             return (
-              <div key={item.Sector} className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#0a0e17] p-4 flex flex-col">
+              <div 
+                key={item.Sector} 
+                id={`sector-card-${item.Sector}`}
+                className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#0a0e17] p-4 flex flex-col"
+              >
                 <div className="flex items-center gap-2 mb-4">
                    <h3 className="text-[13px] font-semibold text-white tracking-widest uppercase">{cleanSector}</h3>
                    <span className="bg-[#ff1e56] text-white text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide shadow-[0_0_8px_rgba(255,30,86,0.5)]">LIVE</span>
