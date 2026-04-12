@@ -304,16 +304,31 @@ export default async function SectorPage({ searchParams }: { searchParams: DateS
   // Merge backend sector sentiment logic
   if (backendSectors?.length > 0) {
     backendSectors.forEach((bs: any) => {
-      const match = sectors.find(s => s.key === bs.sector || s.name.toUpperCase() === String(bs.sector).toUpperCase());
+      const bsSector = bs.Sector ?? bs.sector;
+      if (!bsSector) return;
+      
+      const match = sectors.find(s => s.key === bsSector || s.name.toUpperCase() === String(bsSector).toUpperCase());
       if (match) {
         match.strength = typeof bs.strength === 'number' ? bs.strength : match.strength;
         match.avgEdge = typeof bs.strength === 'number' ? bs.strength : match.avgEdge;
-        match.bullishCount = bs.bull_count ?? match.bullishCount;
-        match.bearishCount = bs.bear_count ?? match.bearishCount;
+        match.bullishCount = bs.bull_count ?? bs.GreenCount ?? match.bullishCount;
+        match.bearishCount = bs.bear_count ?? bs.OrangeCount ?? match.bearishCount;
         match.bullRatio = bs.bull_pct ?? match.bullRatio;
+        
+        // Map new sector RVOL fields from DynamoDB
+        match.rvol = parseFloat(bs.SectorRVOL) || 0;
+        match.rvolColor = bs.RVOL_Color || "";
+        match.topStock = bs.TopStock || "";
+        match.topRvol = parseFloat(bs.TopStockRVOL) || 0;
       }
     });
-    sectors.sort(compareSectorStrength);
+
+    sectors.sort((a, b) => {
+      if (a.rvol !== undefined && b.rvol !== undefined) {
+        return b.rvol - a.rvol;
+      }
+      return compareSectorStrength(a, b);
+    });
   }
 
   const liveSectors = sectors.filter((sector) => (sector.count ?? sector.stocks.length) > 0);

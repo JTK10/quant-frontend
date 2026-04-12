@@ -65,4 +65,8 @@ export interface SectorStrength {
   bearishCount?: number;
   trackedSymbols?: string[];
   trackedCount?: number;
+  rvol?: number;
+  rvolColor?: string;
+  topStock?: string;
+  topRvol?: number;
 }

@@ -20,7 +20,12 @@ function getSignalChart(stock: RadarStock): string {
 export default function SectorSkyline({ sectors }: { sectors: SectorStrength[] }) {
   const liveSectors = [...sectors]
     .filter((sector) => (sector.count ?? sector.stocks.length) > 0)
-    .sort(compareSectorStrength);
+    .sort((a, b) => {
+      if (a.rvol !== undefined && b.rvol !== undefined) {
+        return (b.rvol || 0) - (a.rvol || 0);
+      }
+      return compareSectorStrength(a, b);
+    });
   const [selectedKey, setSelectedKey] = useState<string | null>(liveSectors[0]?.key ?? null);
 
   if (!liveSectors.length) {
@@ -37,7 +42,7 @@ export default function SectorSkyline({ sectors }: { sectors: SectorStrength[] }
   }
 
   const sorted = liveSectors;
-  const maxAbs = Math.max(...sorted.map((sector) => Math.abs(sector.strength)), 1);
+  const maxRvol = Math.max(...sorted.map((sector) => sector.rvol || 1), 1);
   const active = sorted.find((sector) => sector.key === selectedKey) ?? sorted[0];
   const activeTickers = new Set(
     active.stocks.map((stock) => normalizeTicker(String(stock.Ticker ?? stock.Symbol ?? stock.Name ?? ''))),
@@ -65,7 +70,7 @@ export default function SectorSkyline({ sectors }: { sectors: SectorStrength[] }
               Sector Tower Map
             </div>
             <div className="font-mono text-[10px] mt-1" style={{ color: 'var(--color-brand-muted)' }}>
-              Towers sorted by live signal count first, then tower height
+              Towers sorted by Sector RVOL, colored based on overall sector flow
             </div>
           </div>
           <div className="flex flex-wrap gap-2 font-mono text-[10px]">
@@ -91,7 +96,7 @@ export default function SectorSkyline({ sectors }: { sectors: SectorStrength[] }
             {sorted.map((sector) => {
               const isBull = sector.strength >= 0;
               const isSelected = sector.key === active.key;
-              const towerHeight = Math.max(12, (Math.abs(sector.strength) / maxAbs) * 42);
+              const towerHeight = Math.max(12, ((sector.rvol || 1) / maxRvol) * 80);
               const towerColor = isBull ? 'var(--color-brand-bull)' : 'var(--color-brand-bear)';
               const towerShade = isBull ? 'rgba(5,217,143,0.18)' : 'rgba(230,85,115,0.18)';
               const towerBase = isBull ? '#02724a' : '#8f1f36';
@@ -151,8 +156,7 @@ export default function SectorSkyline({ sectors }: { sectors: SectorStrength[] }
                           : { top: `calc(50% + ${towerHeight}% + 10px)` }),
                       }}
                     >
-                      {sector.strength > 0 ? '+' : ''}
-                      {sector.strength.toFixed(1)}
+                      {sector.rvol ? sector.rvol.toFixed(2) + 'x' : (sector.strength > 0 ? '+' : '') + sector.strength.toFixed(1)}
                     </div>
                   </div>
 
