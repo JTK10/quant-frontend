@@ -7,8 +7,11 @@ type SectorItem = {
   RVOL_Color: string;
   CandleTime: string;
   TopStock: string;
-  TopStockRVOL: string;
-  StockCount: number;
+  TopStockRVOL?: string;
+  StockCount?: number;
+  BullCount?: number;
+  BearCount?: number;
+  SectorChgPct?: string;
 };
 
 const BULL = "#00e89a";
@@ -55,15 +58,22 @@ export default function SectorSentiment() {
 
   // Sort by RVOL descending
   const sortedData = [...data].sort((a, b) => parseFloat(b.SectorRVOL || "0") - parseFloat(a.SectorRVOL || "0"));
-  const totalBull = data.filter(d => (d.RVOL_Color || "").toUpperCase() === "GREEN").length;
-  const totalBear = data.filter(d => (d.RVOL_Color || "").toUpperCase() === "RED").length;
+  
+  // Decide bullish vs bearish sector via underlying price change (falling back to simple bull > bear count if needed)
+  const isSectorBullish = (d: SectorItem) => {
+    if (d.SectorChgPct) return parseFloat(d.SectorChgPct) >= 0;
+    return (d.BullCount || 0) >= (d.BearCount || 0);
+  };
+
+  const totalBull = data.filter(d => isSectorBullish(d)).length;
+  const totalBear = data.filter(d => !isSectorBullish(d)).length;
   const grandTotal = data.reduce((s, d) => s + (Number(d.StockCount) || 0), 0);
 
   const maxRvol = Math.max(...sortedData.map(d => parseFloat(d.SectorRVOL || "0")), 1);
 
   // Generate dynamic Y ticks around the max RVOL value
-  const maxRvolRound = Math.ceil(maxRvol * 2) / 2; // e.g. 2.3 -> 2.5
-  const yTicks = [maxRvolRound, maxRvolRound * 0.8, maxRvolRound * 0.6, maxRvolRound * 0.4, maxRvolRound * 0.2, 0].map(v => Number(v.toFixed(1)));
+  const maxY = Math.ceil(maxRvol * 2) / 2; // e.g. 2.3 -> 2.5
+  const yTicks = [maxY, maxY * 0.8, maxY * 0.6, maxY * 0.4, maxY * 0.2, 0];
 
   return (
     <div className="flex flex-col h-full font-sans">
@@ -130,10 +140,10 @@ export default function SectorSentiment() {
             {/* Bars Container */}
             <div className="absolute inset-0 flex items-end justify-around px-2 z-10 bottom-[1px]">
               {sortedData.map(item => {
-                const isBull = (item.RVOL_Color || "").toUpperCase() === "GREEN";
+                const isBull = isSectorBullish(item);
                 const color = isBull ? BULL : BEAR;
                 const rvolVal = parseFloat(item.SectorRVOL || "0");
-                const heightPct = maxRvolRound > 0 ? (rvolVal / maxRvolRound) * 100 : 0;
+                const heightPct = maxY > 0 ? (rvolVal / maxY) * 100 : 0;
                 const cleanSector = (item.Sector || "").replace("NIFTY_", "").replace("_", " ");
 
                 return (
@@ -143,7 +153,7 @@ export default function SectorSentiment() {
                     <div className="flex-1 flex items-end justify-center w-full relative">
                       {/* Tooltip on hover */}
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#141a27] border border-[rgba(255,255,255,0.1)] text-[9px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-20 font-mono tracking-wider font-semibold pointer-events-none" style={{ color }}>
-                        {rvolVal.toFixed(2)}x {isBull ? 'VOL' : 'VOL'}
+                        {rvolVal.toFixed(2)}x VOL
                       </div>
                       
                       <div 
