@@ -2,16 +2,13 @@
 import { useState, useEffect, useCallback } from "react";
 
 type SectorItem = {
-  sector: string;
-  bull_count: number;
-  bear_count: number;
-  total: number;
-  bull_pct: number;
-  bear_pct: number;
-  strength: number;
-  is_top_bull: boolean;
-  is_top_bear: boolean;
-  scan_time: string;
+  Sector: string;
+  SectorRVOL: string;
+  RVOL_Color: string;
+  CandleTime: string;
+  TopStock: string;
+  TopStockRVOL: string;
+  StockCount: number;
 };
 
 const BULL = "#00e89a";
@@ -33,8 +30,9 @@ export default function SectorSentiment() {
         const json = await res.json();
         if (Array.isArray(json)) {
           setData(json);
-          if (json.length > 0 && json[0]?.scan_time) {
-            setScanTime(json[0].scan_time);
+          // NEW SECTOR PAYLOAD USES CandleTime
+          if (json.length > 0 && json[0]?.CandleTime) {
+            setScanTime(json[0].CandleTime);
           }
           setUpdatedAt(new Date());
         }
@@ -55,13 +53,17 @@ export default function SectorSentiment() {
     return () => clearTimeout(t);
   }, [data]);
 
-  // Sort by strength descending regardless of direction
-  const sortedData = [...data].sort((a, b) => b.strength - a.strength);
-  const totalBull = data.filter(d => d.bull_pct >= d.bear_pct).length;
-  const totalBear = data.filter(d => d.bear_pct > d.bull_pct).length;
-  const grandTotal = data.reduce((s, d) => s + d.total, 0);
+  // Sort by RVOL descending
+  const sortedData = [...data].sort((a, b) => parseFloat(b.SectorRVOL || "0") - parseFloat(a.SectorRVOL || "0"));
+  const totalBull = data.filter(d => (d.RVOL_Color || "").toUpperCase() === "GREEN").length;
+  const totalBear = data.filter(d => (d.RVOL_Color || "").toUpperCase() === "RED").length;
+  const grandTotal = data.reduce((s, d) => s + (Number(d.StockCount) || 0), 0);
 
-  const yTicks = [100, 80, 60, 40, 20, 0];
+  const maxRvol = Math.max(...sortedData.map(d => parseFloat(d.SectorRVOL || "0")), 1);
+
+  // Generate dynamic Y ticks around the max RVOL value
+  const maxRvolRound = Math.ceil(maxRvol * 2) / 2; // e.g. 2.3 -> 2.5
+  const yTicks = [maxRvolRound, maxRvolRound * 0.8, maxRvolRound * 0.6, maxRvolRound * 0.4, maxRvolRound * 0.2, 0].map(v => Number(v.toFixed(1)));
 
   return (
     <div className="flex flex-col h-full font-sans">
@@ -107,7 +109,7 @@ export default function SectorSentiment() {
           <div className="flex flex-col justify-between h-[300px] text-right pr-4 shrink-0 w-[45px]">
             {yTicks.map(val => (
               <span key={val} className="text-[10px] font-mono translate-y-[5px] font-semibold" style={{ color: "var(--color-muted)" }}>
-                {val === 0 ? "0" : val}
+                {val === 0 ? "0" : val.toFixed(1) + "x"}
               </span>
             ))}
           </div>
@@ -128,25 +130,26 @@ export default function SectorSentiment() {
             {/* Bars Container */}
             <div className="absolute inset-0 flex items-end justify-around px-2 z-10 bottom-[1px]">
               {sortedData.map(item => {
-                const isBull = item.bull_pct >= item.bear_pct;
+                const isBull = (item.RVOL_Color || "").toUpperCase() === "GREEN";
                 const color = isBull ? BULL : BEAR;
-                const val = item.strength * 100;
-                const cleanSector = item.sector.replace("NIFTY_", "").replace("_", " ");
+                const rvolVal = parseFloat(item.SectorRVOL || "0");
+                const heightPct = maxRvolRound > 0 ? (rvolVal / maxRvolRound) * 100 : 0;
+                const cleanSector = (item.Sector || "").replace("NIFTY_", "").replace("_", " ");
 
                 return (
-                  <div key={item.sector} className="flex flex-col items-center h-full group relative w-full px-[2%] max-w-[60px]">
+                  <div key={item.Sector} className="flex flex-col items-center h-full group relative w-full px-[2%] max-w-[60px]">
                     
                     {/* Bar */}
                     <div className="flex-1 flex items-end justify-center w-full relative">
                       {/* Tooltip on hover */}
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#141a27] border border-[rgba(255,255,255,0.1)] text-[9px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-20 font-mono tracking-wider font-semibold pointer-events-none" style={{ color }}>
-                        {val.toFixed(0)}% {isBull ? 'BULL' : 'BEAR'}
+                        {rvolVal.toFixed(2)}x {isBull ? 'VOL' : 'VOL'}
                       </div>
                       
                       <div 
                         className="w-full max-w-[22px] rounded-t transition-all duration-[900ms] ease-out hover:brightness-125 cursor-pointer" 
                         style={{ 
-                          height: animated ? `${val}%` : '0%', 
+                          height: animated ? `${Math.min(100, heightPct)}%` : '0%', 
                           backgroundColor: color,
                           boxShadow: `inset 0 0 10px rgba(0,0,0,0.1), 0 0 8px ${color}33`,
                           opacity: 0.95
@@ -189,3 +192,4 @@ export default function SectorSentiment() {
     </div>
   );
 }
+
