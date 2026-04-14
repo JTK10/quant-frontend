@@ -24,7 +24,7 @@ const NAV_ITEMS = [
     href: '/sector',
     icon: BarChart2,
     label: 'Sector Flow',
-    sub: 'Market Rotation',
+    sub: 'Market Pressure',
     color: '#f5a623',
   },
   {
@@ -38,7 +38,7 @@ const NAV_ITEMS = [
     href: '/sniper-signal',
     icon: Crosshair,
     label: 'Sniper Signal',
-    sub: 'EMA Crossovers',
+    sub: 'BID/ASK SPREAD',
     color: '#ff3b3b',
   },
 ];
