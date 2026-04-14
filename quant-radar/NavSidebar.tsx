@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, Zap, BarChart2, Brain, ChevronRight } from 'lucide-react';
+import { Activity, Zap, BarChart2, Brain, ChevronRight, Crosshair } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const NAV_ITEMS = [
@@ -33,6 +33,13 @@ const NAV_ITEMS = [
     label: 'AI Analysis',
     sub: 'ML Top Picks',
     color: '#9b6fff',
+  },
+  {
+    href: '/sniper-signal',
+    icon: Crosshair,
+    label: 'Sniper Signal',
+    sub: 'EMA Crossovers',
+    color: '#ff3b3b',
   },
 ];
 
@@ -163,7 +170,7 @@ export default function NavSidebar() {
                   style={
                     isActive
                       ? {
-                          background: `rgba(${color === '#2d8eff' ? '45,142,255' : color === '#00e89a' ? '0,232,154' : color === '#f5a623' ? '245,166,35' : '155,111,255'},0.12)`,
+                          background: `rgba(${color === '#f5a623' ? '245,166,35' : color === '#00e89a' ? '0,232,154' : color === '#9b6fff' ? '155,111,255' : color === '#ff3b3b' ? '255,59,59' : '45,142,255'},0.12)`,
                           boxShadow: `inset 2px 0 0 ${color}`,
                         }
                       : {
@@ -175,7 +182,7 @@ export default function NavSidebar() {
                     className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-all"
                     style={{
                       background: isActive
-                        ? `rgba(${color === '#2d8eff' ? '45,142,255' : color === '#00e89a' ? '0,232,154' : color === '#f5a623' ? '245,166,35' : '155,111,255'},0.15)`
+                        ? `rgba(${color === '#f5a623' ? '245,166,35' : color === '#00e89a' ? '0,232,154' : color === '#9b6fff' ? '155,111,255' : color === '#ff3b3b' ? '255,59,59' : '45,142,255'},0.15)`
                         : 'rgba(255,255,255,0.04)',
                       border: `1px solid ${isActive ? color + '40' : 'var(--color-border)'}`,
                     }}

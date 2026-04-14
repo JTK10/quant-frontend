@@ -1,0 +1,185 @@
+"use client";
+
+import { ExternalLink } from "lucide-react";
+import { useState } from "react";
+import type { SniperRow } from "@/utils/backend";
+
+type SortKey = "time" | "name" | "rvol";
+
+function shortTime(value: string): string {
+  if (!value) return "-";
+  if (value.includes("T")) return value.slice(11, 16);
+  return value.length > 5 ? value.slice(0, 5) : value;
+}
+
+function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "SHORT" }) {
+  const [sortKey, setSortKey] = useState<SortKey>("time");
+  const [ascending, setAscending] = useState(false);
+
+  const sorted = [...signals].sort((a, b) => {
+    const cmp = (() => {
+      switch (sortKey) {
+        case "time":
+          return (a.SignalTime || "").localeCompare(b.SignalTime || "");
+        case "name":
+          return a.Name.localeCompare(b.Name);
+        case "rvol":
+          return (a.RVOL || 0) - (b.RVOL || 0);
+        default:
+          return 0;
+      }
+    })();
+    return ascending ? cmp : -cmp;
+  });
+
+  const headers: [SortKey, string][] = [
+    ["time", "TIME"],
+    ["name", "NAME"],
+    ["rvol", "RVOL"],
+  ];
+
+  const isBull = type === "LONG";
+  const headerColor = isBull ? "var(--color-bull)" : "var(--color-bear)";
+  const bgAccent = isBull ? "var(--color-bullbg)" : "var(--color-bearbg)";
+
+  return (
+    <div className="flex h-full flex-col border-b md:border-b-0 md:border-r last:border-r-0" style={{ borderColor: "var(--color-border)" }}>
+      {/* Sub-header */}
+      <div
+        className="flex items-center justify-between border-b px-4 py-2 sticky top-0 z-20"
+        style={{ borderColor: "var(--color-border)", background: bgAccent }}
+      >
+        <div className="font-mono text-[10px] font-semibold tracking-[0.2em]" style={{ color: headerColor }}>
+          {isBull ? "BULLISH CROSSOVERS" : "BEARISH CROSSOVERS"}
+        </div>
+        <div className="font-mono text-[10px]" style={{ color: headerColor }}>
+          {signals.length} LISTED
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        {/* Table Header */}
+        <div
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[50px_1fr_60px_60px_40px] xl:grid-cols-[60px_1fr_75px_75px_40px] min-w-[320px] xl:min-w-0"
+          style={{
+            borderColor: "var(--color-border)",
+            background: "rgba(10, 14, 23, 0.95)",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          {headers.map(([key, label]) => {
+            const active = sortKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  if (sortKey === key) setAscending((c) => !c);
+                  else {
+                    setSortKey(key);
+                    setAscending(key === "name"); // default to ascending for name, desc for values
+                  }
+                }}
+                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "rvol" ? "text-right" : ""}`}
+                style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
+              >
+                {label}
+                {active ? (ascending ? " ↑" : " ↓") : ""}
+              </button>
+            );
+          })}
+          <span className="text-right font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
+            MAX %
+          </span>
+          <span className="text-right font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
+            TV
+          </span>
+        </div>
+
+        {/* Rows */}
+        {sorted.map((row, idx) => (
+          <div
+            key={`${row.Symbol}-${row.SignalTime}-${idx}`}
+            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[50px_1fr_60px_60px_40px] xl:grid-cols-[60px_1fr_75px_75px_40px] min-w-[320px] xl:min-w-0"
+            style={{
+              borderColor: "var(--color-border)",
+              borderLeft: `2px solid ${row.RVOL_Color === "GREEN" ? "var(--color-bull)" : row.RVOL_Color === "ORANGE" ? "var(--color-gold)" : row.RVOL_Color === "YELLOW" ? "#facc15" : "transparent"}`
+            }}
+          >
+            <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+              {shortTime(row.SignalTime ?? "")}
+            </span>
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-semibold" style={{ color: "var(--color-text2)" }}>
+                {row.Name}
+              </div>
+              <div className="truncate font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
+                {row.Symbol} <span className="opacity-50">| IN: ₹{row.EntryPrice}</span>
+              </div>
+            </div>
+            
+            <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
+               {row.RVOL ? row.RVOL.toFixed(1) + "x" : "-"}
+            </span>
+
+            <span className="text-right font-mono text-[11px] font-semibold" style={{ color: row.MaxMovePct > 0 ? "var(--color-bull)" : row.MaxMovePct < 0 ? "var(--color-bear)" : "var(--color-text)" }}>
+               {row.MaxMovePct ? row.MaxMovePct.toFixed(1) + "%" : "0%"}
+            </span>
+
+            <div className="text-right">
+              <a
+                href={row.Chart}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-md border p-1 opacity-80 hover:opacity-100 transition-opacity"
+                style={{
+                  color: "var(--color-accent)",
+                  borderColor: "rgba(45,142,255,0.20)",
+                  background: "rgba(45,142,255,0.06)",
+                }}
+              >
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          </div>
+        ))}
+        {sorted.length === 0 && (
+          <div className="p-8 text-center font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>
+            NO SIGNALS
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function SniperClient({ signals }: { signals: SniperRow[] }) {
+  if (!signals.length) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 bg-[var(--color-bg)]">
+        <div className="text-center">
+          <div className="font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
+            SNIPER SIGNAL
+          </div>
+          <p className="mt-2 text-sm" style={{ color: "var(--color-muted2)" }}>
+            No crossover signals for the selected date.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const longs = signals.filter((s) => s.Direction === "LONG");
+  const shorts = signals.filter((s) => s.Direction === "SHORT");
+
+  return (
+    <div className="flex h-full flex-col md:flex-row bg-[var(--color-bg)] absolute inset-0">
+      <div className="flex-1 overflow-hidden min-w-[320px] relative">
+        <SignalList signals={longs} type="LONG" />
+      </div>
+      <div className="flex-1 overflow-hidden min-w-[320px] relative border-t md:border-t-0 md:border-l" style={{ borderColor: "var(--color-border)" }}>
+        <SignalList signals={shorts} type="SHORT" />
+      </div>
+    </div>
+  );
+}

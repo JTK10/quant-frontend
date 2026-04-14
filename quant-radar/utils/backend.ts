@@ -129,6 +129,19 @@ export type RvolPulseData = {
   shortBoard: RvolPulseItem[];
 };
 
+export type SniperRow = {
+  Name: string;
+  Symbol: string;
+  Direction: "LONG" | "SHORT";
+  SignalTime: string;
+  EntryPrice: number;
+  EMA9: number;
+  RVOL: number;
+  RVOL_Color: string;
+  MaxMovePct: number;
+  Chart: string;
+};
+
 
 export function getTodayIstDate(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -222,7 +235,7 @@ export function buildTradingViewUrl(symbol: string, name?: string): string {
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(finalSymbol)}&interval=5`;
 }
 
-type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse";
+type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal";
 
 export async function fetchBackendRoute(route: BackendRoute, dateStr: string, extraParams: Record<string, string> = {}): Promise<unknown> {
   const rawApiUrl = process.env.AWS_API_URL;
@@ -512,5 +525,28 @@ export function normalizeRvolPulseData(payload: unknown): RvolPulseData {
     longBoard: toArray(root.longBoard).map(normalizeRvolPulseItem),
     shortBoard: toArray(root.shortBoard).map(normalizeRvolPulseItem),
   };
+}
+
+export function normalizeSniperSignals(payload: unknown): SniperRow[] {
+  const rows = toArray(payload);
+
+  return rows.map((row) => {
+    const symbol = textify(row.Symbol);
+    const name = textify(row.Name, symbol || "Unnamed");
+    const direction = textify(row.Direction).toUpperCase();
+
+    return {
+      Name: name,
+      Symbol: symbol,
+      Direction: direction === "SHORT" ? "SHORT" : "LONG",
+      SignalTime: textify(row.SignalTime),
+      EntryPrice: numberify(row.EntryPrice),
+      EMA9: numberify(row.EMA9),
+      RVOL: numberify(row.RVOL),
+      RVOL_Color: textify(row.RVOL_Color, "GRAY"),
+      MaxMovePct: numberify(row.MaxMove_Pct),
+      Chart: buildTradingViewUrl(symbol, name),
+    };
+  });
 }
 
