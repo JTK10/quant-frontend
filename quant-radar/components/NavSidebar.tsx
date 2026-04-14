@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp } from "lucide-react";
+import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "Flow Watchlist", color: "#00e89a" },
   { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
   { href: "/ai", icon: Brain, label: "AI Analysis", sub: "ML Top Picks", color: "#a855f7" },
+  { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "EMA Crossovers", color: "#ff3b3b" },
 ];
 
 function LiveClock() {
