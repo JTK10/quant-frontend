@@ -115,14 +115,15 @@ function PanelRow({ item, index, maxRms }: { item: RvolPulseItem; index: number;
   );
 }
 
-export default function RvolPulseClient() {
+export default function RvolPulseClient({ dateStr }: { dateStr?: string }) {
   const [data, setData] = useState<RvolPulseData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/rvol-pulse");
+      const params = dateStr ? `?date=${dateStr}` : "";
+      const res = await fetch(`/api/rvol-pulse${params}`);
       if (!res.ok) throw new Error("Failed to fetch RVOL Pulse data");
       const json = await res.json();
       setData(json);
@@ -132,9 +133,10 @@ export default function RvolPulseClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dateStr]);
 
   useEffect(() => {
+    setLoading(true);
     load();
     const intervalId = setInterval(load, 5 * 60 * 1000); // 5 mins
     return () => clearInterval(intervalId);
