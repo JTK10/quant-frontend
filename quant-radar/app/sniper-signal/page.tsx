@@ -32,7 +32,7 @@ export default async function SniperSignalPage({ searchParams }: { searchParams:
     <div className="flex h-screen flex-col overflow-hidden">
       <PageHeader
         title="Sniper Signal"
-        subtitle="EMA-9 CROSSOVER · HYBRID LOGIC"
+        subtitle="BIS/ASK SPREAD · HYBRID LOGIC"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="var(--color-accent)"
