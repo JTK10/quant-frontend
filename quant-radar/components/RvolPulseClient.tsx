@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Clock, Trophy, TrendingUp, Zap } from "lucide-react";
 import type { RvolPulseData, RvolPulseItem } from "@/utils/backend";
+import { buildTradingViewUrl } from "@/utils/backend";
 
 function getRvolColor(color: "GREEN" | "ORANGE" | "YELLOW" | "GRAY") {
   switch (color) {
@@ -65,9 +66,15 @@ function PanelRow({ item, index, maxRms }: { item: RvolPulseItem; index: number;
 
         {/* Stock Info */}
         <div className="flex items-center gap-1.5 min-w-0">
-          <div className="truncate text-xs font-semibold" style={{ color: "var(--color-text2)" }}>
+          <a
+            href={buildTradingViewUrl(item.stock)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate text-xs font-semibold hover:underline cursor-pointer"
+            style={{ color: "var(--color-text2)" }}
+          >
             {item.stock}
-          </div>
+          </a>
         </div>
 
         {/* Direction Badge */}
