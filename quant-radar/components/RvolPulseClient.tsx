@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Star, Clock, Trophy, Target } from "lucide-react";
+import { Clock, Trophy, TrendingUp, Zap } from "lucide-react";
 import type { RvolPulseData, RvolPulseItem } from "@/utils/backend";
 
 function getRvolColor(color: "GREEN" | "ORANGE" | "YELLOW" | "GRAY") {
@@ -39,9 +39,9 @@ function StatCard({ label, value, sub, icon: Icon, color }: any) {
   );
 }
 
-function PanelRow({ item, index, maxRms, side }: { item: RvolPulseItem; index: number; maxRms: number; side: "LONG" | "SHORT" }) {
-  const isPos = item.chg >= 0;
-  const barColor = side === "LONG" ? "var(--color-bull)" : "var(--color-bear)";
+function PanelRow({ item, index, maxRms }: { item: RvolPulseItem; index: number; maxRms: number }) {
+  const isLong = item.dir === "LONG";
+  const barColor = isLong ? "var(--color-bull)" : "var(--color-bear)";
   const bgWidth = maxRms > 0 ? (item.rms / maxRms) * 100 : 0;
   const rvolStyle = getRvolColor(item.color);
 
@@ -52,12 +52,12 @@ function PanelRow({ item, index, maxRms, side }: { item: RvolPulseItem; index: n
         className="absolute inset-y-0 left-0 transition-all duration-700 ease-out"
         style={{
           width: `${Math.min(bgWidth, 100)}%`,
-          background: side === "LONG" ? "rgba(0,232,154,0.05)" : "rgba(255,59,107,0.05)",
+          background: isLong ? "rgba(0,232,154,0.05)" : "rgba(255,59,107,0.05)",
           zIndex: 0
         }}
       />
       
-      <div className="relative z-10 grid items-center gap-2 px-3 py-2.5 md:px-4" style={{ gridTemplateColumns: "24px 1fr 60px 50px 70px" }}>
+      <div className="relative z-10 grid items-center gap-2 px-3 py-2.5 md:px-4" style={{ gridTemplateColumns: "24px 1fr 52px 60px 50px 70px" }}>
         {/* Rank */}
         <span className="font-mono text-[10px] font-bold" style={{ color: "var(--color-muted)" }}>
           #{index + 1}
@@ -68,9 +68,20 @@ function PanelRow({ item, index, maxRms, side }: { item: RvolPulseItem; index: n
           <div className="truncate text-xs font-semibold" style={{ color: "var(--color-text2)" }}>
             {item.stock}
           </div>
-          {item.signal && (
-            <Star size={10} fill="var(--color-gold)" stroke="var(--color-gold)" className="flex-shrink-0" />
-          )}
+        </div>
+
+        {/* Direction Badge */}
+        <div className="text-center">
+          <span
+            className="inline-flex justify-center items-center rounded px-1.5 py-0.5 font-mono text-[8px] tracking-[0.1em] font-bold"
+            style={{
+              color: isLong ? "var(--color-bull)" : "var(--color-bear)",
+              backgroundColor: isLong ? "rgba(0,232,154,0.1)" : "rgba(255,59,107,0.1)",
+              border: `1px solid ${isLong ? "rgba(0,232,154,0.25)" : "rgba(255,59,107,0.25)"}`,
+            }}
+          >
+            {item.dir}
+          </span>
         </div>
 
         {/* RVOL Badge */}
@@ -90,67 +101,15 @@ function PanelRow({ item, index, maxRms, side }: { item: RvolPulseItem; index: n
         {/* Change % */}
         <span
           className="text-right font-mono text-[10px] font-semibold"
-          style={{ color: isPos ? "var(--color-bull)" : "var(--color-bear)" }}
+          style={{ color: isLong ? "var(--color-bull)" : "var(--color-bear)" }}
         >
-          {isPos ? "+" : ""}{item.chg.toFixed(1)}%
+          {item.chg >= 0 ? "+" : ""}{item.chg.toFixed(1)}%
         </span>
 
         {/* RMS Score */}
         <span className="text-right font-mono text-[11px] font-bold" style={{ color: barColor }}>
           {item.rms.toFixed(1)}
         </span>
-      </div>
-    </div>
-  );
-}
-
-function RvolPanel({ data, side }: { data: RvolPulseItem[]; side: "LONG" | "SHORT" }) {
-  const maxRms = useMemo(() => {
-    return data.length > 0 ? Math.max(...data.map(d => d.rms)) : 0;
-  }, [data]);
-
-  return (
-    <div className="flex-1 flex flex-col rounded-xl border overflow-hidden" style={{ borderColor: "var(--color-border)", background: "var(--color-surface2)" }}>
-      <div
-        className="flex items-center justify-between border-b px-4 py-3"
-        style={{ borderColor: "var(--color-border)", background: "rgba(10,14,23,0.95)" }}
-      >
-        <span
-          className="font-mono text-[10px] tracking-[0.22em] font-bold"
-          style={{ color: side === "LONG" ? "var(--color-bull)" : "var(--color-bear)" }}
-        >
-          {side} MOVERS
-        </span>
-        <span className="font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
-          {data.length} STOCKS
-        </span>
-      </div>
-
-      <div
-        className="grid items-center gap-2 border-b px-3 py-2 md:px-4"
-        style={{
-          gridTemplateColumns: "24px 1fr 60px 50px 70px",
-          borderColor: "var(--color-border)",
-          background: "var(--color-surface2)",
-        }}
-      >
-        <span className="font-mono text-[8px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>RNK</span>
-        <span className="font-mono text-[8px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>SYMBOL</span>
-        <span className="font-mono text-[8px] tracking-[0.14em] text-center" style={{ color: "var(--color-muted)" }}>RVOL</span>
-        <span className="font-mono text-[8px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>CHG</span>
-        <span className="font-mono text-[8px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>RMS</span>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        {data.length > 0 ? (
-          data.map((item, i) => (
-            <PanelRow key={`${item.stock}-${item.rms}-${i}`} item={item} index={i} maxRms={maxRms} side={side} />
-          ))
-        ) : (
-          <div className="flex items-center justify-center p-10">
-            <span className="font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>NO DATA</span>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -181,6 +140,20 @@ export default function RvolPulseClient() {
     return () => clearInterval(intervalId);
   }, [load]);
 
+  // Use the unified top25Board (fallback: combine old long+short boards)
+  const board = useMemo(() => {
+    if (!data) return [];
+    if (data.top25Board && data.top25Board.length > 0) return data.top25Board;
+    // Fallback for old data that only has longBoard/shortBoard
+    return [...(data.longBoard || []), ...(data.shortBoard || [])]
+      .sort((a, b) => b.rms - a.rms)
+      .slice(0, 25);
+  }, [data]);
+
+  const maxRms = useMemo(() => {
+    return board.length > 0 ? Math.max(...board.map(d => d.rms)) : 0;
+  }, [board]);
+
   if (loading && !data) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
@@ -201,53 +174,89 @@ export default function RvolPulseClient() {
     );
   }
 
-  const longBoard = data?.longBoard || [];
-  const shortBoard = data?.shortBoard || [];
-  
-  const topLong = longBoard.length > 0 ? longBoard[0] : null;
-  const topShort = shortBoard.length > 0 ? shortBoard[0] : null;
-
-  const activeSignals = [...longBoard, ...shortBoard].filter(x => x.signal).length;
-  const lastUpdated = data?.lastUpdated ? data.lastUpdated.split(" ")[1] || data.lastUpdated : "--:--:--";
+  const topStock = board.length > 0 ? board[0] : null;
+  const longCount = board.filter(x => x.dir === "LONG").length;
+  const shortCount = board.filter(x => x.dir === "SHORT").length;
+  const lastUpdated = data?.lastUpdated || "--:--";
 
   return (
     <div className="flex flex-col h-full space-y-5">
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="TOP LONG RMS"
-          value={topLong ? topLong.stock : "-"}
-          sub={topLong ? `RMS: ${topLong.rms.toFixed(2)}` : "Awaiting Data"}
+          label="TOP CUMULATIVE RMS"
+          value={topStock ? topStock.stock : "-"}
+          sub={topStock ? `RMS: ${topStock.rms.toFixed(2)} • ${topStock.dir}` : "Awaiting Data"}
           icon={Trophy}
+          color="var(--color-gold)"
+        />
+        <StatCard
+          label="LONG MOVERS"
+          value={longCount}
+          sub={`of ${board.length} in Top 25`}
+          icon={TrendingUp}
           color="var(--color-bull)"
         />
         <StatCard
-          label="TOP SHORT RMS"
-          value={topShort ? topShort.stock : "-"}
-          sub={topShort ? `RMS: ${topShort.rms.toFixed(2)}` : "Awaiting Data"}
-          icon={Trophy}
+          label="SHORT MOVERS"
+          value={shortCount}
+          sub={`of ${board.length} in Top 25`}
+          icon={Zap}
           color="var(--color-bear)"
-        />
-        <StatCard
-          label="ACTIVE SIGNALS"
-          value={activeSignals}
-          sub="Stars on Top 10 rows"
-          icon={Target}
-          color="var(--color-gold)"
         />
         <StatCard
           label="LAST UPDATED"
           value={lastUpdated}
-          sub="Server Time"
+          sub="Cumulative since 09:15"
           icon={Clock}
           color="#14b8a6"
         />
       </div>
 
-      {/* Side-by-Side Panels */}
-      <div className="flex flex-col lg:flex-row gap-5 flex-1 min-h-0">
-        <RvolPanel data={longBoard} side="LONG" />
-        <RvolPanel data={shortBoard} side="SHORT" />
+      {/* Unified Top 25 Board */}
+      <div className="flex-1 flex flex-col rounded-xl border overflow-hidden" style={{ borderColor: "var(--color-border)", background: "var(--color-surface2)" }}>
+        <div
+          className="flex items-center justify-between border-b px-4 py-3"
+          style={{ borderColor: "var(--color-border)", background: "rgba(10,14,23,0.95)" }}
+        >
+          <span
+            className="font-mono text-[10px] tracking-[0.22em] font-bold"
+            style={{ color: "var(--color-gold)" }}
+          >
+            CUMULATIVE RMS LEADERBOARD
+          </span>
+          <span className="font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
+            TOP {board.length} STOCKS
+          </span>
+        </div>
+
+        <div
+          className="grid items-center gap-2 border-b px-3 py-2 md:px-4"
+          style={{
+            gridTemplateColumns: "24px 1fr 52px 60px 50px 70px",
+            borderColor: "var(--color-border)",
+            background: "var(--color-surface2)",
+          }}
+        >
+          <span className="font-mono text-[8px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>RNK</span>
+          <span className="font-mono text-[8px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>SYMBOL</span>
+          <span className="font-mono text-[8px] tracking-[0.14em] text-center" style={{ color: "var(--color-muted)" }}>DIR</span>
+          <span className="font-mono text-[8px] tracking-[0.14em] text-center" style={{ color: "var(--color-muted)" }}>RVOL</span>
+          <span className="font-mono text-[8px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>CHG</span>
+          <span className="font-mono text-[8px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>RMS</span>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          {board.length > 0 ? (
+            board.map((item, i) => (
+              <PanelRow key={`${item.stock}-${item.rms}-${i}`} item={item} index={i} maxRms={maxRms} />
+            ))
+          ) : (
+            <div className="flex items-center justify-center p-10">
+              <span className="font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>NO DATA</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ type StockRow = {
   Close: string;
   ChgPct: string;
   RVOL: string;
+  RMS?: string;
   Signal: "up" | "down";
 };
 
@@ -259,16 +260,17 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
                 
                 {/* Table */}
                 <div className="w-full border border-[rgba(255,255,255,0.04)] rounded-lg overflow-hidden bg-[rgba(255,255,255,0.01)]">
-                  <div className="grid grid-cols-6 text-[10px] text-[rgba(255,255,255,0.4)] font-mono tracking-wider p-2.5 border-b border-[rgba(255,255,255,0.04)] bg-[rgba(255,255,255,0.02)]">
+                  <div className="grid grid-cols-7 text-[10px] text-[rgba(255,255,255,0.4)] font-mono tracking-wider p-2.5 border-b border-[rgba(255,255,255,0.04)] bg-[rgba(255,255,255,0.02)]">
                      <div className="col-span-2">Symbol</div>
                      <div className="text-right">Pre C</div>
                      <div className="text-right">%</div>
-                     <div className="text-right flex items-center justify-end gap-1">R Fact <span className="text-[8px]">▼</span></div>
+                     <div className="text-right flex items-center justify-end gap-1">RVOL <span className="text-[8px]">▼</span></div>
+                     <div className="text-right">RMS</div>
                      <div className="text-center">Signal</div>
                   </div>
                   <div className="flex flex-col max-h-[350px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
                     {stocks.map((s, idx) => (
-                      <div key={s.Stock} className={`grid grid-cols-6 items-center px-2.5 py-3 text-[11px] font-semibold font-mono border-b border-[rgba(255,255,255,0.02)] ${idx % 2 === 0 ? '' : 'bg-[rgba(255,255,255,0.01)]'} hover:bg-[rgba(255,255,255,0.05)] transition-colors`}>
+                      <div key={s.Stock} className={`grid grid-cols-7 items-center px-2.5 py-3 text-[11px] font-semibold font-mono border-b border-[rgba(255,255,255,0.02)] ${idx % 2 === 0 ? '' : 'bg-[rgba(255,255,255,0.01)]'} hover:bg-[rgba(255,255,255,0.05)] transition-colors`}>
                         <div className="col-span-2 flex items-center gap-2">
                            <div className="w-4 h-4 bg-[rgba(255,255,255,0.1)] rounded flex items-center justify-center text-[8px] opacity-70">✦</div>
                            <a href={buildTradingViewUrl(s.Stock)} target="_blank" rel="noopener noreferrer" className="text-[rgba(255,255,255,0.9)] truncate tracking-wide hover:text-[#00e89a] hover:underline cursor-pointer">
@@ -281,6 +283,9 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
                         </div>
                         <div className="text-right font-bold text-[12px]" style={{color: Number(s.RVOL) >= 2.0 ? '#ffb020' : (Number(s.RVOL) >= 1.5 ? 'var(--color-gold)' : 'rgba(255,255,255,0.8)')}}>
                            {Number(s.RVOL).toFixed(2)}
+                        </div>
+                        <div className="text-right font-bold text-[11px]" style={{color: Number(s.RMS || 0) >= 3.0 ? '#ffb020' : (Number(s.RMS || 0) >= 1.0 ? 'var(--color-gold)' : 'rgba(255,255,255,0.5)')}}>
+                           {s.RMS ? Number(s.RMS).toFixed(1) : '–'}
                         </div>
                         <div className="text-center flex justify-center">
                            {s.Signal === 'up' ? (

@@ -120,11 +120,13 @@ export type RvolPulseItem = {
   rvol: number;
   chg: number;
   color: "GREEN" | "ORANGE" | "YELLOW" | "GRAY";
+  dir: "LONG" | "SHORT";
   signal: boolean;
 };
 
 export type RvolPulseData = {
   lastUpdated: string | null;
+  top25Board: RvolPulseItem[];
   longBoard: RvolPulseItem[];
   shortBoard: RvolPulseItem[];
 };
@@ -508,12 +510,14 @@ export function normalizeInstitutionalWatchlist(payload: unknown): PulseData {
 }
 
 export function normalizeRvolPulseItem(input: GenericRecord): RvolPulseItem {
+  const dir = textify(input.dir).toUpperCase();
   return {
     stock: textify(input.stock),
     rms: numberify(input.rms),
     rvol: numberify(input.rvol),
     chg: numberify(input.chg),
     color: (textify(input.color) || "GRAY") as "GREEN" | "ORANGE" | "YELLOW" | "GRAY",
+    dir: dir === "SHORT" ? "SHORT" : "LONG",
     signal: truthy(input.signal),
   };
 }
@@ -522,6 +526,7 @@ export function normalizeRvolPulseData(payload: unknown): RvolPulseData {
   const root = toRecord(payload);
   return {
     lastUpdated: textify(root.lastUpdated) || null,
+    top25Board: toArray(root.top25Board).map(normalizeRvolPulseItem),
     longBoard: toArray(root.longBoard).map(normalizeRvolPulseItem),
     shortBoard: toArray(root.shortBoard).map(normalizeRvolPulseItem),
   };
