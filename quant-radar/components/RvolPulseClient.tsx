@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Clock, Trophy, TrendingUp, Zap, ExternalLink } from "lucide-react";
+import { Clock } from "lucide-react";
 import type { RvolPulseData, RvolPulseItem } from "@/utils/backend";
 import { buildTradingViewUrl } from "@/utils/backend";
 
@@ -19,27 +19,6 @@ function getRvolColor(color: "GREEN" | "ORANGE" | "YELLOW" | "GRAY") {
     default:
       return { text: "var(--color-muted)", bg: "rgba(255,255,255,0.05)", border: "var(--color-border)" };
   }
-}
-
-function StatCard({ label, value, sub, icon: Icon, color }: any) {
-  return (
-    <div className="rounded-xl border p-4" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-      <div className="flex items-center justify-between mb-3">
-        <span className="font-mono text-[9px] tracking-[0.2em] font-semibold" style={{ color: "var(--color-muted)" }}>
-          {label}
-        </span>
-        <Icon size={14} style={{ color }} />
-      </div>
-      <div>
-        <div className="text-lg font-bold font-mono tracking-wide" style={{ color: "var(--color-text)" }}>
-          {value}
-        </div>
-        <div className="font-mono text-[9px] tracking-[0.14em] mt-1" style={{ color: "var(--color-muted2)" }}>
-          {sub}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function BoardTable({ board }: { board: RvolPulseItem[] }) {
@@ -142,7 +121,7 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[36px_1fr_60px_70px_70px_70px_40px] lg:grid-cols-[44px_1fr_80px_80px_80px_80px_50px] min-w-[520px] lg:min-w-0"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[30px_1fr_60px_60px_60px_60px] lg:grid-cols-[40px_1fr_80px_80px_80px_80px] min-w-[460px] lg:min-w-0"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -170,9 +149,6 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
               </button>
             );
           })}
-          <span className="font-mono text-[9px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>
-            TV
-          </span>
         </div>
 
         {/* Rows */}
@@ -186,7 +162,7 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
           return (
               <div
                 key={rowId}
-                className="relative overflow-hidden grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[36px_1fr_60px_70px_70px_70px_40px] lg:grid-cols-[44px_1fr_80px_80px_80px_80px_50px] min-w-[520px] lg:min-w-0"
+                className="relative overflow-hidden grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[30px_1fr_60px_60px_60px_60px] lg:grid-cols-[40px_1fr_80px_80px_80px_80px] min-w-[460px] lg:min-w-0"
                 style={{ borderColor: "var(--color-border)" }}
               >
                 {/* Background RMS Bar */}
@@ -260,23 +236,6 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
                 >
                   {item.rms.toFixed(1)}
                 </span>
-
-                {/* TV LINK */}
-                <div className="relative z-10 text-right">
-                  <a
-                    href={buildTradingViewUrl(item.stock)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center rounded-md border p-1"
-                    style={{
-                      color: "var(--color-accent)",
-                      borderColor: "rgba(45,142,255,0.20)",
-                      background: "rgba(45,142,255,0.06)",
-                    }}
-                  >
-                    <ExternalLink size={12} />
-                  </a>
-                </div>
               </div>
           );
         })}
@@ -342,47 +301,13 @@ export default function RvolPulseClient({ dateStr }: { dateStr?: string }) {
     );
   }
 
-  const topStock = board.length > 0 ? board[0] : null;
-  const longCount = board.filter(x => x.dir === "LONG").length;
-  const shortCount = board.filter(x => x.dir === "SHORT").length;
   const lastUpdated = data?.lastUpdated || "--:--";
 
   return (
-    <div className="flex flex-col h-full space-y-5">
-      {/* 4 Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="TOP CUMULATIVE RMS"
-          value={topStock ? topStock.stock : "-"}
-          sub={topStock ? `RMS: ${topStock.rms.toFixed(2)} • ${topStock.dir}` : "Awaiting Data"}
-          icon={Trophy}
-          color="var(--color-gold)"
-        />
-        <StatCard
-          label="LONG MOVERS"
-          value={longCount}
-          sub={`of ${board.length} in Top 25`}
-          icon={TrendingUp}
-          color="var(--color-bull)"
-        />
-        <StatCard
-          label="SHORT MOVERS"
-          value={shortCount}
-          sub={`of ${board.length} in Top 25`}
-          icon={Zap}
-          color="var(--color-bear)"
-        />
-        <StatCard
-          label="LAST UPDATED"
-          value={lastUpdated}
-          sub="Cumulative since 09:15"
-          icon={Clock}
-          color="#14b8a6"
-        />
-      </div>
-
-      {/* Unified Top 25 Board — Smart Radar style table */}
+    <div className="flex flex-col h-full">
+      {/* Leaderboard table — full height */}
       <div className="flex-1 flex flex-col rounded-xl border overflow-hidden" style={{ borderColor: "var(--color-border)", background: "var(--color-surface2)" }}>
+        {/* Header bar with title + last updated */}
         <div
           className="flex items-center justify-between border-b px-4 py-3"
           style={{ borderColor: "var(--color-border)", background: "rgba(10,14,23,0.95)" }}
@@ -393,9 +318,15 @@ export default function RvolPulseClient({ dateStr }: { dateStr?: string }) {
           >
             CUMULATIVE RMS LEADERBOARD
           </span>
-          <span className="font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
-            TOP {board.length} STOCKS
-          </span>
+          <div className="flex items-center gap-1.5">
+            <Clock size={11} style={{ color: "#14b8a6" }} />
+            <span className="font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted2)" }}>
+              {lastUpdated}
+            </span>
+            <span className="font-mono text-[8px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
+              • since 09:15
+            </span>
+          </div>
         </div>
 
         <BoardTable board={board} />
