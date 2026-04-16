@@ -1,8 +1,9 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import type { RadarSignal } from "@/utils/backend";
+import { buildTradingViewUrl } from "@/utils/backend";
 
 type SortKey = "time" | "name" | "break" | "side" | "score" | "rank" | "oflow";
 
@@ -21,7 +22,6 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [ascending, setAscending] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "BULL" | "BEAR">("ALL");
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   const filtered = signals.filter((s) => filter === "ALL" || s.Side === filter);
 
@@ -148,30 +148,31 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
         {/* Rows */}
         {sorted.map((signal, idx) => {
           const rowId = `${signal.Symbol || signal.Name}-${signal.FiredAt}-${idx}`;
-          const isOpen = expanded === rowId;
           const isBull = signal.Side === "BULL";
           const bt = breakLabel(signal.BreakType);
 
           return (
-            <Fragment key={rowId}>
               <div
-                onClick={() => setExpanded((c) => (c === rowId ? null : rowId))}
-                className="grid cursor-pointer items-center gap-2 border-b px-3 py-2.5 transition-colors md:px-4 grid-cols-[60px_1fr_75px_60px_60px_60px_40px] lg:grid-cols-[80px_1fr_100px_80px_80px_80px_50px] min-w-[600px] lg:min-w-0"
-                style={{
-                  borderColor: isOpen ? "transparent" : "var(--color-border)",
-                  background: isOpen ? "rgba(45, 142, 255, 0.04)" : "transparent",
-                }}
+                key={rowId}
+                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[60px_1fr_75px_60px_60px_60px_40px] lg:grid-cols-[80px_1fr_100px_80px_80px_80px_50px] min-w-[600px] lg:min-w-0"
+                style={{ borderColor: "var(--color-border)" }}
               >
                 {/* TIME */}
                 <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
                   {shortTime(signal.FiredAt || signal.EntryTime)}
                 </span>
 
-                {/* NAME + symbol */}
+                {/* NAME + symbol — inline TradingView link */}
                 <div className="min-w-0">
-                  <div className="truncate text-[13px] font-semibold" style={{ color: "var(--color-text2)" }}>
+                  <a
+                    href={signal.Chart || buildTradingViewUrl(signal.Symbol, signal.Name)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-[13px] font-semibold hover:underline block"
+                    style={{ color: "var(--color-text2)" }}
+                  >
                     {signal.Name}
-                  </div>
+                  </a>
                   <div
                     className="truncate font-mono text-[9px] tracking-[0.14em]"
                     style={{ color: "var(--color-muted)" }}
@@ -226,7 +227,6 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                     href={signal.Chart}
                     target="_blank"
                     rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center rounded-md border p-1"
                     style={{
                       color: "var(--color-accent)",
@@ -238,35 +238,6 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                   </a>
                 </div>
               </div>
-
-              {/* ── Expanded detail ─────────────────────────────────── */}
-              {isOpen && (
-                <div
-                  className="border-b px-3 pb-4 pt-2 md:px-4"
-                  style={{ borderColor: "var(--color-border)", background: "rgba(45, 142, 255, 0.02)" }}
-                >
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    <DetailCell label="ENTRY" value={signal.Entry ? `₹${signal.Entry.toFixed(2)}` : "-"} color="var(--color-text2)" />
-                    <DetailCell label="STOP" value={signal.SL ? `₹${signal.SL.toFixed(2)}` : "-"} color="var(--color-bear)" />
-                    <DetailCell label="TARGET 1" value={signal.Target1 ? `₹${signal.Target1.toFixed(2)}` : "-"} color="var(--color-bull)" />
-                    <DetailCell label="R:R" value={signal.RR || "-"} color="var(--color-text)" />
-                    <DetailCell label="O.FLOW" value={signal.PCR ? signal.PCR.toFixed(2) : "-"} color="var(--color-text)" />
-                    <DetailCell label="RVOL" value={signal.RVOL ? `${signal.RVOL.toFixed(1)}x` : "-"} color="var(--color-text)" />
-                    <DetailCell label="SECTOR" value={signal.Sector || "-"} color="var(--color-accent)" />
-                    <DetailCell
-                      label="MOVE"
-                      value={signal.DayMovePct ? `${signal.DayMovePct > 0 ? "+" : ""}${signal.DayMovePct.toFixed(2)}%` : "-"}
-                      color={signal.DayMovePct > 0 ? "var(--color-bull)" : signal.DayMovePct < 0 ? "var(--color-bear)" : "var(--color-muted)"}
-                    />
-                  </div>
-                  {signal.Notes && (
-                    <p className="mt-2 font-mono text-[10px]" style={{ color: "var(--color-muted2)" }}>
-                      {signal.Notes}
-                    </p>
-                  )}
-                </div>
-              )}
-            </Fragment>
           );
         })}
       </div>
@@ -274,15 +245,3 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
   );
 }
 
-function DetailCell({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div className="rounded-lg border px-2.5 py-2" style={{ borderColor: "var(--color-border)" }}>
-      <div className="font-mono text-[8px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
-        {label}
-      </div>
-      <div className="mt-0.5 font-mono text-xs font-semibold" style={{ color }}>
-        {value}
-      </div>
-    </div>
-  );
-}
