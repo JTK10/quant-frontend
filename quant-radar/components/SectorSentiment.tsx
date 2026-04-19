@@ -88,11 +88,11 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
   const totalBear = bearishSectors.length;
   const grandTotal = data.reduce((s, d) => s + (Number(d.StockCount) || 0), 0);
 
-  const maxRvol = Math.max(...data.map(d => parseFloat(d.SectorRVOL || "0")), 1);
+  const maxChg = Math.max(...data.map(d => Math.abs(parseFloat(d.SectorChgPct || "0"))), 0.1);
 
-  // Generate dynamic Y ticks around the max RVOL value 
+  // Generate dynamic Y ticks around the max SectorChgPct value 
   // We want ticks for: +maxY, +maxY/2, 0, -maxY/2, -maxY
-  const maxY = Math.ceil(maxRvol * 2) / 2; // e.g. 2.3 -> 2.5
+  const maxY = Math.ceil(maxChg * 2) / 2; // e.g. 0.7 -> 1.0
   const yTicks = [maxY, maxY / 2, 0, -(maxY / 2), -maxY];
 
   return (
@@ -139,7 +139,7 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
           <div className="flex flex-col justify-between h-[300px] text-right pr-4 shrink-0 w-[45px]">
             {yTicks.map((val, i) => (
               <span key={`ytick-${i}`} className="text-[10px] font-mono translate-y-[5px] font-semibold" style={{ color: "var(--color-muted)" }}>
-                {val > 0 ? `+${val.toFixed(1)}x` : val < 0 ? `${val.toFixed(1)}x` : '0'}
+                {val > 0 ? `+${val.toFixed(1)}%` : val < 0 ? `${val.toFixed(1)}%` : '0'}
               </span>
             ))}
           </div>
@@ -162,8 +162,8 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
               {sortedData.map(item => {
                 const isBull = isSectorBullish(item);
                 const color = isBull ? BULL : BEAR;
-                const rvolVal = parseFloat(item.SectorRVOL || "0");
-                const heightPct = maxY > 0 ? (rvolVal / maxY) * 50 : 0; // max is 50%
+                const chgVal = Math.abs(parseFloat(item.SectorChgPct || "0"));
+                const heightPct = maxY > 0 ? (chgVal / maxY) * 50 : 0; // max is 50%
                 const cleanSector = (item.Sector || "").replace("NIFTY_", "").replace("_", " ");
 
                 return (
@@ -185,7 +185,7 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
                     >
                       {/* Tooltip on hover */}
                       <div className={`absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#141a27] border border-[rgba(255,255,255,0.1)] text-[9px] px-2 py-1 rounded shadow-lg whitespace-nowrap z-20 font-mono tracking-wider font-semibold pointer-events-none ${isBull ? '-top-8' : '-bottom-8'}`} style={{ color }}>
-                        {rvolVal.toFixed(2)}x VOL
+                        {parseFloat(item.SectorChgPct || "0") >= 0 ? "+" : ""}{parseFloat(item.SectorChgPct || "0").toFixed(2)}%
                       </div>
                     </div>
 
