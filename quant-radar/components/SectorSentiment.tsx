@@ -76,11 +76,11 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
   const bullishSectors = data.filter(d => isSectorBullish(d));
   const bearishSectors = data.filter(d => !isSectorBullish(d));
 
-  // Bullish: Highest RVOL on the left (index 0)
-  bullishSectors.sort((a, b) => parseFloat(b.SectorRVOL || "0") - parseFloat(a.SectorRVOL || "0"));
+  // Bullish: Highest ChgPct on the left (index 0)
+  bullishSectors.sort((a, b) => parseFloat(b.SectorChgPct || "0") - parseFloat(a.SectorChgPct || "0"));
   
-  // Bearish: Lowest RVOL on the left, Highest RVOL on the far right
-  bearishSectors.sort((a, b) => parseFloat(a.SectorRVOL || "0") - parseFloat(b.SectorRVOL || "0"));
+  // Bearish: Least negative on the left, Most negative on the far right
+  bearishSectors.sort((a, b) => parseFloat(b.SectorChgPct || "0") - parseFloat(a.SectorChgPct || "0"));
 
   const sortedData = [...bullishSectors, ...bearishSectors];
   
