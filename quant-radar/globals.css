@@ -1,0 +1,148 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --font-display: "Inter", "SF Pro Display", sans-serif;
+
+  /* ── Dark prop-desk palette ──────────────────────────────────────────── */
+  --color-bg: #0a0e17;
+  --color-surface: #111827;
+  --color-surface2: #1a2233;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border2: rgba(255, 255, 255, 0.10);
+  --color-muted: #4b5563;
+  --color-muted2: #6b7280;
+  --color-text: #d1d5db;
+  --color-text2: #f3f4f6;
+
+  /* ── Bull / Bear ─────────────────────────────────────────────────────── */
+  --color-bull: #00e89a;
+  --color-bullbg: rgba(0, 232, 154, 0.08);
+  --color-bullborder: rgba(0, 232, 154, 0.20);
+  --color-bear: #ff3b6b;
+  --color-bearbg: rgba(255, 59, 107, 0.08);
+  --color-bearborder: rgba(255, 59, 107, 0.20);
+
+  /* ── Accent palette ──────────────────────────────────────────────────── */
+  --color-accent: #2d8eff;
+  --color-accentbg: rgba(45, 142, 255, 0.10);
+  --color-gold: #f59e0b;
+  --color-goldbg: rgba(245, 158, 11, 0.10);
+  --color-purple: #a855f7;
+  --color-purplebg: rgba(168, 85, 247, 0.10);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes bar-fill {
+  from {
+    width: 0;
+  }
+}
+
+@keyframes ping {
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.35s ease both;
+}
+
+.animate-ping {
+  animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.pulse-glow {
+  animation: pulse-glow 1.4s ease-in-out infinite;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.8);
+}
+
+input[type="date"] {
+  color-scheme: dark;
+}
+
+.glass {
+  border: 1px solid var(--color-border);
+  background: rgba(17, 24, 39, 0.92);
+  backdrop-filter: blur(6px);
+}
