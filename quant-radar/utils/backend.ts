@@ -144,6 +144,26 @@ export type SniperRow = {
   Chart: string;
 };
 
+export type ObSignalRow = {
+  Name: string;
+  Symbol: string;
+  Side: "BULL" | "BEAR" | "NEUTRAL";
+  Direction: string;
+  SignalTime: string;
+  Entry: number;
+  PDL: number;
+  PDH: number;
+  PDL_Brk_Pct: number;
+  OB_High: number;
+  OB_Low: number;
+  OB_Pen_Pct: number;
+  Gap_Pct: number;
+  Score: number;
+  OB_Date: string;
+  FiredAt: string;
+  Chart: string;
+};
+
 
 export function getTodayIstDate(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -237,7 +257,7 @@ export function buildTradingViewUrl(symbol: string, name?: string): string {
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(finalSymbol)}&interval=5`;
 }
 
-type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal";
+type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal" | "ob-signal";
 
 export async function fetchBackendRoute(route: BackendRoute, dateStr: string, extraParams: Record<string, string> = {}): Promise<unknown> {
   const rawApiUrl = process.env.AWS_API_URL;
@@ -554,4 +574,33 @@ export function normalizeSniperSignals(payload: unknown): SniperRow[] {
     };
   });
 }
+export function normalizeObSignals(payload: unknown): ObSignalRow[] {
+  const rows = toArray(payload);
 
+  return rows.map((row) => {
+    const symbol = textify(row.Symbol);
+    const name = textify(row.Name, symbol || "Unnamed");
+    const direction = textify(row.Direction).toUpperCase();
+    const side = direction.includes("BULL") ? "BULL" : direction.includes("BEAR") ? "BEAR" : "NEUTRAL";
+
+    return {
+      Name: name,
+      Symbol: symbol,
+      Side: side as "BULL" | "BEAR" | "NEUTRAL",
+      Direction: direction,
+      SignalTime: textify(row.Signal_Time),
+      Entry: numberify(row.Entry),
+      PDL: numberify(row.PDL),
+      PDH: numberify(row.PDH),
+      PDL_Brk_Pct: numberify(row.PDL_Brk_Pct),
+      OB_High: numberify(row.OB_High),
+      OB_Low: numberify(row.OB_Low),
+      OB_Pen_Pct: numberify(row.OB_Pen_Pct),
+      Gap_Pct: numberify(row.Gap_Pct),
+      Score: numberify(row.Score),
+      OB_Date: textify(row.OB_Date),
+      FiredAt: textify(row.Fired_At),
+      Chart: buildTradingViewUrl(symbol, name),
+    };
+  });
+}
