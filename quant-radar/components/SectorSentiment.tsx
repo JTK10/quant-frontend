@@ -217,7 +217,7 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
             let stocks: StockRow[] = [];
             try {
                stocks = item.Stocks ? JSON.parse(item.Stocks) : [];
-               stocks.sort((a,b) => parseFloat(b.RVOL) - parseFloat(a.RVOL));
+               stocks.sort((a,b) => parseFloat(b.RMS || "0") - parseFloat(a.RMS || "0"));
             } catch(e) {}
             
             if (stocks.length === 0) return null;
