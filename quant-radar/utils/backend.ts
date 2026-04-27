@@ -161,6 +161,10 @@ export type ObSignalRow = {
   Score: number;
   OB_Date: string;
   FiredAt: string;
+  RMS: number;
+  Sector: string;
+  Sector_RMS_Rank: number;
+  Sector_Size: number;
   Chart: string;
 };
 
@@ -600,6 +604,10 @@ export function normalizeObSignals(payload: unknown): ObSignalRow[] {
       Score: numberify(row.Score),
       OB_Date: textify(row.OB_Date),
       FiredAt: textify(row.Fired_At),
+      RMS: numberify(row.RMS),
+      Sector: textify(row.Sector),
+      Sector_RMS_Rank: numberify(row.Sector_RMS_Rank),
+      Sector_Size: numberify(row.Sector_Size),
       Chart: buildTradingViewUrl(symbol, name),
     };
   });

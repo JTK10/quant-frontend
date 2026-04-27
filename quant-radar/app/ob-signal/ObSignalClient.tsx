@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { useState, useMemo } from "react";
 import type { ObSignalRow } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "side" | "score" | "entry" | "brk" | "pen" | "gap";
+type SortKey = "time" | "name" | "side" | "score" | "entry" | "brk" | "pen" | "gap" | "rms" | "sector";
 
 function shortTime(value: string): string {
   if (!value) return "-";
@@ -39,6 +39,8 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
         case "brk": diff = a.PDL_Brk_Pct - b.PDL_Brk_Pct; break;
         case "pen": diff = a.OB_Pen_Pct - b.OB_Pen_Pct; break;
         case "gap": diff = a.Gap_Pct - b.Gap_Pct; break;
+        case "rms": diff = a.RMS - b.RMS; break;
+        case "sector": diff = a.Sector_RMS_Rank - b.Sector_RMS_Rank; break;
         default: diff = a.Score - b.Score;
       }
       return ascending ? diff : -diff;
@@ -72,9 +74,11 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
     ["name", "NAME"],
     ["side", "SIDE"],
     ["entry", "ENTRY"],
+    ["rms", "RMS"],
     ["brk", "BRK%"],
     ["pen", "OB PEN%"],
     ["gap", "GAP%"],
+    ["sector", "SECTOR"],
     ["score", "SCORE"],
   ];
 
@@ -115,7 +119,7 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[60px_1fr_60px_75px_68px_68px_68px_80px_40px] min-w-[700px]"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[55px_1fr_55px_70px_55px_62px_62px_62px_minmax(90px,1fr)_75px_36px] min-w-[800px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -155,7 +159,7 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
           return (
             <div
               key={rowId}
-              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[60px_1fr_60px_75px_68px_68px_68px_80px_40px] min-w-[700px]"
+              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[55px_1fr_55px_70px_55px_62px_62px_62px_minmax(90px,1fr)_75px_36px] min-w-[800px]"
               style={{ borderColor: "var(--color-border)" }}
             >
               {/* TIME */}
@@ -209,6 +213,14 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
                 {sig.PDL_Brk_Pct.toFixed(2)}%
               </span>
 
+              {/* RMS */}
+              <span
+                className="text-right font-mono text-[11px] tabular-nums font-semibold"
+                style={{ color: sig.RMS >= 3 ? "var(--color-gold)" : sig.RMS >= 1 ? "var(--color-text2)" : "var(--color-muted)" }}
+              >
+                {sig.RMS > 0 ? sig.RMS.toFixed(1) : "-"}
+              </span>
+
               {/* OB PEN% */}
               <span
                 className="text-right font-mono text-[11px] tabular-nums font-semibold"
@@ -226,6 +238,25 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
               >
                 {sig.Gap_Pct >= 0 ? "+" : ""}{sig.Gap_Pct.toFixed(2)}%
               </span>
+
+              {/* SECTOR + RANK */}
+              <div className="min-w-0">
+                {sig.Sector ? (
+                  <>
+                    <span className="truncate font-mono text-[10px] block" style={{ color: "var(--color-text2)" }}>
+                      {sig.Sector}
+                    </span>
+                    <span
+                      className="font-mono text-[8px] tracking-[0.1em]"
+                      style={{ color: sig.Sector_RMS_Rank <= 3 ? "var(--color-gold)" : "var(--color-muted)" }}
+                    >
+                      #{sig.Sector_RMS_Rank}/{sig.Sector_Size} RMS
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>-</span>
+                )}
+              </div>
 
               {/* SCORE */}
               <div className="flex items-center justify-end gap-1.5">
