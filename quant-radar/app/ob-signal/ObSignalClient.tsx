@@ -160,7 +160,7 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
             >
               {/* TIME */}
               <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
-                {shortTime(sig.FiredAt || sig.SignalTime)}
+                {shortTime(sig.SignalTime || sig.FiredAt)}
               </span>
 
               {/* NAME */}
