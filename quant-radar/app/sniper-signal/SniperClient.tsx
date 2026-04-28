@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { SniperRow } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "rvol";
+type SortKey = "time" | "name" | "rvol" | "composite";
 
 function shortTime(value: string): string {
   if (!value) return "-";
@@ -15,8 +15,11 @@ function shortTime(value: string): string {
 function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "SHORT" }) {
   const [sortKey, setSortKey] = useState<SortKey>("time");
   const [ascending, setAscending] = useState(false);
+  const [bestOnly, setBestOnly] = useState(false);
 
-  const sorted = [...signals].sort((a, b) => {
+  const filtered = bestOnly ? signals.filter(s => s.IsBestInSector) : signals;
+
+  const sorted = [...filtered].sort((a, b) => {
     const cmp = (() => {
       switch (sortKey) {
         case "time":
@@ -25,6 +28,8 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
           return a.Name.localeCompare(b.Name);
         case "rvol":
           return (a.RVOL || 0) - (b.RVOL || 0);
+        case "composite":
+          return (a.CompositeScore || 0) - (b.CompositeScore || 0);
         default:
           return 0;
       }
@@ -35,6 +40,7 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
   const headers: [SortKey, string][] = [
     ["time", "TIME"],
     ["name", "NAME"],
+    ["composite", "COMP"],
     ["rvol", "RVOL"],
   ];
 
@@ -49,18 +55,31 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
         className="flex items-center justify-between border-b px-4 py-2 sticky top-0 z-20"
         style={{ borderColor: "var(--color-border)", background: bgAccent }}
       >
-        <div className="font-mono text-[10px] font-semibold tracking-[0.2em]" style={{ color: headerColor }}>
-          {isBull ? "BULLISH CROSSOVERS" : "BEARISH CROSSOVERS"}
+        <div className="flex items-center gap-3">
+          <div className="font-mono text-[10px] font-semibold tracking-[0.2em]" style={{ color: headerColor }}>
+            {isBull ? "BULLISH CROSSOVERS" : "BEARISH CROSSOVERS"}
+          </div>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={bestOnly}
+              onChange={(e) => setBestOnly(e.target.checked)}
+              className="w-3 h-3 rounded-sm border-gray-600 bg-transparent text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+            />
+            <span className="font-mono text-[9px] tracking-[0.1em]" style={{ color: bestOnly ? headerColor : "var(--color-muted)" }}>
+              BEST IN SECTOR
+            </span>
+          </label>
         </div>
         <div className="font-mono text-[10px]" style={{ color: headerColor }}>
-          {signals.length} LISTED
+          {filtered.length} LISTED
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
         {/* Table Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[50px_1fr_60px_60px_40px] xl:grid-cols-[60px_1fr_75px_75px_40px] min-w-[320px] xl:min-w-0"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[50px_1fr_50px_50px_30px] xl:grid-cols-[60px_1fr_60px_60px_30px] min-w-[320px] xl:min-w-0"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -80,7 +99,7 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
                     setAscending(key === "name"); // default to ascending for name, desc for values
                   }
                 }}
-                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "rvol" ? "text-right" : ""}`}
+                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "rvol" || key === "composite" ? "text-right" : ""}`}
                 style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
               >
                 {label}
@@ -89,10 +108,6 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
             );
           })}
           <span className="text-right font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
-            MAX %
-          </span>
-          <span className="text-right font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
-            TV
           </span>
         </div>
 
@@ -100,7 +115,7 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
         {sorted.map((row, idx) => (
           <div
             key={`${row.Symbol}-${row.SignalTime}-${idx}`}
-            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[50px_1fr_60px_60px_40px] xl:grid-cols-[60px_1fr_75px_75px_40px] min-w-[320px] xl:min-w-0"
+            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[50px_1fr_50px_50px_30px] xl:grid-cols-[60px_1fr_60px_60px_30px] min-w-[320px] xl:min-w-0"
             style={{
               borderColor: "var(--color-border)",
               borderLeft: `2px solid ${row.RVOL_Color === "GREEN" ? "var(--color-bull)" : row.RVOL_Color === "ORANGE" ? "var(--color-gold)" : row.RVOL_Color === "YELLOW" ? "#facc15" : "transparent"}`
@@ -109,24 +124,29 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
             <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
               {shortTime(row.SignalTime ?? "")}
             </span>
-            <div className="min-w-0">
-              <div className="truncate text-[13px] font-semibold" style={{ color: "var(--color-text2)" }}>
-                {row.Name}
+            <div className="min-w-0 flex flex-col justify-center">
+              <div className="flex items-center gap-1.5">
+                <div className="truncate text-[13px] font-semibold" style={{ color: "var(--color-text2)" }}>
+                  {row.Name}
+                </div>
+                {row.IsBestInSector && (
+                  <span className="shrink-0 text-[10px]" title="Best in Sector">⭐</span>
+                )}
               </div>
-              <div className="truncate font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
-                {row.Symbol} <span className="opacity-50">| IN: ₹{row.EntryPrice}</span>
+              <div className="truncate font-mono text-[9px] tracking-[0.05em]" style={{ color: "var(--color-muted)" }}>
+                {row.TriggerMode}
               </div>
             </div>
             
             <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
+               {row.CompositeScore ? row.CompositeScore.toFixed(1) : "-"}
+            </span>
+
+            <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
                {row.RVOL ? row.RVOL.toFixed(1) + "x" : "-"}
             </span>
 
-            <span className="text-right font-mono text-[11px] font-semibold" style={{ color: row.MaxMovePct > 0 ? "var(--color-bull)" : row.MaxMovePct < 0 ? "var(--color-bear)" : "var(--color-text)" }}>
-               {row.MaxMovePct ? row.MaxMovePct.toFixed(1) + "%" : "0%"}
-            </span>
-
-            <div className="text-right">
+            <div className="text-right flex items-center justify-end">
               <a
                 href={row.Chart}
                 target="_blank"

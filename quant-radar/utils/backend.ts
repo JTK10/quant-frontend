@@ -142,6 +142,13 @@ export type SniperRow = {
   RVOL_Color: string;
   MaxMovePct: number;
   Chart: string;
+  TriggerMode: string;
+  Conviction: number;
+  Sector: string;
+  RSScore: number;
+  SectorPressure: number;
+  CompositeScore: number;
+  IsBestInSector: boolean;
 };
 
 export type ObSignalRow = {
@@ -254,10 +261,10 @@ export function normalizeSignalSide(value: unknown): "BULL" | "BEAR" | "NEUTRAL"
 export function buildTradingViewUrl(symbol: string, name?: string): string {
   const token = textify(symbol) || textify(name) || "NIFTY";
   const cleaned = token.replace(/\s+/g, "").toUpperCase();
-  
+
   // Cross-reference with the master mapping dictionary
   const finalSymbol = symbolMap[cleaned] || cleaned;
-  
+
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(finalSymbol)}&interval=5`;
 }
 
@@ -278,7 +285,7 @@ export async function fetchBackendRoute(route: BackendRoute, dateStr: string, ex
   const url = new URL(rawApiUrl);
   url.searchParams.set("route", route);
   url.searchParams.set("date", dateStr);
-  
+
   Object.entries(extraParams).forEach(([k, v]) => {
     url.searchParams.set(k, v);
   });
@@ -493,12 +500,12 @@ export function normalizeInstitutionalWatchlist(payload: unknown): PulseData {
   const rows = toArray(payload);
   const bulls: PulseRow[] = [];
   const bears: PulseRow[] = [];
-  
+
   for (const item of rows) {
     const symbol = textify(item.SK);
     const side = normalizeSignalSide(item.Direction);
     const time = textify(item.StoredAt);
-    
+
     const pulseRow: PulseRow = {
       Name: symbol,
       Symbol: symbol,
@@ -516,14 +523,14 @@ export function normalizeInstitutionalWatchlist(payload: unknown): PulseData {
       Break: "-",
       Chart: buildTradingViewUrl(symbol, symbol)
     };
-    
+
     if (side === "BEAR") {
       bears.push(pulseRow);
     } else {
       bulls.push(pulseRow);
     }
   }
-  
+
   return {
     watchlist: [],
     bulls,
@@ -575,6 +582,13 @@ export function normalizeSniperSignals(payload: unknown): SniperRow[] {
       RVOL_Color: textify(row.RVOL_Color, "GRAY"),
       MaxMovePct: numberify(row.MaxMove_Pct),
       Chart: buildTradingViewUrl(symbol, name),
+      TriggerMode: textify(row.TriggerMode),
+      Conviction: numberify(row.Conviction),
+      Sector: textify(row.Sector, "OTHER"),
+      RSScore: numberify(row.RS_Score),
+      SectorPressure: numberify(row.SectorPressure),
+      CompositeScore: numberify(row.CompositeScore),
+      IsBestInSector: truthy(row.IsBestInSector),
     };
   });
 }
