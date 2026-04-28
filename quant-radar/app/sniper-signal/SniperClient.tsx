@@ -82,7 +82,7 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
       <div className="flex-1 overflow-auto">
         {/* Table Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[40px_minmax(80px,1fr)_minmax(80px,1fr)_40px_40px_20px] xl:grid-cols-[60px_minmax(120px,1fr)_minmax(120px,1fr)_60px_60px_30px] min-w-[400px] xl:min-w-0"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[40px_minmax(80px,1fr)_minmax(80px,1fr)_40px_40px] xl:grid-cols-[60px_minmax(120px,1fr)_minmax(120px,1fr)_60px_60px] min-w-[360px] xl:min-w-0"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -118,7 +118,7 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
         {sorted.map((row, idx) => (
           <div
             key={`${row.Symbol}-${row.SignalTime}-${idx}`}
-            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[40px_minmax(80px,1fr)_minmax(80px,1fr)_40px_40px_20px] xl:grid-cols-[60px_minmax(120px,1fr)_minmax(120px,1fr)_60px_60px_30px] min-w-[400px] xl:min-w-0"
+            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[40px_minmax(80px,1fr)_minmax(80px,1fr)_40px_40px] xl:grid-cols-[60px_minmax(120px,1fr)_minmax(120px,1fr)_60px_60px] min-w-[360px] xl:min-w-0"
             style={{
               borderColor: "var(--color-border)",
               borderLeft: `2px solid ${row.RVOL_Color === "GREEN" ? "var(--color-bull)" : row.RVOL_Color === "ORANGE" ? "var(--color-gold)" : row.RVOL_Color === "YELLOW" ? "#facc15" : "transparent"}`
@@ -129,9 +129,15 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
             </span>
             <div className="min-w-0 flex flex-col justify-center">
               <div className="flex items-center gap-1.5">
-                <div className="truncate text-[13px] font-semibold" style={{ color: "var(--color-text2)" }}>
+                <a 
+                  href={row.Chart} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="truncate text-[13px] font-semibold hover:underline" 
+                  style={{ color: "var(--color-accent)" }}
+                >
                   {row.Name}
-                </div>
+                </a>
                 {row.IsBestInSector && (
                   <span className="shrink-0 text-[10px]" title="Best in Sector">⭐</span>
                 )}
@@ -154,22 +160,6 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
             <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
                {row.RVOL ? row.RVOL.toFixed(1) + "x" : "-"}
             </span>
-
-            <div className="text-right flex items-center justify-end">
-              <a
-                href={row.Chart}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center rounded-md border p-1 opacity-80 hover:opacity-100 transition-opacity"
-                style={{
-                  color: "var(--color-accent)",
-                  borderColor: "rgba(45,142,255,0.20)",
-                  background: "rgba(45,142,255,0.06)",
-                }}
-              >
-                <ExternalLink size={12} />
-              </a>
-            </div>
           </div>
         ))}
         {sorted.length === 0 && (
