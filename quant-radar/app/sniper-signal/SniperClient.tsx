@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { SniperRow } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "rvol" | "composite";
+type SortKey = "time" | "name" | "rvol" | "composite" | "trigger";
 
 function shortTime(value: string): string {
   if (!value) return "-";
@@ -30,6 +30,8 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
           return (a.RVOL || 0) - (b.RVOL || 0);
         case "composite":
           return (a.CompositeScore || 0) - (b.CompositeScore || 0);
+        case "trigger":
+          return (a.TriggerMode || "").localeCompare(b.TriggerMode || "");
         default:
           return 0;
       }
@@ -40,6 +42,7 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
   const headers: [SortKey, string][] = [
     ["time", "TIME"],
     ["name", "NAME"],
+    ["trigger", "TRIGGER"],
     ["composite", "COMP"],
     ["rvol", "RVOL"],
   ];
@@ -79,7 +82,7 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
       <div className="flex-1 overflow-auto">
         {/* Table Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[50px_1fr_50px_50px_30px] xl:grid-cols-[60px_1fr_60px_60px_30px] min-w-[320px] xl:min-w-0"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[40px_minmax(80px,1fr)_minmax(80px,1fr)_40px_40px_20px] xl:grid-cols-[60px_minmax(120px,1fr)_minmax(120px,1fr)_60px_60px_30px] min-w-[400px] xl:min-w-0"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -115,7 +118,7 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
         {sorted.map((row, idx) => (
           <div
             key={`${row.Symbol}-${row.SignalTime}-${idx}`}
-            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[50px_1fr_50px_50px_30px] xl:grid-cols-[60px_1fr_60px_60px_30px] min-w-[320px] xl:min-w-0"
+            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[40px_minmax(80px,1fr)_minmax(80px,1fr)_40px_40px_20px] xl:grid-cols-[60px_minmax(120px,1fr)_minmax(120px,1fr)_60px_60px_30px] min-w-[400px] xl:min-w-0"
             style={{
               borderColor: "var(--color-border)",
               borderLeft: `2px solid ${row.RVOL_Color === "GREEN" ? "var(--color-bull)" : row.RVOL_Color === "ORANGE" ? "var(--color-gold)" : row.RVOL_Color === "YELLOW" ? "#facc15" : "transparent"}`
@@ -134,8 +137,14 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
                 )}
               </div>
               <div className="truncate font-mono text-[9px] tracking-[0.05em]" style={{ color: "var(--color-muted)" }}>
-                {row.TriggerMode}
+                {row.Symbol} <span className="opacity-50">| IN: ₹{row.EntryPrice}</span>
               </div>
+            </div>
+
+            <div className="min-w-0 flex flex-col justify-center">
+              <span className="truncate font-mono text-[9px] tracking-[0.05em]" style={{ color: "var(--color-text)" }} title={row.TriggerMode}>
+                {row.TriggerMode || "-"}
+              </span>
             </div>
             
             <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
