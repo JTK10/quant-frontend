@@ -149,6 +149,13 @@ export type SniperRow = {
   SectorPressure: number;
   CompositeScore: number;
   IsBestInSector: boolean;
+  IsTopMover: boolean;
+  EarlyAbsPct: number;
+  EarlyRVOL: number;
+  B0_Range_Pct: number;
+  B0_CloseStr: number;
+  PDRange_Pct: number;
+  Open_vs_Ref: number;
 };
 
 export type ObSignalRow = {
@@ -589,6 +596,13 @@ export function normalizeSniperSignals(payload: unknown): SniperRow[] {
       SectorPressure: numberify(row.SectorPressure),
       CompositeScore: numberify(row.CompositeScore),
       IsBestInSector: truthy(row.IsBestInSector),
+      IsTopMover: truthy(row.IsTopMover),
+      EarlyAbsPct: numberify(row.EarlyAbsPct),
+      EarlyRVOL: numberify(row.EarlyRVOL),
+      B0_Range_Pct: numberify(row.B0_Range_Pct),
+      B0_CloseStr: numberify(row.B0_CloseStr),
+      PDRange_Pct: numberify(row.PDRange_Pct),
+      Open_vs_Ref: numberify(row.Open_vs_Ref),
     };
   });
 }

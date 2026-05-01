@@ -1,170 +1,108 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { ChevronDown, ChevronRight, ExternalLink, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { SniperRow } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "rvol" | "composite" | "trigger";
+type SortKey = "time" | "name" | "sector" | "side" | "rvol" | "secPress" | "rsScore" | "composite";
 
 function shortTime(value: string): string {
-  if (!value) return "-";
+  if (!value) return "—";
   if (value.includes("T")) return value.slice(11, 16);
   return value.length > 5 ? value.slice(0, 5) : value;
 }
 
-function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "SHORT" }) {
-  const [sortKey, setSortKey] = useState<SortKey>("time");
-  const [ascending, setAscending] = useState(false);
-  const [bestOnly, setBestOnly] = useState(false);
-
-  const filtered = bestOnly ? signals.filter(s => s.IsBestInSector) : signals;
-
-  const sorted = [...filtered].sort((a, b) => {
-    const cmp = (() => {
-      switch (sortKey) {
-        case "time":
-          return (a.SignalTime || "").localeCompare(b.SignalTime || "");
-        case "name":
-          return a.Name.localeCompare(b.Name);
-        case "rvol":
-          return (a.RVOL || 0) - (b.RVOL || 0);
-        case "composite":
-          return (a.CompositeScore || 0) - (b.CompositeScore || 0);
-        case "trigger":
-          return (a.TriggerMode || "").localeCompare(b.TriggerMode || "");
-        default:
-          return 0;
-      }
-    })();
-    return ascending ? cmp : -cmp;
-  });
-
-  const headers: [SortKey, string][] = [
-    ["time", "TIME"],
-    ["name", "NAME"],
-    ["trigger", "TRIGGER"],
-    ["composite", "COMP"],
-    ["rvol", "RVOL"],
-  ];
-
-  const isBull = type === "LONG";
-  const headerColor = isBull ? "var(--color-bull)" : "var(--color-bear)";
-  const bgAccent = isBull ? "var(--color-bullbg)" : "var(--color-bearbg)";
-
+function SideBadge({ direction }: { direction: string }) {
+  const map: Record<string, { label: string; color: string; bg: string; border: string; Icon: any }> = {
+    LONG: { label: "BULL", color: "var(--color-bull)", bg: "var(--color-bullbg)", border: "var(--color-bullborder)", Icon: TrendingUp },
+    SHORT: { label: "BEAR", color: "var(--color-bear)", bg: "var(--color-bearbg)", border: "var(--color-bearborder)", Icon: TrendingDown },
+  };
+  const { label, color, bg, border, Icon } = map[direction] ?? { label: "NEUT", color: "var(--color-muted)", bg: "rgba(255,255,255,0.04)", border: "var(--color-border)", Icon: Minus };
   return (
-    <div className="flex h-full flex-col border-b md:border-b-0 md:border-r last:border-r-0" style={{ borderColor: "var(--color-border)" }}>
-      {/* Sub-header */}
-      <div
-        className="flex items-center justify-between border-b px-4 py-2 sticky top-0 z-20"
-        style={{ borderColor: "var(--color-border)", background: bgAccent }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="font-mono text-[10px] font-semibold tracking-[0.2em]" style={{ color: headerColor }}>
-            {isBull ? "BULLISH CROSSOVERS" : "BEARISH CROSSOVERS"}
-          </div>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input 
-              type="checkbox" 
-              checked={bestOnly}
-              onChange={(e) => setBestOnly(e.target.checked)}
-              className="w-3 h-3 rounded-sm border-gray-600 bg-transparent text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
-            />
-            <span className="font-mono text-[9px] tracking-[0.1em]" style={{ color: bestOnly ? headerColor : "var(--color-muted)" }}>
-              BEST IN SECTOR
-            </span>
-          </label>
-        </div>
-        <div className="font-mono text-[10px]" style={{ color: headerColor }}>
-          {filtered.length} LISTED
+    <span
+      className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded"
+      style={{ color, background: bg, border: `1px solid ${border}` }}
+    >
+      <Icon size={9} />
+      {label}
+    </span>
+  );
+}
+
+function ExpandedRow({ sig }: { sig: SniperRow }) {
+  return (
+    <div
+      className="grid grid-cols-4 gap-4 px-6 py-4 text-xs"
+      style={{ background: "rgba(0,0,0,0.25)", borderTop: "1px solid var(--color-border)" }}
+    >
+      {/* Trade levels */}
+      <div>
+        <div className="font-mono text-[8px] tracking-widest mb-2.5" style={{ color: "var(--color-muted)" }}>TRADE LEVELS</div>
+        <div className="space-y-1.5">
+          {[
+            { l: "ENTRY PRICE", v: `₹${sig.EntryPrice?.toFixed(2) ?? '—'}`, c: "var(--color-text2)" },
+            { l: "EMA 9 (REF)", v: `₹${sig.EMA9?.toFixed(2) ?? '—'}`, c: "var(--color-text)" },
+            { l: "MAX MOVE", v: `${sig.MaxMovePct > 0 ? "+" : ""}${sig.MaxMovePct?.toFixed(2) ?? '—'}%`, c: sig.MaxMovePct > 0 ? "var(--color-bull)" : "var(--color-bear)" },
+          ].map(({ l, v, c }) => (
+            <div key={l} className="flex justify-between items-center">
+              <span className="font-mono text-[9px]" style={{ color: "var(--color-muted)" }}>{l}</span>
+              <span className="font-mono text-[10px] font-semibold" style={{ color: c }}>{v}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {/* Table Header */}
-        <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-4 py-1.5 grid-cols-[40px_minmax(80px,1fr)_minmax(80px,1fr)_40px_40px] xl:grid-cols-[60px_minmax(120px,1fr)_minmax(120px,1fr)_60px_60px] min-w-[360px] xl:min-w-0"
-          style={{
-            borderColor: "var(--color-border)",
-            background: "rgba(10, 14, 23, 0.95)",
-            backdropFilter: "blur(6px)",
-          }}
-        >
-          {headers.map(([key, label]) => {
-            const active = sortKey === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  if (sortKey === key) setAscending((c) => !c);
-                  else {
-                    setSortKey(key);
-                    setAscending(key === "name"); // default to ascending for name, desc for values
-                  }
-                }}
-                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "rvol" || key === "composite" ? "text-right" : ""}`}
-                style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
-              >
-                {label}
-                {active ? (ascending ? " ↑" : " ↓") : ""}
-              </button>
-            );
-          })}
-          <span className="text-right font-mono text-[9px] tracking-[0.14em]" style={{ color: "var(--color-muted)" }}>
-          </span>
+      {/* Trigger & Early Movers */}
+      <div>
+        <div className="font-mono text-[8px] tracking-widest mb-2.5" style={{ color: "var(--color-muted)" }}>TRIGGER & MOVERS</div>
+        <div className="space-y-1.5">
+          {[
+            { l: "TRIGGER MODE", v: sig.TriggerMode || "—", c: "var(--color-text)" },
+            { l: "CONVICTION", v: `${sig.Conviction}/5`, c: "var(--color-gold)" },
+            { l: "EARLY ABS PCT", v: sig.EarlyAbsPct ? `${sig.EarlyAbsPct.toFixed(2)}%` : "—", c: "var(--color-text2)" },
+            { l: "EARLY RVOL", v: sig.EarlyRVOL ? `${sig.EarlyRVOL.toFixed(2)}x` : "—", c: "var(--color-text2)" },
+          ].map(({ l, v, c }) => (
+            <div key={l} className="flex justify-between items-center">
+              <span className="font-mono text-[9px]" style={{ color: "var(--color-muted)" }}>{l}</span>
+              <span className="font-mono text-[10px] font-semibold text-right max-w-[120px] truncate" title={v} style={{ color: c }}>{v}</span>
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Rows */}
-        {sorted.map((row, idx) => (
-          <div
-            key={`${row.Symbol}-${row.SignalTime}-${idx}`}
-            className="grid items-center gap-2 border-b px-4 py-2.5 hover:bg-[rgba(255,255,255,0.02)] transition-colors grid-cols-[40px_minmax(80px,1fr)_minmax(80px,1fr)_40px_40px] xl:grid-cols-[60px_minmax(120px,1fr)_minmax(120px,1fr)_60px_60px] min-w-[360px] xl:min-w-0"
-            style={{
-              borderColor: "var(--color-border)",
-              borderLeft: `2px solid ${row.RVOL_Color === "GREEN" ? "var(--color-bull)" : row.RVOL_Color === "ORANGE" ? "var(--color-gold)" : row.RVOL_Color === "YELLOW" ? "#facc15" : "transparent"}`
-            }}
-          >
-            <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
-              {shortTime(row.SignalTime ?? "")}
-            </span>
-            <div className="min-w-0 flex flex-col justify-center">
-              <div className="flex items-center gap-1.5">
-                <a 
-                  href={row.Chart} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="truncate text-[13px] font-semibold hover:underline" 
-                  style={{ color: "var(--color-accent)" }}
-                >
-                  {row.Name}
-                </a>
-                {row.IsBestInSector && (
-                  <span className="shrink-0 text-[10px]" title="Best in Sector">⭐</span>
-                )}
-              </div>
-              <div className="truncate font-mono text-[9px] tracking-[0.05em]" style={{ color: "var(--color-muted)" }}>
-                {row.Symbol} <span className="opacity-50">| IN: ₹{row.EntryPrice}</span>
-              </div>
+      {/* First Candle Metrics */}
+      <div>
+        <div className="font-mono text-[8px] tracking-widest mb-2.5" style={{ color: "var(--color-muted)" }}>FIRST CANDLE (B0)</div>
+        <div className="space-y-1.5">
+          {[
+            { l: "B0 RANGE", v: sig.B0_Range_Pct !== undefined && sig.B0_Range_Pct !== null ? `${sig.B0_Range_Pct.toFixed(2)}%` : "—", c: "var(--color-text)" },
+            { l: "B0 CLOSE STR", v: sig.B0_CloseStr !== undefined && sig.B0_CloseStr !== null ? sig.B0_CloseStr.toFixed(2) : "—", c: "var(--color-text)" },
+          ].map(({ l, v, c }) => (
+            <div key={l} className="flex justify-between items-center">
+              <span className="font-mono text-[9px]" style={{ color: "var(--color-muted)" }}>{l}</span>
+              <span className="font-mono text-[10px] font-semibold" style={{ color: c }}>{v}</span>
             </div>
+          ))}
+        </div>
+      </div>
 
-            <div className="min-w-0 flex flex-col justify-center">
-              <span className="truncate font-mono text-[9px] tracking-[0.05em]" style={{ color: "var(--color-text)" }} title={row.TriggerMode}>
-                {row.TriggerMode || "-"}
-              </span>
+      {/* Context Metrics */}
+      <div>
+        <div className="font-mono text-[8px] tracking-widest mb-2.5" style={{ color: "var(--color-muted)" }}>CONTEXT</div>
+        <div className="space-y-1.5">
+          {[
+            { l: "PD RANGE", v: sig.PDRange_Pct !== undefined && sig.PDRange_Pct !== null ? `${sig.PDRange_Pct.toFixed(2)}%` : "—", c: "var(--color-text)" },
+            { l: "OPEN VS REF", v: sig.Open_vs_Ref !== undefined && sig.Open_vs_Ref !== null ? `${sig.Open_vs_Ref > 0 ? "+" : ""}${sig.Open_vs_Ref.toFixed(2)}%` : "—", c: "var(--color-text)" },
+          ].map(({ l, v, c }) => (
+            <div key={l} className="flex justify-between items-center">
+              <span className="font-mono text-[9px]" style={{ color: "var(--color-muted)" }}>{l}</span>
+              <span className="font-mono text-[10px] font-semibold" style={{ color: c }}>{v}</span>
             </div>
-            
-            <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
-               {row.CompositeScore ? row.CompositeScore.toFixed(1) : "-"}
-            </span>
-
-            <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
-               {row.RVOL ? row.RVOL.toFixed(1) + "x" : "-"}
-            </span>
-          </div>
-        ))}
-        {sorted.length === 0 && (
-          <div className="p-8 text-center font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>
-            NO SIGNALS
+          ))}
+        </div>
+        {sig.IsTopMover && (
+          <div className="mt-3 inline-flex items-center gap-1 font-mono text-[8px] px-2 py-0.5 rounded-full" style={{ background: "rgba(0, 232, 154, 0.1)", color: "rgba(0, 232, 154, 0.9)", border: "1px solid rgba(0, 232, 154, 0.3)" }}>
+            ★ TOP MOVER
           </div>
         )}
       </div>
@@ -172,32 +110,273 @@ function SignalList({ signals, type }: { signals: SniperRow[]; type: "LONG" | "S
   );
 }
 
+const COLUMNS: { key: SortKey; label: string; width: string }[] = [
+  { key: "time", label: "TIME", width: "70px" },
+  { key: "name", label: "STOCK", width: "160px" },
+  { key: "side", label: "SIDE", width: "70px" },
+  { key: "rvol", label: "RVOL", width: "80px" },
+  { key: "secPress", label: "SEC PRESS", width: "100px" },
+  { key: "rsScore", label: "RS SCORE", width: "100px" },
+  { key: "composite", label: "COMPOSITE", width: "110px" },
+];
+
 export default function SniperClient({ signals }: { signals: SniperRow[] }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<SortKey>("time");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
+  const [bestOnly, setBestOnly] = useState(false);
+
+  const sorted = useMemo(() => {
+    let rows = [...signals];
+    if (filter !== "ALL") rows = rows.filter((r) => r.Direction === filter);
+    if (bestOnly) rows = rows.filter((r) => r.IsBestInSector);
+
+    rows.sort((a, b) => {
+      let diff = 0;
+      switch (sortKey) {
+        case "time": diff = (a.SignalTime || "").localeCompare(b.SignalTime || ""); break;
+        case "name": diff = (a.Name || "").localeCompare(b.Name || ""); break;
+        case "sector": diff = (a.Sector || "").localeCompare(b.Sector || ""); break;
+        case "side": diff = (a.Direction || "").localeCompare(b.Direction || ""); break;
+        case "rvol": diff = (a.RVOL || 0) - (b.RVOL || 0); break;
+        case "secPress": diff = (a.SectorPressure || 0) - (b.SectorPressure || 0); break;
+        case "rsScore": diff = (a.RSScore || 0) - (b.RSScore || 0); break;
+        case "composite": diff = (a.CompositeScore || 0) - (b.CompositeScore || 0); break;
+        default: diff = (a.CompositeScore || 0) - (b.CompositeScore || 0);
+      }
+      return sortAsc ? diff : -diff;
+    });
+    return rows;
+  }, [signals, sortKey, sortAsc, filter, bestOnly]);
+
+  const toggle = (key: SortKey) => {
+    if (sortKey === key) setSortAsc((p) => !p);
+    else { setSortKey(key); setSortAsc(false); }
+  };
+
+  const toggleRow = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   if (!signals.length) {
     return (
-      <div className="flex h-full items-center justify-center p-8 bg-[var(--color-bg)]">
-        <div className="text-center">
-          <div className="font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
-            SNIPER SIGNAL
-          </div>
-          <p className="mt-2 text-sm" style={{ color: "var(--color-muted2)" }}>
-            No crossover signals for the selected date.
-          </p>
+      <div className="flex flex-col items-center justify-center h-full gap-4 absolute inset-0 bg-[var(--color-bg)]">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)" }}>
+          <TrendingUp size={24} style={{ color: "var(--color-muted)" }} />
         </div>
+        <p className="font-mono text-[10px] tracking-widest" style={{ color: "var(--color-muted)" }}>
+          NO SNIPER SIGNALS
+        </p>
+        <p className="text-sm" style={{ color: "var(--color-muted2)" }}>
+          No crossover signals for the selected date.
+        </p>
       </div>
     );
   }
 
-  const longs = signals.filter((s) => s.Direction === "LONG");
-  const shorts = signals.filter((s) => s.Direction === "SHORT");
-
   return (
-    <div className="flex h-full flex-col md:flex-row bg-[var(--color-bg)] absolute inset-0">
-      <div className="flex-1 overflow-hidden min-w-[320px] relative">
-        <SignalList signals={longs} type="LONG" />
+    <div className="flex flex-col h-full bg-[var(--color-bg)] absolute inset-0">
+      {/* Toolbar */}
+      <div
+        className="flex items-center gap-4 px-4 py-2.5 border-b shrink-0 flex-wrap"
+        style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+      >
+        <div className="flex rounded-lg overflow-hidden shrink-0" style={{ border: "1px solid var(--color-border)" }}>
+          {(["ALL", "LONG", "SHORT"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className="px-3 py-1 font-mono text-[9px] tracking-widest transition-all"
+              style={{
+                background: filter === f
+                  ? f === "LONG" ? "var(--color-bullbg)" : f === "SHORT" ? "var(--color-bearbg)" : "var(--color-accentbg)"
+                  : "transparent",
+                color: filter === f
+                  ? f === "LONG" ? "var(--color-bull)" : f === "SHORT" ? "var(--color-bear)" : "var(--color-accent)"
+                  : "var(--color-muted)",
+                borderRight: f !== "SHORT" ? "1px solid var(--color-border)" : "none",
+              }}
+            >
+              {f} {f !== "ALL" && `(${signals.filter((s) => s.Direction === f).length})`}
+            </button>
+          ))}
+        </div>
+        
+        <label className="flex items-center gap-1.5 cursor-pointer shrink-0 ml-2">
+          <input 
+            type="checkbox" 
+            checked={bestOnly}
+            onChange={(e) => setBestOnly(e.target.checked)}
+            className="w-3.5 h-3.5 rounded-sm border-gray-600 bg-transparent text-blue-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+          />
+          <span className="font-mono text-[9px] tracking-widest" style={{ color: bestOnly ? "var(--color-accent)" : "var(--color-muted)" }}>
+            BEST IN SECTOR
+          </span>
+        </label>
+
+        <span className="font-mono text-[9px] tracking-widest hidden sm:block" style={{ color: "var(--color-muted)" }}>
+          {sorted.length} SIGNALS
+        </span>
+        <div className="ml-auto font-mono text-[8px] tracking-widest hidden md:block" style={{ color: "var(--color-muted)" }}>
+          CLICK ROW FOR DETAILS
+        </div>
       </div>
-      <div className="flex-1 overflow-hidden min-w-[320px] relative border-t md:border-t-0 md:border-l" style={{ borderColor: "var(--color-border)" }}>
-        <SignalList signals={shorts} type="SHORT" />
+
+      {/* Table */}
+      <div className="flex-1 overflow-auto">
+        {/* Header */}
+        <div
+          className="sticky top-0 z-10 flex items-center px-4 py-2 border-b"
+          style={{ background: "rgba(10, 14, 23, 0.95)", backdropFilter: "blur(6px)", borderColor: "var(--color-border)", minWidth: "900px" }}
+        >
+          <div className="w-7 shrink-0" />
+          {COLUMNS.map((col) => (
+            <button
+              key={col.key}
+              onClick={() => toggle(col.key)}
+              className="font-mono text-[8px] tracking-widest text-left hover:opacity-80 transition-opacity flex items-center gap-1"
+              style={{ width: col.width, minWidth: col.width, color: sortKey === col.key ? "var(--color-accent)" : "var(--color-muted)" }}
+            >
+              {col.label}
+              {sortKey === col.key && (
+                <span style={{ color: "var(--color-accent)", fontSize: "8px" }}>{sortAsc ? "↑" : "↓"}</span>
+              )}
+            </button>
+          ))}
+          <div className="font-mono text-[8px] tracking-widest ml-auto" style={{ color: "var(--color-muted)" }}>
+            TV
+          </div>
+        </div>
+
+        {/* Rows */}
+        <div style={{ minWidth: "900px" }}>
+          {sorted.map((sig, idx) => {
+            const rowId = `${sig.Symbol}-${sig.SignalTime}-${idx}`;
+            const isOpen = expanded.has(rowId);
+            
+            return (
+              <div
+                key={rowId}
+                className="border-b"
+                style={{
+                  borderColor: "rgba(28,45,69,0.6)",
+                  background: isOpen
+                    ? "rgba(45,142,255,0.04)"
+                    : idx % 2 === 0
+                    ? "transparent"
+                    : "rgba(255,255,255,0.01)",
+                  borderLeft: `2px solid ${sig.RVOL_Color === "GREEN" ? "var(--color-bull)" : sig.RVOL_Color === "ORANGE" ? "var(--color-gold)" : sig.RVOL_Color === "YELLOW" ? "#facc15" : "transparent"}`
+                }}
+              >
+                {/* Main row */}
+                <div
+                  className="flex items-center px-4 py-2.5 cursor-pointer hover:bg-white/[0.025] transition-colors"
+                  onClick={() => toggleRow(rowId)}
+                >
+                  <div className="w-7 shrink-0 flex items-center justify-center">
+                    {isOpen
+                      ? <ChevronDown size={12} style={{ color: "var(--color-accent)" }} />
+                      : <ChevronRight size={12} style={{ color: "var(--color-muted)" }} />
+                    }
+                  </div>
+
+                  {/* TIME */}
+                  <div style={{ width: "70px", minWidth: "70px" }}>
+                    <span className="font-mono text-[11px] tabular-nums" style={{ color: "var(--color-muted2)" }}>
+                      {shortTime(sig.SignalTime)}
+                    </span>
+                  </div>
+
+                  {/* STOCK & SECTOR */}
+                  <div style={{ width: "160px", minWidth: "160px" }}>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-[13px] truncate" style={{ color: "var(--color-accent)" }}>
+                        {sig.Name}
+                      </span>
+                      {sig.IsBestInSector && (
+                        <span style={{ fontSize: "10px" }} title="Best in Sector">⭐</span>
+                      )}
+                    </div>
+                    <div className="font-mono text-[9px] truncate tracking-[0.05em] mt-0.5" style={{ color: "var(--color-muted)" }}>
+                      {sig.Sector}
+                    </div>
+                  </div>
+
+                  {/* SIDE */}
+                  <div style={{ width: "70px", minWidth: "70px" }}>
+                    <SideBadge direction={sig.Direction} />
+                  </div>
+
+                  {/* RVOL */}
+                  <div style={{ width: "80px", minWidth: "80px" }}>
+                    <span
+                      className="font-mono text-[11px] tabular-nums font-semibold"
+                      style={{ color: sig.RVOL >= 1.5 ? "var(--color-gold)" : "var(--color-text)" }}
+                    >
+                      {sig.RVOL ? `${sig.RVOL.toFixed(2)}x` : "—"}
+                    </span>
+                  </div>
+
+                  {/* SEC PRESS */}
+                  <div style={{ width: "100px", minWidth: "100px" }}>
+                    <span
+                      className="font-mono text-[11px] tabular-nums"
+                      style={{ color: sig.SectorPressure > 0 ? "var(--color-bull)" : sig.SectorPressure < 0 ? "var(--color-bear)" : "var(--color-text)" }}
+                    >
+                      {sig.SectorPressure !== undefined && sig.SectorPressure !== null ? `${sig.SectorPressure > 0 ? "+" : ""}${sig.SectorPressure.toFixed(2)}` : "—"}
+                    </span>
+                  </div>
+
+                  {/* RS SCORE */}
+                  <div style={{ width: "100px", minWidth: "100px" }}>
+                    <span
+                      className="font-mono text-[11px] tabular-nums"
+                      style={{ color: sig.RSScore > 0 ? "var(--color-bull)" : sig.RSScore < 0 ? "var(--color-bear)" : "var(--color-text)" }}
+                    >
+                      {sig.RSScore !== undefined && sig.RSScore !== null ? `${sig.RSScore > 0 ? "+" : ""}${sig.RSScore.toFixed(2)}` : "—"}
+                    </span>
+                  </div>
+
+                  {/* COMPOSITE */}
+                  <div style={{ width: "110px", minWidth: "110px" }}>
+                    <span className="font-mono text-[12px] font-bold tabular-nums" style={{ color: "var(--color-text)" }}>
+                      {sig.CompositeScore !== undefined && sig.CompositeScore !== null ? sig.CompositeScore.toFixed(2) : "—"}
+                    </span>
+                  </div>
+
+                  {/* TV link */}
+                  <div className="ml-auto pr-2">
+                    {sig.Chart ? (
+                      <a
+                        href={sig.Chart}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 font-mono text-[8px] px-2 py-1 rounded transition-all hover:opacity-80"
+                        style={{
+                          color: "var(--color-accent)",
+                          background: "var(--color-accentbg)",
+                          border: "1px solid rgba(45,142,255,0.25)",
+                        }}
+                      >
+                        TV <ExternalLink size={8} />
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Expanded detail */}
+                {isOpen && <ExpandedRow sig={sig} />}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
