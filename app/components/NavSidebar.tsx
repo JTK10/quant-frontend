@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, BarChart3, LineChart, PieChart, Cpu, LayoutGrid } from 'lucide-react';
+import { Activity, BarChart3, LineChart, PieChart, Cpu, LayoutGrid, Trophy } from 'lucide-react';
 
 const NAV_GROUPS = [
   {
@@ -11,6 +11,7 @@ const NAV_GROUPS = [
       { href: '/', icon: Activity, label: 'Smart Radar' },
       { href: '/velocity', icon: BarChart3, label: 'Signal Pulse' },
       { href: '/sector', icon: LayoutGrid, label: 'Sector Rotation' },
+      { href: '/top-picks', icon: Trophy, label: 'Sector Master List' },
     ],
   },
   {
