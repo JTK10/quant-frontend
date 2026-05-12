@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AutoRefresh from "../components/AutoRefresh";
 import DatePicker from "../components/DatePicker";
+import RvolPulseScanner from "../components/RvolPulseScanner";
 import { resolveDate, type DateSearchParams } from "../utils/date";
 import { getInternalApiUrl } from "../utils/internalApi";
 import { toNumber, toText } from "../utils/scanner";
@@ -288,127 +289,8 @@ export default async function VelocityPage({ searchParams }: { searchParams: Dat
         </div>
       </div>
 
-      {/* ── Scanner Table ── */}
-      <div
-        className="rounded-xl border overflow-hidden"
-        style={{ background: "var(--color-brand-surface)", borderColor: "var(--color-brand-border)" }}
-      >
-        <div className="overflow-x-auto">
-          <div
-            className="grid gap-2 px-4 py-2 border-b font-mono text-[8px] tracking-[0.18em] min-w-[1000px]"
-            style={{
-              gridTemplateColumns: "4.5rem minmax(10.5rem,1.8fr) 5.5rem 5.5rem 4.75rem 5rem 4.75rem 5.25rem 5.25rem 6rem",
-              borderColor: "var(--color-brand-border)",
-              background: "rgba(255,255,255,0.08)",
-              color: "var(--color-brand-muted)",
-            }}
-          >
-            <span>TRADINGVIEW</span>
-            <span>NAME</span>
-            <span>DIRECTION</span>
-            <span>MODULE</span>
-            <span>TIME</span>
-            <span>CONFIDENCE</span>
-            <span>RVOL</span>
-            <span>LIVE FLOW</span>
-            <span>OPEN FLOW</span>
-            <span>ATM STRIKE</span>
-          </div>
-
-          <div className="overflow-auto" style={{ maxHeight: "640px" }}>
-            {scanRows.map((stock, index) => {
-              const bull = stock.Side === "BULLISH";
-              const sideColor = bull ? "var(--color-brand-bull)" : "var(--color-brand-bear)";
-              const sideBg = bull ? "var(--color-brand-bullbg)" : "var(--color-brand-bearbg)";
-
-              return (
-                <div
-                  key={`${stock.Name}-${stock.Side}-${index}`}
-                  className="grid gap-2 px-4 py-2.5 border-b items-center min-w-[1000px] hover:bg-white/5 transition-colors"
-                  style={{
-                    gridTemplateColumns: "4.5rem minmax(10.5rem,1.8fr) 5.5rem 5.5rem 4.75rem 5rem 4.75rem 5.25rem 5.25rem 6rem",
-                    borderColor: "rgba(47,71,108,0.4)",
-                  }}
-                >
-                  <div>
-                    {stock.Chart ? (
-                      <Link
-                        href={stock.Chart}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded-full border px-2.5 py-0.5 font-mono text-[9px] tracking-wider transition-colors hover:opacity-90"
-                        style={{
-                          color: "var(--color-brand-accent)",
-                          borderColor: "rgba(60,130,246,0.28)",
-                          background: "rgba(60,130,246,0.08)",
-                        }}
-                      >
-                        TV
-                      </Link>
-                    ) : (
-                      <span className="font-mono text-[10px]" style={{ color: "var(--color-brand-muted)" }}>
-                        -
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="font-semibold text-[13px] truncate" style={{ color: "var(--color-brand-text)" }} title={stock.Name}>
-                    {stock.Name}
-                  </div>
-
-                  <div>
-                    <span
-                      className="font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded"
-                      style={{ color: sideColor, background: sideBg }}
-                    >
-                      {bull ? "BULL" : "BEAR"}
-                    </span>
-                  </div>
-
-                  <div className="font-mono text-[9px]" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.ModuleLabel}
-                  </div>
-
-                  <div className="font-mono text-[9px] tabular-nums" style={{ color: "var(--color-brand-muted)" }}>
-                    {stock.Time}
-                  </div>
-
-                  <div>
-                    <span
-                      className="inline-flex min-w-[42px] items-center justify-center rounded-full px-2 py-0.5 font-mono text-[9px]"
-                      style={{ color: sideColor, background: bull ? "rgba(5,217,143,0.14)" : "rgba(230,85,115,0.14)" }}
-                    >
-                      {stock.Confidence.toFixed(0)}
-                    </span>
-                  </div>
-
-                  <div className="font-mono text-[11px] font-semibold" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.RVOL ? `${stock.RVOL.toFixed(1)}x` : "-"}
-                  </div>
-
-                  <div className="font-mono text-[11px] font-semibold" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.FlowNow ? stock.FlowNow.toFixed(2) : "-"}
-                  </div>
-
-                  <div className="font-mono text-[11px] font-semibold" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.FlowOpen ? stock.FlowOpen.toFixed(2) : "-"}
-                  </div>
-
-                  <div className="font-mono text-[11px] font-semibold" style={{ color: "var(--color-brand-text)" }}>
-                    {stock.ATM_Strike || "-"}
-                  </div>
-                </div>
-              );
-            })}
-
-            {scanRows.length === 0 && (
-              <div className="p-8 text-center font-mono text-xs" style={{ color: "var(--color-brand-muted)" }}>
-                NO SIGNALS
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* ── Scanner Table (Smart Radar style) ── */}
+      <RvolPulseScanner data={scanRows} />
     </div>
   );
 }

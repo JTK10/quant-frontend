@@ -140,6 +140,7 @@ export type SniperRow = {
   EMA9: number;
   RVOL: number;
   RVOL_Color: string;
+  RMS: number;
   MaxMovePct: number;
   Chart: string;
   TriggerMode: string;
@@ -587,6 +588,7 @@ export function normalizeSniperSignals(payload: unknown): SniperRow[] {
       EMA9: numberify(row.EMA9),
       RVOL: numberify(row.RVOL),
       RVOL_Color: textify(row.RVOL_Color, "GRAY"),
+      RMS: numberify(row.RMS),
       MaxMovePct: numberify(row.MaxMove_Pct),
       Chart: buildTradingViewUrl(symbol, name),
       TriggerMode: textify(row.TriggerMode),

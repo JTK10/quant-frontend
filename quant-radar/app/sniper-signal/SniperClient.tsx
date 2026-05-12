@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { SniperRow } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "sector" | "side" | "rvol" | "secPress" | "rsScore" | "composite";
+type SortKey = "time" | "name" | "sector" | "side" | "rvol" | "rms" | "secPress" | "rsScore" | "composite";
 
 function shortTime(value: string): string {
   if (!value) return "—";
@@ -35,6 +35,7 @@ const COLUMNS: { key: SortKey; label: string; flex: string; justify: string }[] 
   { key: "sector", label: "SECTOR", flex: "1 1 150px", justify: "flex-start" },
   { key: "side", label: "SIDE", flex: "0 0 100px", justify: "flex-start" },
   { key: "rvol", label: "RVOL", flex: "0 0 100px", justify: "flex-end" },
+  { key: "rms", label: "RMS", flex: "0 0 100px", justify: "flex-end" },
   { key: "secPress", label: "SEC PRESS", flex: "0 0 120px", justify: "flex-end" },
   { key: "rsScore", label: "RS SCORE", flex: "0 0 120px", justify: "flex-end" },
   { key: "composite", label: "COMPOSITE", flex: "0 0 120px", justify: "flex-end" },
@@ -59,6 +60,7 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
         case "sector": diff = (a.Sector || "").localeCompare(b.Sector || ""); break;
         case "side": diff = (a.Direction || "").localeCompare(b.Direction || ""); break;
         case "rvol": diff = (a.RVOL || 0) - (b.RVOL || 0); break;
+        case "rms": diff = (a.RMS || 0) - (b.RMS || 0); break;
         case "secPress": diff = (a.SectorPressure || 0) - (b.SectorPressure || 0); break;
         case "rsScore": diff = (a.RSScore || 0) - (b.RSScore || 0); break;
         case "composite": diff = (a.CompositeScore || 0) - (b.CompositeScore || 0); break;
@@ -224,8 +226,15 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                   </span>
                 </div>
 
-                {/* SEC PRESS */}
+                {/* RMS */}
                 <div style={{ flex: COLUMNS[5].flex, justifyContent: COLUMNS[5].justify }} className="flex">
+                  <span className="font-mono text-[12px] tabular-nums font-semibold" style={{ color: "var(--color-text)" }}>
+                    {sig.RMS ? sig.RMS.toFixed(2) : "—"}
+                  </span>
+                </div>
+
+                {/* SEC PRESS */}
+                <div style={{ flex: COLUMNS[6].flex, justifyContent: COLUMNS[6].justify }} className="flex">
                   <span
                     className="font-mono text-[12px] tabular-nums"
                     style={{ color: sig.SectorPressure > 0 ? "var(--color-bull)" : sig.SectorPressure < 0 ? "var(--color-bear)" : "var(--color-text)" }}
@@ -235,7 +244,7 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                 </div>
 
                 {/* RS SCORE */}
-                <div style={{ flex: COLUMNS[6].flex, justifyContent: COLUMNS[6].justify }} className="flex">
+                <div style={{ flex: COLUMNS[7].flex, justifyContent: COLUMNS[7].justify }} className="flex">
                   <span
                     className="font-mono text-[12px] tabular-nums"
                     style={{ color: sig.RSScore > 0 ? "var(--color-bull)" : sig.RSScore < 0 ? "var(--color-bear)" : "var(--color-text)" }}
@@ -245,7 +254,7 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                 </div>
 
                 {/* COMPOSITE */}
-                <div style={{ flex: COLUMNS[7].flex, justifyContent: COLUMNS[7].justify }} className="flex">
+                <div style={{ flex: COLUMNS[8].flex, justifyContent: COLUMNS[8].justify }} className="flex">
                   <span className="font-mono text-[13px] font-bold tabular-nums" style={{ color: "var(--color-text)" }}>
                     {sig.CompositeScore !== undefined && sig.CompositeScore !== null ? sig.CompositeScore.toFixed(2) : "—"}
                   </span>
