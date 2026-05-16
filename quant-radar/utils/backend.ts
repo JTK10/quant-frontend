@@ -159,6 +159,17 @@ export type SniperRow = {
   Open_vs_Ref: number;
 };
 
+
+export type CapitulationRow = {
+  Name: string;
+  Symbol: string;
+  Direction: "LONG" | "SHORT" | "NEUTRAL";
+  SignalTime: string;
+  EntryPrice: number;
+  Triggers: string;
+  Chart: string;
+};
+
 export type ObSignalRow = {
   Name: string;
   Symbol: string;
@@ -276,7 +287,7 @@ export function buildTradingViewUrl(symbol: string, name?: string): string {
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(finalSymbol)}&interval=5`;
 }
 
-type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal" | "ob-signal";
+type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal" | "ob-signal" | "capitulation-signal";
 
 export async function fetchBackendRoute(route: BackendRoute, dateStr: string, extraParams: Record<string, string> = {}): Promise<unknown> {
   const rawApiUrl = process.env.AWS_API_URL;
@@ -638,6 +649,27 @@ export function normalizeObSignals(payload: unknown): ObSignalRow[] {
       Sector: textify(row.Sector),
       Sector_RMS_Rank: numberify(row.Sector_RMS_Rank),
       Sector_Size: numberify(row.Sector_Size),
+      Chart: buildTradingViewUrl(symbol, name),
+    };
+  });
+}
+
+
+export function normalizeCapitulationSignals(payload: unknown): CapitulationRow[] {
+  const rows = toArray(payload);
+
+  return rows.map((row) => {
+    const symbol = textify(row.Symbol);
+    const name = textify(row.Name, symbol || "Unnamed");
+    const direction = textify(row.Direction).toUpperCase();
+
+    return {
+      Name: name,
+      Symbol: symbol,
+      Direction: direction === "SHORT" ? "SHORT" : direction === "LONG" ? "LONG" : "NEUTRAL",
+      SignalTime: textify(row.Signal_Time),
+      EntryPrice: numberify(row.Entry),
+      Triggers: textify(row.Triggers),
       Chart: buildTradingViewUrl(symbol, name),
     };
   });
