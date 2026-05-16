@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/master-list", icon: Target, label: "Master List", sub: "Top Sector Picks", color: "#eab308" },
   { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "EMA Crossovers", color: "#ff3b3b" },
   { href: "/ob-signal", icon: Target, label: "OB Radar", sub: "Order Block Sniper", color: "#eab308" },
+  { href: "/capitulation-signal", icon: Activity, label: "Capitulation", sub: "Early Entry", color: "#ff3b3b" },
 ];
 
 function LiveClock() {
