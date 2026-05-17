@@ -30,7 +30,7 @@ export default async function CapitulationSignalPage({ searchParams }: { searchP
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <PageHeader
-        title="Capitulation Reversal"
+        title="Intraday Reversal"
         subtitle="EARLY ENTRY · EXPERIMENTAL LOGIC"
         badge="LIVE"
         dateStr={dateStr}

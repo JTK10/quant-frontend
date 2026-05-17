@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6" },
   { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
   { href: "/ai", icon: Brain, label: "AI Analysis", sub: "ML Top Picks", color: "#a855f7" },
-  { href: "/capitulation-signal", icon: Activity, label: "Capitulation", sub: "Early Entry", color: "#ff3b3b" },
+  { href: "/capitulation-signal", icon: Activity, label: "Intraday Reversal", sub: "Early Entry", color: "#ff3b3b" },
   
   // -- Temporarily Hidden Pages --
   // { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },

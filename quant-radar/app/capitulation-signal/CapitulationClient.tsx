@@ -73,7 +73,7 @@ export default function CapitulationClient({ signals }: { signals: CapitulationR
           <TrendingUp size={24} style={{ color: "var(--color-muted)" }} />
         </div>
         <p className="font-mono text-[10px] tracking-widest" style={{ color: "var(--color-muted)" }}>
-          NO CAPITULATION SIGNALS
+          NO REVERSAL SIGNALS
         </p>
         <p className="text-sm" style={{ color: "var(--color-muted2)" }}>
           No early entry setups detected for the selected date.
