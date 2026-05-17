@@ -163,7 +163,7 @@ function AIAnalysisPageContent() {
     <div className="flex h-screen flex-col overflow-hidden">
       <PageHeader
         title="AI Analysis"
-        subtitle="ML POWERED TOP PICKS · CATBOOST INFERENCE"
+        subtitle="ML POWERED TOP PICKS · NEURAL ENGINE INFERENCE"
         badge="AI INFERENCE ENGINE"
         dateStr={selectedDate}
         accentColor="var(--color-purple)"
@@ -200,7 +200,7 @@ function AIAnalysisPageContent() {
             </div>
             <div>
               <h2 className="text-xl font-semibold" style={{ color: "var(--color-text2)" }}>
-                CatBoost inference ready
+                Neural Engine inference ready
               </h2>
               <p className="mt-2 max-w-xl text-sm" style={{ color: "var(--color-muted2)" }}>
                 Run AI scoring for the selected date and fetch the top unique trade ideas ranked by win probability.
