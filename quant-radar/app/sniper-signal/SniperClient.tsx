@@ -190,13 +190,13 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                       target="_blank" 
                       rel="noreferrer"
                       className="font-semibold text-[14px] truncate hover:underline" 
-                      style={{ color: "var(--color-accent)" }}
+                      style={{ color: "var(--color-text2)" }}
                       title={`Open ${sig.Name} in TradingView`}
                     >
                       {sig.Name}
                     </a>
                   ) : (
-                    <span className="font-semibold text-[14px] truncate" style={{ color: "var(--color-accent)" }}>
+                    <span className="font-semibold text-[14px] truncate" style={{ color: "var(--color-text2)" }}>
                       {sig.Name}
                     </span>
                   )}

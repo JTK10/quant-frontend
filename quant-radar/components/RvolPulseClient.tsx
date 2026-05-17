@@ -22,7 +22,7 @@ function getRvolColor(color: "GREEN" | "ORANGE" | "YELLOW" | "GRAY") {
 }
 
 function BoardTable({ board }: { board: RvolPulseItem[] }) {
-  const [sortKey, setSortKey] = useState<SortKey>("rank");
+  const [sortKey, setSortKey] = useState<SortKey>("rms");
   const [ascending, setAscending] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
 
