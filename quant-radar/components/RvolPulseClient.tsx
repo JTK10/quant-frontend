@@ -79,9 +79,9 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
     ["rank", "#"],
     ["name", "SYMBOL"],
     ["dir", "DIR"],
-    ["rvol", "FLOW"],
+    ["rvol", "VOL"],
     ["chg", "CHG%"],
-    ["rms", "SCORE"],
+    ["rms", "RFAC"],
   ];
 
   return (

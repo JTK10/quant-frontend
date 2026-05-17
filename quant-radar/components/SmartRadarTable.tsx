@@ -71,7 +71,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
     ["name", "NAME"],
     ["break", "TYPE"],
     ["side", "SIDE"],
-    ["score", "SCORE"],
+    ["score", "RFAC"],
     ["oflow", "VOL BIAS"],
   ];
 

@@ -34,11 +34,11 @@ const COLUMNS: { key: SortKey; label: string; width: string; justify: string }[]
   { key: "name", label: "NAME", width: "minmax(180px, 1fr)", justify: "flex-start" },
   { key: "sector", label: "SECTOR", width: "150px", justify: "flex-start" },
   { key: "side", label: "SIDE", width: "80px", justify: "flex-start" },
-  { key: "rvol", label: "FLOW", width: "80px", justify: "flex-end" },
-  { key: "rms", label: "SCORE", width: "80px", justify: "flex-end" },
+  { key: "rvol", label: "VOL", width: "80px", justify: "flex-end" },
+  { key: "rms", label: "RFAC", width: "80px", justify: "flex-end" },
   { key: "secPress", label: "MKT BIAS", width: "100px", justify: "flex-end" },
-  { key: "rsScore", label: "ALPHA", width: "100px", justify: "flex-end" },
-  { key: "composite", label: "RATING", width: "100px", justify: "flex-end" },
+  { key: "rsScore", label: "NFAC", width: "100px", justify: "flex-end" },
+  { key: "composite", label: "JFAC", width: "100px", justify: "flex-end" },
 ];
 
 export default function SniperClient({ signals }: { signals: SniperRow[] }) {

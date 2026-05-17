@@ -74,12 +74,12 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
     ["name", "NAME"],
     ["side", "SIDE"],
     ["entry", "ENTRY"],
-    ["rms", "SCORE"],
+    ["rms", "RFAC"],
     ["brk", "BRK%"],
     ["pen", "ZONE PEN%"],
     ["gap", "GAP%"],
     ["sector", "SECTOR"],
-    ["score", "RATING"],
+    ["score", "JFAC"],
   ];
 
   return (
