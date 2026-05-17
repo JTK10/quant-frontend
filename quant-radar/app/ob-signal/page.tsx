@@ -31,8 +31,8 @@ export default async function ObSignalPage({ searchParams }: { searchParams: Dat
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <PageHeader
-        title="OB Radar"
-        subtitle="ORDER BLOCK + PDL/PDH · ELITE FILTER"
+        title="Precision Radar"
+        subtitle="PRECISION ZONES + LIQUIDITY · ELITE FILTER"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="#f59e0b"

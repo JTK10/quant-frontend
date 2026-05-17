@@ -72,7 +72,7 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
     ["break", "TYPE"],
     ["side", "SIDE"],
     ["score", "SCORE"],
-    ["oflow", "O.FLOW"],
+    ["oflow", "VOL BIAS"],
   ];
 
   return (

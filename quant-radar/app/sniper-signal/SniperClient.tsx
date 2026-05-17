@@ -29,16 +29,16 @@ function SideBadge({ direction }: { direction: string }) {
   );
 }
 
-const COLUMNS: { key: SortKey; label: string; flex: string; justify: string }[] = [
-  { key: "time", label: "TIME", flex: "0 0 80px", justify: "flex-start" },
-  { key: "name", label: "NAME", flex: "1 1 180px", justify: "flex-start" },
-  { key: "sector", label: "SECTOR", flex: "1 1 150px", justify: "flex-start" },
-  { key: "side", label: "SIDE", flex: "0 0 100px", justify: "flex-start" },
-  { key: "rvol", label: "RVOL", flex: "0 0 100px", justify: "flex-end" },
-  { key: "rms", label: "RMS", flex: "0 0 100px", justify: "flex-end" },
-  { key: "secPress", label: "SEC PRESS", flex: "0 0 120px", justify: "flex-end" },
-  { key: "rsScore", label: "RS SCORE", flex: "0 0 120px", justify: "flex-end" },
-  { key: "composite", label: "COMPOSITE", flex: "0 0 120px", justify: "flex-end" },
+const COLUMNS: { key: SortKey; label: string; width: string; justify: string }[] = [
+  { key: "time", label: "TIME", width: "60px", justify: "flex-start" },
+  { key: "name", label: "NAME", width: "minmax(180px, 1fr)", justify: "flex-start" },
+  { key: "sector", label: "SECTOR", width: "150px", justify: "flex-start" },
+  { key: "side", label: "SIDE", width: "80px", justify: "flex-start" },
+  { key: "rvol", label: "FLOW", width: "80px", justify: "flex-end" },
+  { key: "rms", label: "SCORE", width: "80px", justify: "flex-end" },
+  { key: "secPress", label: "MKT BIAS", width: "100px", justify: "flex-end" },
+  { key: "rsScore", label: "ALPHA", width: "100px", justify: "flex-end" },
+  { key: "composite", label: "RATING", width: "100px", justify: "flex-end" },
 ];
 
 export default function SniperClient({ signals }: { signals: SniperRow[] }) {
@@ -141,15 +141,15 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 flex items-center px-6 py-3 border-b"
-          style={{ background: "rgba(10, 14, 23, 0.95)", backdropFilter: "blur(6px)", borderColor: "var(--color-border)", minWidth: "900px" }}
+          className="sticky top-0 z-10 grid items-center px-6 py-3 border-b gap-4"
+          style={{ background: "rgba(10, 14, 23, 0.95)", backdropFilter: "blur(6px)", borderColor: "var(--color-border)", minWidth: "900px", gridTemplateColumns: COLUMNS.map(c => c.width).join(" ") }}
         >
           {COLUMNS.map((col) => (
             <button
               key={col.key}
               onClick={() => toggle(col.key)}
               className="font-mono text-[9px] tracking-widest hover:opacity-80 transition-opacity flex items-center gap-1"
-              style={{ flex: col.flex, justifyContent: col.justify, color: sortKey === col.key ? "var(--color-accent)" : "var(--color-muted)" }}
+              style={{ justifyContent: col.justify, color: sortKey === col.key ? "var(--color-accent)" : "var(--color-muted)" }}
             >
               {col.label}
               {sortKey === col.key && (
@@ -167,22 +167,23 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
             return (
               <div
                 key={rowId}
-                className="flex items-center px-6 py-3.5 border-b hover:bg-white/[0.025] transition-colors"
+                className="grid items-center px-6 py-3.5 border-b hover:bg-white/[0.025] transition-colors gap-4"
                 style={{
+                  gridTemplateColumns: COLUMNS.map(c => c.width).join(" "),
                   borderColor: "rgba(28,45,69,0.6)",
                   background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)",
                   borderLeft: `3px solid ${sig.RVOL_Color === "GREEN" ? "var(--color-bull)" : sig.RVOL_Color === "ORANGE" ? "var(--color-gold)" : sig.RVOL_Color === "YELLOW" ? "#facc15" : "transparent"}`
                 }}
               >
                 {/* TIME */}
-                <div style={{ flex: COLUMNS[0].flex, justifyContent: COLUMNS[0].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[0].justify }} className="flex">
                   <span className="font-mono text-[12px] tabular-nums" style={{ color: "var(--color-muted2)" }}>
                     {shortTime(sig.SignalTime)}
                   </span>
                 </div>
 
                 {/* NAME (Clickable TV Link) */}
-                <div style={{ flex: COLUMNS[1].flex, justifyContent: COLUMNS[1].justify }} className="flex items-center gap-2 pr-4">
+                <div style={{ justifyContent: COLUMNS[1].justify }} className="flex items-center gap-2 pr-4 min-w-0">
                   {sig.Chart ? (
                     <a 
                       href={sig.Chart} 
@@ -200,24 +201,24 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                     </span>
                   )}
                   {sig.IsBestInSector && (
-                    <span style={{ fontSize: "12px" }} title="Best in Sector">⭐</span>
+                    <span style={{ fontSize: "12px", flexShrink: 0 }} title="Best in Sector">⭐</span>
                   )}
                 </div>
 
                 {/* SECTOR */}
-                <div style={{ flex: COLUMNS[2].flex, justifyContent: COLUMNS[2].justify }} className="flex pr-4">
+                <div style={{ justifyContent: COLUMNS[2].justify }} className="flex pr-4 min-w-0">
                   <span className="font-mono text-[10px] tracking-widest truncate" style={{ color: "var(--color-muted)" }}>
                     {sig.Sector}
                   </span>
                 </div>
 
                 {/* SIDE */}
-                <div style={{ flex: COLUMNS[3].flex, justifyContent: COLUMNS[3].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[3].justify }} className="flex">
                   <SideBadge direction={sig.Direction} />
                 </div>
 
                 {/* RVOL */}
-                <div style={{ flex: COLUMNS[4].flex, justifyContent: COLUMNS[4].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[4].justify }} className="flex">
                   <span
                     className="font-mono text-[12px] tabular-nums font-semibold"
                     style={{ color: sig.RVOL >= 1.5 ? "var(--color-gold)" : "var(--color-text)" }}
@@ -227,14 +228,14 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                 </div>
 
                 {/* RMS */}
-                <div style={{ flex: COLUMNS[5].flex, justifyContent: COLUMNS[5].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[5].justify }} className="flex">
                   <span className="font-mono text-[12px] tabular-nums font-semibold" style={{ color: "var(--color-text)" }}>
                     {sig.RMS ? sig.RMS.toFixed(2) : "—"}
                   </span>
                 </div>
 
                 {/* SEC PRESS */}
-                <div style={{ flex: COLUMNS[6].flex, justifyContent: COLUMNS[6].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[6].justify }} className="flex">
                   <span
                     className="font-mono text-[12px] tabular-nums"
                     style={{ color: sig.SectorPressure > 0 ? "var(--color-bull)" : sig.SectorPressure < 0 ? "var(--color-bear)" : "var(--color-text)" }}
@@ -244,7 +245,7 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                 </div>
 
                 {/* RS SCORE */}
-                <div style={{ flex: COLUMNS[7].flex, justifyContent: COLUMNS[7].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[7].justify }} className="flex">
                   <span
                     className="font-mono text-[12px] tabular-nums"
                     style={{ color: sig.RSScore > 0 ? "var(--color-bull)" : sig.RSScore < 0 ? "var(--color-bear)" : "var(--color-text)" }}
@@ -254,7 +255,7 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                 </div>
 
                 {/* COMPOSITE */}
-                <div style={{ flex: COLUMNS[8].flex, justifyContent: COLUMNS[8].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[8].justify }} className="flex">
                   <span className="font-mono text-[13px] font-bold tabular-nums" style={{ color: "var(--color-text)" }}>
                     {sig.CompositeScore !== undefined && sig.CompositeScore !== null ? sig.CompositeScore.toFixed(2) : "—"}
                   </span>

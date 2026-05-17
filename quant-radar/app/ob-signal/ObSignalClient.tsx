@@ -56,13 +56,13 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
           style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
         >
           <div className="font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
-            OB RADAR
+            PRECISION RADAR
           </div>
           <p className="mt-3 text-lg font-semibold" style={{ color: "var(--color-text2)" }}>
-            No OB signals for the selected date.
+            No precision signals for the selected date.
           </p>
           <p className="mt-1 text-sm" style={{ color: "var(--color-muted)" }}>
-            OB signals generate during 09:25 – 10:00 AM IST
+            Precision signals generate during 09:25 – 10:00 AM IST
           </p>
         </div>
       </div>
@@ -74,12 +74,12 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
     ["name", "NAME"],
     ["side", "SIDE"],
     ["entry", "ENTRY"],
-    ["rms", "RMS"],
+    ["rms", "SCORE"],
     ["brk", "BRK%"],
-    ["pen", "OB PEN%"],
+    ["pen", "ZONE PEN%"],
     ["gap", "GAP%"],
     ["sector", "SECTOR"],
-    ["score", "SCORE"],
+    ["score", "RATING"],
   ];
 
   return (
@@ -183,7 +183,7 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
                     {sig.Symbol}
                   </span>
                   <span className="font-mono text-[8px] tracking-[0.1em]" style={{ color: "var(--color-muted)" }}>
-                    {refLabel} ₹{refPrice.toFixed(0)} · OB {sig.OB_Date}
+                    {refLabel} ₹{refPrice.toFixed(0)} · ZONE {sig.OB_Date}
                   </span>
                 </div>
               </div>
