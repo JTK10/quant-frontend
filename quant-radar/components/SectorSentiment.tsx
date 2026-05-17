@@ -264,8 +264,8 @@ export default function SectorSentiment({ dateStr }: { dateStr?: string }) {
                      <div className="col-span-2">Symbol</div>
                      <div className="text-right">Pre C</div>
                      <div className="text-right">%</div>
-                     <div className="text-right flex items-center justify-end gap-1">RVOL <span className="text-[8px]">▼</span></div>
-                     <div className="text-right">RMS</div>
+                     <div className="text-right flex items-center justify-end gap-1">VOL <span className="text-[8px]">▼</span></div>
+                     <div className="text-right">RFAC</div>
                      <div className="text-center">Signal</div>
                   </div>
                   <div className="flex flex-col max-h-[350px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
