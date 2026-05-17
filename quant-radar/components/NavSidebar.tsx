@@ -6,15 +6,17 @@ import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, T
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },
-  { href: "/rvol-pulse", icon: TrendingUp, label: "RVOL Pulse", sub: "Momentum Movers", color: "#14b8a6" },
-  { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "Flow Watchlist", color: "#00e89a" },
+  { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "Precision Setup", color: "#ff3b3b" },
+  { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6" },
   { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
   { href: "/ai", icon: Brain, label: "AI Analysis", sub: "ML Top Picks", color: "#a855f7" },
-  { href: "/master-list", icon: Target, label: "Master List", sub: "Top Sector Picks", color: "#eab308" },
-  { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "EMA Crossovers", color: "#ff3b3b" },
-  { href: "/ob-signal", icon: Target, label: "OB Radar", sub: "Order Block Sniper", color: "#eab308" },
   { href: "/capitulation-signal", icon: Activity, label: "Capitulation", sub: "Early Entry", color: "#ff3b3b" },
+  
+  // -- Temporarily Hidden Pages --
+  // { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },
+  // { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "Flow Watchlist", color: "#00e89a" },
+  // { href: "/master-list", icon: Target, label: "Master List", sub: "Top Sector Picks", color: "#eab308" },
+  // { href: "/ob-signal", icon: Target, label: "OB Radar", sub: "Order Block Sniper", color: "#eab308" },
 ];
 
 function LiveClock() {

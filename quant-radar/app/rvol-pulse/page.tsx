@@ -12,8 +12,8 @@ export default async function RvolPulsePage({ searchParams }: { searchParams: Da
     <div className="flex h-screen flex-col overflow-hidden bg-[var(--color-bg)]">
       <div className="flex-none">
         <PageHeader 
-          title="RVOL PULSE" 
-          subtitle="Cumulative RMS Leaderboard" 
+          title="INTRADAY PULSE" 
+          subtitle="Momentum Leaderboard" 
           badge="LIVE"
           dateStr={dateStr}
           accentColor="#14b8a6"

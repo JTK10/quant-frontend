@@ -65,7 +65,7 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
           style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
         >
           <div className="font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
-            RVOL PULSE
+            INTRADAY PULSE
           </div>
           <p className="mt-3 text-lg font-semibold" style={{ color: "var(--color-text2)" }}>
             No data for the selected date.
@@ -79,9 +79,9 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
     ["rank", "#"],
     ["name", "SYMBOL"],
     ["dir", "DIR"],
-    ["rvol", "RVOL"],
+    ["rvol", "FLOW"],
     ["chg", "CHG%"],
-    ["rms", "RMS"],
+    ["rms", "SCORE"],
   ];
 
   return (
@@ -284,7 +284,7 @@ export default function RvolPulseClient({ dateStr }: { dateStr?: string }) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <span className="font-mono text-[10px] tracking-[0.2em]" style={{ color: "var(--color-muted)" }}>
-          LOADING RVOL PULSE...
+          LOADING INTRADAY PULSE...
         </span>
       </div>
     );
@@ -315,7 +315,7 @@ export default function RvolPulseClient({ dateStr }: { dateStr?: string }) {
             className="font-mono text-[10px] tracking-[0.22em] font-bold"
             style={{ color: "var(--color-gold)" }}
           >
-            CUMULATIVE RMS LEADERBOARD
+            MOMENTUM LEADERBOARD
           </span>
           <div className="flex items-center gap-1.5">
             <Clock size={11} style={{ color: "#14b8a6" }} />

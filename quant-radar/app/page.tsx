@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import SmartRadarTable from "@/components/SmartRadarTable";
@@ -6,6 +7,13 @@ import { resolveDate, type DateSearchParams } from "@/utils/date";
 import { getInternalApiUrl } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
+
+export default async function RedirectPage() {
+  redirect("/sniper-signal");
+}
+
+/* 
+// --- SMART RADAR (Temporarily Switched Off) ---
 
 async function getSignals(dateStr: string): Promise<RadarSignal[]> {
   try {
@@ -18,7 +26,7 @@ async function getSignals(dateStr: string): Promise<RadarSignal[]> {
   }
 }
 
-export default async function RadarPage({ searchParams }: { searchParams: DateSearchParams }) {
+export async function RadarPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
   const signals = await getSignals(dateStr);
 
@@ -70,3 +78,4 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
     </div>
   );
 }
+*/
