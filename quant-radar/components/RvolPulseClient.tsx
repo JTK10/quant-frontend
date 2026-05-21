@@ -81,7 +81,7 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
     ["dir", "DIR"],
     ["rvol", "VOL"],
     ["chg", "CHG%"],
-    ["rms", "RFAC"],
+    ["rms", "SCORE"],
   ];
 
   return (

@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { SniperRow } from "@/utils/backend";
 
-type SortKey = "time" | "name" | "sector" | "side" | "rvol" | "rms" | "secPress" | "rsScore" | "composite";
+type SortKey = "time" | "name" | "sector" | "side" | "rvol" | "rms" | "secPress" | "rsScore";
 
 function shortTime(value: string): string {
   if (!value) return "—";
@@ -35,10 +35,9 @@ const COLUMNS: { key: SortKey; label: string; width: string; justify: string }[]
   { key: "sector", label: "SECTOR", width: "150px", justify: "flex-start" },
   { key: "side", label: "SIDE", width: "80px", justify: "flex-start" },
   { key: "rvol", label: "VOL", width: "80px", justify: "flex-end" },
-  { key: "rms", label: "RFAC", width: "80px", justify: "flex-end" },
+  { key: "rms", label: "AI SCORE", width: "80px", justify: "flex-end" },
   { key: "secPress", label: "MKT BIAS", width: "100px", justify: "flex-end" },
-  { key: "rsScore", label: "NFAC", width: "100px", justify: "flex-end" },
-  { key: "composite", label: "JFAC", width: "100px", justify: "flex-end" },
+  { key: "rsScore", label: "CHANGE%", width: "100px", justify: "flex-end" },
 ];
 
 export default function SniperClient({ signals }: { signals: SniperRow[] }) {
@@ -63,8 +62,7 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
         case "rms": diff = (a.RMS || 0) - (b.RMS || 0); break;
         case "secPress": diff = (a.SectorPressure || 0) - (b.SectorPressure || 0); break;
         case "rsScore": diff = (a.RSScore || 0) - (b.RSScore || 0); break;
-        case "composite": diff = (a.CompositeScore || 0) - (b.CompositeScore || 0); break;
-        default: diff = (a.CompositeScore || 0) - (b.CompositeScore || 0);
+        default: diff = (a.RMS || 0) - (b.RMS || 0);
       }
       return sortAsc ? diff : -diff;
     });
@@ -244,20 +242,13 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                   </span>
                 </div>
 
-                {/* RS SCORE */}
+                {/* RS SCORE / CHANGE% */}
                 <div style={{ justifyContent: COLUMNS[7].justify }} className="flex">
                   <span
                     className="font-mono text-[12px] tabular-nums"
                     style={{ color: sig.RSScore > 0 ? "var(--color-bull)" : sig.RSScore < 0 ? "var(--color-bear)" : "var(--color-text)" }}
                   >
-                    {sig.RSScore !== undefined && sig.RSScore !== null ? `${sig.RSScore > 0 ? "+" : ""}${sig.RSScore.toFixed(2)}` : "—"}
-                  </span>
-                </div>
-
-                {/* COMPOSITE */}
-                <div style={{ justifyContent: COLUMNS[8].justify }} className="flex">
-                  <span className="font-mono text-[13px] font-bold tabular-nums" style={{ color: "var(--color-text)" }}>
-                    {sig.CompositeScore !== undefined && sig.CompositeScore !== null ? sig.CompositeScore.toFixed(2) : "—"}
+                    {sig.RSScore !== undefined && sig.RSScore !== null ? `${sig.RSScore > 0 ? "+" : ""}${sig.RSScore.toFixed(2)}%` : "—"}
                   </span>
                 </div>
 
