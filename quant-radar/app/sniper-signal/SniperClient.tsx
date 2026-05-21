@@ -31,13 +31,13 @@ function SideBadge({ direction }: { direction: string }) {
 
 const COLUMNS: { key: SortKey; label: string; width: string; justify: string }[] = [
   { key: "time", label: "TIME", width: "60px", justify: "flex-start" },
-  { key: "name", label: "NAME", width: "minmax(180px, 1fr)", justify: "flex-start" },
-  { key: "sector", label: "SECTOR", width: "150px", justify: "flex-start" },
+  { key: "name", label: "NAME", width: "minmax(200px, 1fr)", justify: "flex-start" },
+  { key: "sector", label: "SECTOR", width: "160px", justify: "flex-start" },
   { key: "side", label: "SIDE", width: "80px", justify: "flex-start" },
-  { key: "rvol", label: "VOL", width: "80px", justify: "flex-end" },
-  { key: "rms", label: "AI SCORE", width: "80px", justify: "flex-end" },
-  { key: "secPress", label: "MKT BIAS", width: "100px", justify: "flex-end" },
-  { key: "rsScore", label: "CHANGE%", width: "100px", justify: "flex-end" },
+  { key: "rvol", label: "VOL", width: "90px", justify: "flex-end" },
+  { key: "secPress", label: "MKT BIAS", width: "110px", justify: "flex-end" },
+  { key: "rsScore", label: "CHANGE%", width: "110px", justify: "flex-end" },
+  { key: "rms", label: "AI SCORE", width: "110px", justify: "flex-end" },
 ];
 
 export default function SniperClient({ signals }: { signals: SniperRow[] }) {
@@ -225,15 +225,8 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                   </span>
                 </div>
 
-                {/* RMS */}
-                <div style={{ justifyContent: COLUMNS[5].justify }} className="flex">
-                  <span className="font-mono text-[12px] tabular-nums font-semibold" style={{ color: "var(--color-text)" }}>
-                    {sig.RMS ? sig.RMS.toFixed(2) : "—"}
-                  </span>
-                </div>
-
                 {/* SEC PRESS */}
-                <div style={{ justifyContent: COLUMNS[6].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[5].justify }} className="flex">
                   <span
                     className="font-mono text-[12px] tabular-nums"
                     style={{ color: sig.SectorPressure > 0 ? "var(--color-bull)" : sig.SectorPressure < 0 ? "var(--color-bear)" : "var(--color-text)" }}
@@ -243,12 +236,19 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
                 </div>
 
                 {/* RS SCORE / CHANGE% */}
-                <div style={{ justifyContent: COLUMNS[7].justify }} className="flex">
+                <div style={{ justifyContent: COLUMNS[6].justify }} className="flex">
                   <span
                     className="font-mono text-[12px] tabular-nums"
                     style={{ color: sig.RSScore > 0 ? "var(--color-bull)" : sig.RSScore < 0 ? "var(--color-bear)" : "var(--color-text)" }}
                   >
                     {sig.RSScore !== undefined && sig.RSScore !== null ? `${sig.RSScore > 0 ? "+" : ""}${sig.RSScore.toFixed(2)}%` : "—"}
+                  </span>
+                </div>
+
+                {/* AI SCORE (RMS) */}
+                <div style={{ justifyContent: COLUMNS[7].justify }} className="flex">
+                  <span className="font-mono text-[12px] tabular-nums font-semibold" style={{ color: "var(--color-text)" }}>
+                    {sig.RMS ? sig.RMS.toFixed(2) : "—"}
                   </span>
                 </div>
 
