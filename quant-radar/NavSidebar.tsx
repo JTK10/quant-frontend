@@ -6,13 +6,13 @@ import { Activity, Zap, BarChart2, Brain, ChevronRight, Crosshair } from 'lucide
 import { useState, useEffect } from 'react';
 
 const NAV_ITEMS = [
-  // {
-  //   href: '/',
-  //   icon: Activity,
-  //   label: 'Smart Radar',
-  //   sub: 'Final Signals',
-  //   color: '#2d8eff',
-  // },
+  {
+    href: '/',
+    icon: Activity,
+    label: 'Smart Radar',
+    sub: 'Final Signals',
+    color: '#2d8eff',
+  },
   {
     href: '/pulse',
     icon: Zap,
