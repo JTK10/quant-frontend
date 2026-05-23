@@ -13,8 +13,8 @@ const NAV_ITEMS = [
   { href: "/capitulation-signal", icon: Activity, label: "Intraday Reversal", sub: "Early Entry", color: "#ff3b3b" },
   
   // -- Temporarily Hidden Pages --
-  { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },
-  { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "Flow Watchlist", color: "#00e89a" },
+  // { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },
+  // { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "Flow Watchlist", color: "#00e89a" },
   // { href: "/master-list", icon: Target, label: "Master List", sub: "Top Sector Picks", color: "#eab308" },
   // { href: "/ob-signal", icon: Target, label: "OB Radar", sub: "Order Block Sniper", color: "#eab308" },
 ];
