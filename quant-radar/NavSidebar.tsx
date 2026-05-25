@@ -27,6 +27,7 @@ const NAV_ITEMS = [
     sub: 'Market Pressure',
     color: '#f5a623',
   },
+  /*
   {
     href: '/ai',
     icon: Brain,
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
     sub: 'ML Top Picks',
     color: '#9b6fff',
   },
+  */
   {
     href: '/sniper-signal',
     icon: Crosshair,

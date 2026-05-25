@@ -8,13 +8,6 @@ import { getInternalApiUrl } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
-export default async function RedirectPage() {
-  redirect("/sniper-signal");
-}
-
-/* 
-// --- SMART RADAR (Temporarily Switched Off) ---
-
 async function getSignals(dateStr: string): Promise<RadarSignal[]> {
   try {
     const url = await getInternalApiUrl(`/api/radar?date=${encodeURIComponent(dateStr)}`);
@@ -26,7 +19,7 @@ async function getSignals(dateStr: string): Promise<RadarSignal[]> {
   }
 }
 
-export async function RadarPage({ searchParams }: { searchParams: DateSearchParams }) {
+export default async function RadarPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
   const signals = await getSignals(dateStr);
 
@@ -78,4 +71,3 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
     </div>
   );
 }
-*/
