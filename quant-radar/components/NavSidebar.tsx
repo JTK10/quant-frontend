@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 const NAV_ITEMS = [
   { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },
   { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "Precision Setup", color: "#ff3b3b" },
+  { href: "/v6-signals", icon: Zap, label: "V6 Momentum", sub: "Premium Alerts", color: "#00e89a" },
   { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6" },
   { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
   { href: "/capitulation-signal", icon: Activity, label: "Intraday Reversal", sub: "Early Entry", color: "#ff3b3b" },
