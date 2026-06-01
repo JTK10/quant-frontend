@@ -192,6 +192,8 @@ export type V6Row = {
   PremiumQualified: string;
   Chart: string;
   Symbol: string;
+  PDL_Break: string;
+  PDH_Break: string;
 };
 
 export type ObSignalRow = {
@@ -729,6 +731,8 @@ export function normalizeV6Signals(payload: unknown): V6Row[] {
       Broke: textify(row.Broke),
       PremiumQualified: textify(row.PremiumQualified),
       Chart: textify(row.Chart, buildTradingViewUrl(symbol, name)),
+      PDL_Break: textify(row.PDL_Break),
+      PDH_Break: textify(row.PDH_Break),
     };
   });
 }
