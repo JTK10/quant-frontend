@@ -170,6 +170,30 @@ export type CapitulationRow = {
   Chart: string;
 };
 
+export type V6Row = {
+  Name: string;
+  Direction: string;
+  Lane: string;
+  ScoreV3: number;
+  Entry: number;
+  SL: number;
+  Target1: number;
+  RiskReward: string;
+  ConvCandleTime: string;
+  EntryTime: string;
+  VolExp: number;
+  RVOL_hist: number;
+  Confluence: number;
+  CoilBars: number;
+  DelayBars: number;
+  ConvBR: number;
+  ORL_Held: string;
+  Broke: string;
+  PremiumQualified: string;
+  Chart: string;
+  Symbol: string;
+};
+
 export type ObSignalRow = {
   Name: string;
   Symbol: string;
@@ -287,7 +311,7 @@ export function buildTradingViewUrl(symbol: string, name?: string): string {
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(finalSymbol)}&interval=5`;
 }
 
-type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal" | "ob-signal" | "capitulation-signal";
+type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal" | "ob-signal" | "capitulation-signal" | "v6-signals";
 
 export async function fetchBackendRoute(route: BackendRoute, dateStr: string, extraParams: Record<string, string> = {}): Promise<unknown> {
   const rawApiUrl = process.env.AWS_API_URL;
@@ -674,3 +698,38 @@ export function normalizeCapitulationSignals(payload: unknown): CapitulationRow[
     };
   });
 }
+
+export function normalizeV6Signals(payload: unknown): V6Row[] {
+  const rows = toArray(payload);
+
+  return rows.map((row) => {
+    const symbol = textify(row.Symbol ?? row.Name);
+    const name = textify(row.Name, symbol || "Unnamed");
+    const direction = textify(row.Direction).toUpperCase();
+
+    return {
+      Name: name,
+      Symbol: symbol,
+      Direction: direction === "SHORT" ? "SHORT" : direction === "LONG" ? "LONG" : textify(row.Side, "NEUTRAL"),
+      Lane: textify(row.Lane, "CONVICTION"),
+      ScoreV3: numberify(row.ScoreV3),
+      Entry: numberify(row.Entry),
+      SL: numberify(row.SL),
+      Target1: numberify(row.Target1),
+      RiskReward: textify(row.RiskReward ?? row.RR),
+      ConvCandleTime: textify(row.ConvCandleTime),
+      EntryTime: textify(row.EntryTime),
+      VolExp: numberify(row.VolExp),
+      RVOL_hist: numberify(row.RVOL_hist),
+      Confluence: numberify(row.Confluence),
+      CoilBars: numberify(row.CoilBars),
+      DelayBars: numberify(row.DelayBars),
+      ConvBR: numberify(row.ConvBR),
+      ORL_Held: textify(row.ORL_Held),
+      Broke: textify(row.Broke),
+      PremiumQualified: textify(row.PremiumQualified),
+      Chart: textify(row.Chart, buildTradingViewUrl(symbol, name)),
+    };
+  });
+}
+

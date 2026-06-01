@@ -13,13 +13,6 @@ const NAV_ITEMS = [
     sub: 'Final Signals',
     color: '#2d8eff',
   },
-  // {
-  //   href: '/pulse',
-  //   icon: Zap,
-  //   label: 'Signal Pulse',
-  //   sub: 'PCR Watchlist',
-  //   color: '#00e89a',
-  // },
   {
     href: '/sector',
     icon: BarChart2,
@@ -27,15 +20,13 @@ const NAV_ITEMS = [
     sub: 'Market Pressure',
     color: '#f5a623',
   },
-  /*
   {
-    href: '/ai',
-    icon: Brain,
-    label: 'AI Analysis',
-    sub: 'ML Top Picks',
-    color: '#9b6fff',
+    href: '/v6-signals',
+    icon: Zap,
+    label: 'V6 Momentum',
+    sub: 'PREMIUM ALERTS',
+    color: '#00e89a',
   },
-  */
   {
     href: '/sniper-signal',
     icon: Crosshair,
