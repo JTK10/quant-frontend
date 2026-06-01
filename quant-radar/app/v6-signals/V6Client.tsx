@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { V6Row } from '@/utils/backend';
 
-type SortKey = 'name' | 'side' | 'lane' | 'pdlbreak' | 'pdhbreak' | 'entry' | 'target1' | 'convtime' | 'entrytime' | 'delaybars' | 'volexp' | 'rvol' | 'convbr' | 'confluence' | 'coilbars';
+type SortKey = 'name' | 'side' | 'lane' | 'entry' | 'target1' | 'convtime' | 'entrytime' | 'delaybars' | 'volexp' | 'rvol' | 'convbr' | 'confluence' | 'coilbars';
 
 function fmtPrice(v: number) {
   if (!v) return '—';
@@ -62,8 +62,6 @@ const COLUMNS: { key: SortKey; label: string; width: string }[] = [
   { key: 'name', label: 'STOCK', width: '130px' },
   { key: 'side', label: 'DIR', width: '70px' },
   { key: 'lane', label: 'LANE', width: '110px' },
-  { key: 'pdlbreak', label: 'PDL BREAK', width: '85px' },
-  { key: 'pdhbreak', label: 'PDH BREAK', width: '85px' },
   { key: 'entry', label: 'ENTRY', width: '80px' },
   { key: 'target1', label: 'TARGET 1', width: '80px' },
   { key: 'convtime', label: 'CONV TIME', width: '80px' },
@@ -93,8 +91,6 @@ export default function V6Client({ signals }: { signals: V6Row[] }) {
         case 'name': diff = a.Name.localeCompare(b.Name); break;
         case 'side': diff = a.Direction.localeCompare(b.Direction); break;
         case 'lane': diff = getLaneRank(a.Lane) - getLaneRank(b.Lane); break;
-        case 'pdlbreak': diff = (a.PDL_Break || '').localeCompare(b.PDL_Break || ''); break;
-        case 'pdhbreak': diff = (a.PDH_Break || '').localeCompare(b.PDH_Break || ''); break;
         case 'entry': diff = a.Entry - b.Entry; break;
         case 'target1': diff = a.Target1 - b.Target1; break;
         case 'convtime': diff = (a.ConvCandleTime || '').localeCompare(b.ConvCandleTime || ''); break;
@@ -250,85 +246,71 @@ export default function V6Client({ signals }: { signals: V6Row[] }) {
                   <LaneBadge lane={sig.Lane} />
                 </div>
 
-                {/* PDL BREAK */}
-                <div style={{ width: COLUMNS[3].width, minWidth: COLUMNS[3].width }}>
-                  <span className="font-mono text-[11px] font-semibold" style={{ color: (sig.PDL_Break || '').toUpperCase() === 'TRUE' ? 'var(--color-bull)' : 'var(--color-muted)' }}>
-                    {sig.PDL_Break || '—'}
-                  </span>
-                </div>
-
-                {/* PDH BREAK */}
-                <div style={{ width: COLUMNS[4].width, minWidth: COLUMNS[4].width }}>
-                  <span className="font-mono text-[11px] font-semibold" style={{ color: (sig.PDH_Break || '').toUpperCase() === 'TRUE' ? 'var(--color-bull)' : 'var(--color-muted)' }}>
-                    {sig.PDH_Break || '—'}
-                  </span>
-                </div>
-
                 {/* ENTRY */}
-                <div style={{ width: COLUMNS[5].width, minWidth: COLUMNS[5].width }}>
+                <div style={{ width: COLUMNS[3].width, minWidth: COLUMNS[3].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text2)' }}>
                     {fmtPrice(sig.Entry)}
                   </span>
                 </div>
 
                 {/* TARGET 1 */}
-                <div style={{ width: COLUMNS[6].width, minWidth: COLUMNS[6].width }}>
+                <div style={{ width: COLUMNS[4].width, minWidth: COLUMNS[4].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-bull)' }}>
                     {fmtPrice(sig.Target1)}
                   </span>
                 </div>
 
                 {/* CONV TIME */}
-                <div style={{ width: COLUMNS[7].width, minWidth: COLUMNS[7].width }}>
+                <div style={{ width: COLUMNS[5].width, minWidth: COLUMNS[5].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
                     {sig.ConvCandleTime || '—'}
                   </span>
                 </div>
 
                 {/* ENTRY TIME */}
-                <div style={{ width: COLUMNS[8].width, minWidth: COLUMNS[8].width }}>
+                <div style={{ width: COLUMNS[6].width, minWidth: COLUMNS[6].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
                     {sig.EntryTime || '—'}
                   </span>
                 </div>
 
                 {/* DELAY BARS */}
-                <div style={{ width: COLUMNS[9].width, minWidth: COLUMNS[9].width }}>
+                <div style={{ width: COLUMNS[7].width, minWidth: COLUMNS[7].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: delayColor }}>
                     {sig.DelayBars !== undefined && sig.DelayBars !== null ? sig.DelayBars : '—'}
                   </span>
                 </div>
 
                 {/* VOL EXP */}
-                <div style={{ width: COLUMNS[10].width, minWidth: COLUMNS[10].width }}>
+                <div style={{ width: COLUMNS[8].width, minWidth: COLUMNS[8].width }}>
                   <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: volExpColor }}>
                     {sig.VolExp ? sig.VolExp.toFixed(2) : '—'}
                   </span>
                 </div>
 
                 {/* RVOL HIST */}
-                <div style={{ width: COLUMNS[11].width, minWidth: COLUMNS[11].width }}>
+                <div style={{ width: COLUMNS[9].width, minWidth: COLUMNS[9].width }}>
                   <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: rvolColor }}>
                     {sig.RVOL_hist ? sig.RVOL_hist.toFixed(2) : '—'}
                   </span>
                 </div>
 
                 {/* CONV BR */}
-                <div style={{ width: COLUMNS[12].width, minWidth: COLUMNS[12].width }}>
+                <div style={{ width: COLUMNS[10].width, minWidth: COLUMNS[10].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: brColor }}>
                     {sig.ConvBR ? sig.ConvBR.toFixed(2) : '—'}
                   </span>
                 </div>
 
                 {/* CONFLUENCE */}
-                <div style={{ width: COLUMNS[13].width, minWidth: COLUMNS[13].width }}>
+                <div style={{ width: COLUMNS[11].width, minWidth: COLUMNS[11].width }}>
                   <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: confColor }}>
                     {sig.Confluence !== undefined && sig.Confluence !== null ? sig.Confluence : '—'}
                   </span>
                 </div>
 
                 {/* COIL BARS */}
-                <div style={{ width: COLUMNS[14].width, minWidth: COLUMNS[14].width }}>
+                <div style={{ width: COLUMNS[12].width, minWidth: COLUMNS[12].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: coilColor }}>
                     {sig.CoilBars !== undefined && sig.CoilBars !== null ? sig.CoilBars : '—'}
                   </span>
