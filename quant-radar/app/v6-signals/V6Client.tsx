@@ -70,8 +70,8 @@ const COLUMNS: { key: SortKey; label: string; width: string }[] = [
   { key: 'delaybars', label: 'DELAY BARS', width: '85px' },
   { key: 'volexp', label: 'VOL EXP', width: '75px' },
   { key: 'rvol', label: 'RVOL HIST', width: '85px' },
-  { key: 'convbr', label: 'CONV BR', width: '70px' },
-  { key: 'confluence', label: 'CONFLUENCE', width: '85px' },
+  { key: 'convbr', label: 'CONV BAR', width: '70px' },
+  { key: 'confluence', label: 'CONFLU', width: '85px' },
   { key: 'coilbars', label: 'COIL BARS', width: '80px' },
 ];
 
