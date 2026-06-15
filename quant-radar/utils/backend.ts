@@ -114,6 +114,30 @@ export type AiPayload = {
   top_ai_picks: AiPick[];
 };
 
+export type FlowRadarRow = {
+  Symbol: string;
+  Name: string;
+  Sector: string;
+  Engines: string;
+  SignalDir: string;
+  Buildup: string;
+  Verdict: string;
+  VerdictReason: string;
+  OI: number;
+  OIChgPct: number;
+  PriceChgPct: number;
+  FadeLongCandidate: boolean;
+  CleanScore: number;
+  CompositeScore: number;
+  StoredAt: string;
+};
+
+export type FlowSmartlistCategory = {
+  count: number;
+  rows: GenericRecord[];
+  stored_at: string;
+};
+
 export type RvolPulseItem = {
   stock: string;
   rms: number;
@@ -311,7 +335,7 @@ export function buildTradingViewUrl(symbol: string, name?: string): string {
   return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(finalSymbol)}&interval=5`;
 }
 
-type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal" | "ob-signal" | "capitulation-signal" | "v6-signals";
+type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "flow-radar" | "flow-smartlist" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal" | "ob-signal" | "capitulation-signal" | "v6-signals";
 
 export async function fetchBackendRoute(route: BackendRoute, dateStr: string, extraParams: Record<string, string> = {}): Promise<unknown> {
   const rawApiUrl = process.env.AWS_API_URL;
@@ -537,6 +561,44 @@ export function normalizeAiPayload(payload: unknown, dateStr: string): AiPayload
     total_signals_analyzed: numberify(root.total_signals_analyzed),
     top_ai_picks: picks,
   };
+}
+
+export function normalizeFlowRadar(payload: unknown): FlowRadarRow[] {
+  const rows = toArray(payload);
+  
+  return rows.map((row) => ({
+    Symbol: textify(row.Symbol),
+    Name: textify(row.Name),
+    Sector: textify(row.Sector, "OTHER"),
+    Engines: textify(row.Engines),
+    SignalDir: textify(row.SignalDir),
+    Buildup: textify(row.Buildup),
+    Verdict: textify(row.Verdict, "NEUTRAL"),
+    VerdictReason: textify(row.VerdictReason),
+    OI: numberify(row.OI),
+    OIChgPct: numberify(row.OIChgPct),
+    PriceChgPct: numberify(row.PriceChgPct),
+    FadeLongCandidate: truthy(row.FadeLongCandidate),
+    CleanScore: numberify(row.CleanScore),
+    CompositeScore: numberify(row.CompositeScore),
+    StoredAt: textify(row.StoredAt),
+  }));
+}
+
+export function normalizeFlowSmartlist(payload: unknown): Record<string, FlowSmartlistCategory> {
+  const root = toRecord(payload);
+  const result: Record<string, FlowSmartlistCategory> = {};
+  
+  for (const [key, value] of Object.entries(root)) {
+    const category = toRecord(value);
+    result[key] = {
+      count: numberify(category.count),
+      rows: toArray(category.rows),
+      stored_at: textify(category.stored_at),
+    };
+  }
+  
+  return result;
 }
 
 export function normalizeInstitutionalWatchlist(payload: unknown): PulseData {

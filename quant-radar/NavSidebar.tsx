@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, Zap, BarChart2, Brain, ChevronRight, Crosshair } from 'lucide-react';
+import { Activity, Zap, BarChart2, Brain, ChevronRight, Crosshair, Layers } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const NAV_ITEMS = [
@@ -33,6 +33,13 @@ const NAV_ITEMS = [
     label: 'Sniper Signal',
     sub: 'BID/ASK SPREAD',
     color: '#ff3b3b',
+  },
+  {
+    href: '/flow-radar',
+    icon: Layers,
+    label: 'Flow Radar',
+    sub: 'OI & SMARTLIST',
+    color: '#9b6fff',
   },
 ];
 
