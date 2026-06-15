@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target } from "lucide-react";
+import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6" },
   { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
   { href: "/capitulation-signal", icon: Activity, label: "Intraday Reversal", sub: "Early Entry", color: "#ff3b3b" },
+  { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI & Smartlist", color: "#9b6fff" },
   
   // -- Temporarily Hidden Pages --
   // { href: "/ai", icon: Brain, label: "AI Analysis", sub: "ML Top Picks", color: "#a855f7" },
