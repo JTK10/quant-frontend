@@ -99,7 +99,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[1fr_80px_100px_60px_60px_60px_60px_40px] min-w-[600px] lg:min-w-0"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[1fr_80px_60px_60px_60px_60px_80px] min-w-[600px] lg:min-w-0"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -119,7 +119,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
                     setAscending(false);
                   }
                 }}
-                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "name" ? "" : key === "sector" ? "" : "text-right"}`}
+                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "name" || key === "sector" ? "" : "text-right"}`}
                 style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
               >
                 {label}
@@ -129,9 +129,6 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
           })}
           <span className="font-mono text-[9px] tracking-[0.14em] text-center" style={{ color: "var(--color-muted)" }}>
             BUILDUP
-          </span>
-          <span className="font-mono text-[9px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>
-            TV
           </span>
         </div>
 
@@ -144,7 +141,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
           return (
               <div
                 key={rowId}
-                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[1fr_80px_100px_60px_60px_60px_60px_40px] min-w-[600px] lg:min-w-0"
+                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[1fr_80px_60px_60px_60px_60px_80px] min-w-[600px] lg:min-w-0"
                 style={{ borderColor: "var(--color-border)" }}
               >
                 {/* NAME + symbol */}
@@ -203,23 +200,6 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
                   >
                     {row.Buildup || "-"}
                   </span>
-                </div>
-
-                {/* TV LINK */}
-                <div className="text-right">
-                  <a
-                    href={buildTradingViewUrl(row.Symbol, row.Name)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center rounded-md border p-1"
-                    style={{
-                      color: "var(--color-accent)",
-                      borderColor: "rgba(45,142,255,0.20)",
-                      background: "rgba(45,142,255,0.06)",
-                    }}
-                  >
-                    <ExternalLink size={12} />
-                  </a>
                 </div>
               </div>
           );

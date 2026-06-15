@@ -37,12 +37,17 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
             ) : (
               <div className="space-y-2">
                 {categoryData.rows.map((row: any, idx) => {
-                  const symbol = row.Symbol || row.Name || row.SK || `row-${idx}`;
-                  const oiChg = row.OI_Chg_Pct ?? row.OIChgPct ?? 0;
-                  const priceChg = row.Price_Chg_Pct ?? row.PriceChgPct ?? 0;
+                  let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
+                  if (!symbol && row.instrument_key) {
+                    symbol = row.instrument_key.split('|').pop();
+                  }
+                  if (!symbol) symbol = `row-${idx}`;
+
+                  const oiChg = row.metric_chg_pct ?? row.OI_Chg_Pct ?? row.OIChgPct ?? 0;
+                  const priceChg = row.price_chg_pct ?? row.Price_Chg_Pct ?? row.PriceChgPct ?? 0;
 
                   return (
-                    <div key={symbol} className="flex items-center justify-between py-1 border-b last:border-0 border-white/5">
+                    <div key={symbol + idx} className="flex items-center justify-between py-1 border-b last:border-0 border-white/5">
                       <a
                         href={buildTradingViewUrl(symbol)}
                         target="_blank"
