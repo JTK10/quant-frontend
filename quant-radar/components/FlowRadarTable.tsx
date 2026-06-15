@@ -108,7 +108,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[minmax(130px,1fr)_100px_80px_60px_80px_80px_110px] min-w-[850px]"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[minmax(130px,1fr)_100px_90px_70px_80px_80px_110px] min-w-[900px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -147,7 +147,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
           return (
               <div
                 key={rowId}
-                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[minmax(130px,1fr)_100px_80px_60px_80px_80px_110px] min-w-[850px]"
+                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[minmax(130px,1fr)_100px_90px_70px_80px_80px_110px] min-w-[900px]"
                 style={{ borderColor: "var(--color-border)" }}
               >
                 {/* NAME + symbol */}

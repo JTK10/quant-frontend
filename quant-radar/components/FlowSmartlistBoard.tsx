@@ -61,14 +61,14 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                       onClick={() => handleSort(categoryName, "oi")}
                       className={`hover:text-white transition-colors ${sortConfig[categoryName]?.key === "oi" ? "text-[var(--color-accent)] font-bold" : ""}`}
                     >
-                      {categoryName.includes("IV") ? "ΔIV%" : "ΔOI%"}{sortConfig[categoryName]?.key === "oi" ? (sortConfig[categoryName].asc ? "↑" : "↓") : ""}
+                      {categoryName.includes("IV_") ? "ΔIV%" : categoryName.includes("ACTIVE") || categoryName.includes("TRADED") ? "ΔVOL%" : "ΔOI%"}{sortConfig[categoryName]?.key === "oi" ? (sortConfig[categoryName].asc ? "↑" : "↓") : ""}
                     </button>
                     <button 
                       type="button" 
                       onClick={() => handleSort(categoryName, "price")}
                       className={`hover:text-white transition-colors ${sortConfig[categoryName]?.key === "price" ? "text-[var(--color-accent)] font-bold" : ""}`}
                     >
-                      ΔPRICE%{sortConfig[categoryName]?.key === "price" ? (sortConfig[categoryName].asc ? "↑" : "↓") : ""}
+                      {categoryName.includes("IV_") ? "ΔPremium%" : "ΔPRICE%"}{sortConfig[categoryName]?.key === "price" ? (sortConfig[categoryName].asc ? "↑" : "↓") : ""}
                     </button>
                   </div>
                 </div>
@@ -83,12 +83,17 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                     });
                   }
                   return rowsToRender.map((row: any, idx) => {
-                    let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
-                    if (!symbol && row.instrument_key) {
-                      const token = row.instrument_key.split('|').pop() || "";
-                      symbol = tokenMap[token] || token;
+                    let symbol = "";
+                    if (categoryName.includes("IV_")) {
+                      symbol = row.trading_symbol || row.SK || row.Symbol || `row-${idx}`;
+                    } else {
+                      symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
+                      if (!symbol && row.instrument_key) {
+                        const token = row.instrument_key.split('|').pop() || "";
+                        symbol = tokenMap[token] || token;
+                      }
+                      if (!symbol) symbol = `row-${idx}`;
                     }
-                    if (!symbol) symbol = `row-${idx}`;
 
                     const oiChg = row.metric_chg_pct ?? row.OI_Chg_Pct ?? row.OIChgPct ?? row.IV_Chg_Pct ?? row.IVChgPct ?? row.iv_chg ?? 0;
                     const priceChg = row.price_chg_pct ?? row.Price_Chg_Pct ?? row.PriceChgPct ?? 0;
@@ -103,6 +108,11 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                         style={{ color: "var(--color-text2)" }}
                       >
                         {symbol}
+                        {categoryName.includes("IV_") && (
+                          <span className="ml-1.5 text-[8px] bg-blue-500/10 text-blue-300 px-1 py-[1px] rounded border border-blue-500/30 align-middle">
+                            OPT
+                          </span>
+                        )}
                       </a>
                       
                       <div className="flex gap-4 w-[110px] justify-end text-[11px] font-mono">
