@@ -136,9 +136,6 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
               </button>
             );
           })}
-          <span className="font-mono text-[9px] tracking-[0.14em] text-center" style={{ color: "var(--color-muted)" }}>
-            BUILDUP
-          </span>
         </div>
 
         {/* Rows */}
