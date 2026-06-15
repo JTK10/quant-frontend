@@ -79,7 +79,7 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                     rowsToRender.sort((a, b) => {
                       const valA = sConf.key === "oi" ? (a.metric_chg_pct ?? a.OI_Chg_Pct ?? a.OIChgPct ?? 0) : (a.price_chg_pct ?? a.Price_Chg_Pct ?? a.PriceChgPct ?? 0);
                       const valB = sConf.key === "oi" ? (b.metric_chg_pct ?? b.OI_Chg_Pct ?? b.OIChgPct ?? 0) : (b.price_chg_pct ?? b.Price_Chg_Pct ?? b.PriceChgPct ?? 0);
-                      return sConf.asc ? valA - valB : valB - valA;
+                      return sConf.asc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
                     });
                   }
                   return rowsToRender.map((row: any, idx) => {
