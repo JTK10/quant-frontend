@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { FlowRadarRow } from "@/utils/backend";
 import { buildTradingViewUrl } from "@/utils/backend";
 
-type SortKey = "name" | "sector" | "oi" | "oichg" | "pricechg" | "score";
+type SortKey = "name" | "sector" | "engines" | "oi" | "oichg" | "pricechg" | "score";
 
 export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("oichg");
@@ -26,6 +26,8 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
           return a.Name.localeCompare(b.Name);
         case "sector":
           return a.Sector.localeCompare(b.Sector);
+        case "engines":
+          return (a.Engines || "").localeCompare(b.Engines || "");
         case "oi":
           return a.OI - b.OI;
         case "oichg":
