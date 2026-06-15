@@ -20,7 +20,6 @@ const NAV_ITEMS = [
   // { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "Flow Watchlist", color: "#00e89a" },
   // { href: "/master-list", icon: Target, label: "Master List", sub: "Top Sector Picks", color: "#eab308" },
   // { href: "/ob-signal", icon: Target, label: "OB Radar", sub: "Order Block Sniper", color: "#eab308" },
-];
 
 function LiveClock() {
   const [time, setTime] = useState("--:--:--");
