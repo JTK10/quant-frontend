@@ -61,7 +61,7 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                       onClick={() => handleSort(categoryName, "oi")}
                       className={`hover:text-white transition-colors ${sortConfig[categoryName]?.key === "oi" ? "text-[var(--color-accent)] font-bold" : ""}`}
                     >
-                      ΔOI%{sortConfig[categoryName]?.key === "oi" ? (sortConfig[categoryName].asc ? "↑" : "↓") : ""}
+                      {categoryName.includes("IV") ? "ΔIV%" : "ΔOI%"}{sortConfig[categoryName]?.key === "oi" ? (sortConfig[categoryName].asc ? "↑" : "↓") : ""}
                     </button>
                     <button 
                       type="button" 
@@ -77,8 +77,8 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                   let rowsToRender = [...categoryData.rows];
                   if (sConf?.key) {
                     rowsToRender.sort((a, b) => {
-                      const valA = sConf.key === "oi" ? (a.metric_chg_pct ?? a.OI_Chg_Pct ?? a.OIChgPct ?? 0) : (a.price_chg_pct ?? a.Price_Chg_Pct ?? a.PriceChgPct ?? 0);
-                      const valB = sConf.key === "oi" ? (b.metric_chg_pct ?? b.OI_Chg_Pct ?? b.OIChgPct ?? 0) : (b.price_chg_pct ?? b.Price_Chg_Pct ?? b.PriceChgPct ?? 0);
+                      const valA = sConf.key === "oi" ? (a.metric_chg_pct ?? a.OI_Chg_Pct ?? a.OIChgPct ?? a.IV_Chg_Pct ?? a.IVChgPct ?? a.iv_chg ?? 0) : (a.price_chg_pct ?? a.Price_Chg_Pct ?? a.PriceChgPct ?? 0);
+                      const valB = sConf.key === "oi" ? (b.metric_chg_pct ?? b.OI_Chg_Pct ?? b.OIChgPct ?? b.IV_Chg_Pct ?? b.IVChgPct ?? b.iv_chg ?? 0) : (b.price_chg_pct ?? b.Price_Chg_Pct ?? b.PriceChgPct ?? 0);
                       return sConf.asc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
                     });
                   }
@@ -90,7 +90,7 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                     }
                     if (!symbol) symbol = `row-${idx}`;
 
-                    const oiChg = row.metric_chg_pct ?? row.OI_Chg_Pct ?? row.OIChgPct ?? 0;
+                    const oiChg = row.metric_chg_pct ?? row.OI_Chg_Pct ?? row.OIChgPct ?? row.IV_Chg_Pct ?? row.IVChgPct ?? row.iv_chg ?? 0;
                     const priceChg = row.price_chg_pct ?? row.Price_Chg_Pct ?? row.PriceChgPct ?? 0;
 
                   return (

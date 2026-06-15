@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { FlowRadarRow } from "@/utils/backend";
 import { buildTradingViewUrl } from "@/utils/backend";
 
-type SortKey = "name" | "sector" | "engines" | "oi" | "oichg" | "pricechg" | "score";
+type SortKey = "name" | "sector" | "engines" | "oichg" | "pricechg" | "score" | "buildup";
 
 export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("oichg");
@@ -28,12 +28,13 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
           return a.Sector.localeCompare(b.Sector);
         case "engines":
           return (a.Engines || "").localeCompare(b.Engines || "");
-        case "oi":
-          return a.OI - b.OI;
+
         case "oichg":
           return Math.abs(a.OIChgPct) - Math.abs(b.OIChgPct);
         case "pricechg":
           return Math.abs(a.PriceChgPct) - Math.abs(b.PriceChgPct);
+        case "buildup":
+          return (a.Buildup || "").localeCompare(b.Buildup || "");
         case "score":
         default:
           return a.CompositeScore - b.CompositeScore;
@@ -65,9 +66,9 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
     ["sector", "SECTOR"],
     ["engines", "STRATEGY"],
     ["score", "SCORE"],
-    ["oi", "OI"],
     ["oichg", "ΔOI%"],
     ["pricechg", "ΔPRICE%"],
+    ["buildup", "BUILDUP"]
   ];
 
   return (
@@ -107,7 +108,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[minmax(130px,1fr)_100px_80px_60px_80px_80px_80px_110px] min-w-[850px]"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[minmax(130px,1fr)_100px_80px_60px_80px_80px_110px] min-w-[850px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -149,7 +150,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
           return (
               <div
                 key={rowId}
-                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[minmax(130px,1fr)_100px_80px_60px_80px_80px_80px_110px] min-w-[850px]"
+                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[minmax(130px,1fr)_100px_80px_60px_80px_80px_110px] min-w-[850px]"
                 style={{ borderColor: "var(--color-border)" }}
               >
                 {/* NAME + symbol */}
@@ -190,11 +191,6 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
                 {/* SCORE */}
                 <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-gold)" }}>
                   {row.CompositeScore.toFixed(1)}
-                </span>
-
-                {/* OI */}
-                <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
-                  {row.OI.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
 
                 {/* OI CHG PCT */}

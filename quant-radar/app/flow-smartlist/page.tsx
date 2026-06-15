@@ -27,7 +27,7 @@ export default async function FlowSmartlistPage({ searchParams }: { searchParams
     <div className="flex h-screen flex-col overflow-hidden">
       <PageHeader
         title="Flow Smartlist"
-        subtitle="UPSTOX MOST ACTIVE · OI GAINERS · OI LOSERS"
+        subtitle="MOST ACTIVE · OI GAINERS · OI LOSERS · TOP TRADED · IV GAINERS"
         badge="LIVE SCAN"
         dateStr={dateStr}
         accentColor="var(--color-gold)"
