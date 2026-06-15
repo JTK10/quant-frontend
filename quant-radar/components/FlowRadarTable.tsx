@@ -58,9 +58,10 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
     );
   }
 
-  const headers: [SortKey, string][] = [
+  const headers: [SortKey | "engines", string][] = [
     ["name", "NAME"],
     ["sector", "SECTOR"],
+    ["engines", "STRATEGY"],
     ["score", "SCORE"],
     ["oi", "OI"],
     ["oichg", "ΔOI%"],
@@ -104,7 +105,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[1fr_80px_60px_80px_70px_70px_100px] min-w-[700px] lg:min-w-0"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[1fr_80px_70px_60px_80px_70px_70px_100px] min-w-[750px] lg:min-w-0"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -124,7 +125,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
                     setAscending(false);
                   }
                 }}
-                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "name" || key === "sector" ? "" : "text-right"}`}
+                className={`text-left font-mono text-[9px] tracking-[0.14em] ${key === "name" || key === "sector" || key === "engines" ? "" : "text-right"}`}
                 style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
               >
                 {label}
@@ -146,7 +147,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
           return (
               <div
                 key={rowId}
-                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[1fr_80px_60px_80px_70px_70px_100px] min-w-[700px] lg:min-w-0"
+                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[1fr_80px_70px_60px_80px_70px_70px_100px] min-w-[750px] lg:min-w-0"
                 style={{ borderColor: "var(--color-border)" }}
               >
                 {/* NAME + symbol */}
@@ -171,6 +172,17 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
                 {/* SECTOR */}
                 <span className="font-mono text-[10px] truncate" style={{ color: "var(--color-muted2)" }}>
                   {row.Sector}
+                </span>
+
+                {/* STRATEGY */}
+                <span className="font-mono text-[10px] truncate" style={{ color: "var(--color-text)" }}>
+                  {(() => {
+                    const engines = row.Engines || "";
+                    if (engines.includes("V6") && engines.includes("SNIPER")) return "BOTH";
+                    if (engines.includes("V6")) return "V69";
+                    if (engines.includes("SNIPER") || engines.includes("SMART_RADAR")) return "SNIPER";
+                    return engines;
+                  })() || "-"}
                 </span>
 
                 {/* SCORE */}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { FlowSmartlistCategory } from "@/utils/backend";
 import { buildTradingViewUrl } from "@/utils/backend";
 import tokenMapData from "@/utils/tokenMap.json";
@@ -7,6 +8,18 @@ import tokenMapData from "@/utils/tokenMap.json";
 const tokenMap: Record<string, string> = tokenMapData;
 
 export default function FlowSmartlistBoard({ data }: { data: Record<string, FlowSmartlistCategory> }) {
+  const [sortConfig, setSortConfig] = useState<Record<string, { key: "oi" | "price" | null; asc: boolean }>>({});
+
+  const handleSort = (category: string, key: "oi" | "price") => {
+    setSortConfig(prev => {
+      const current = prev[category];
+      if (current?.key === key) {
+        return { ...prev, [category]: { key, asc: !current.asc } };
+      }
+      return { ...prev, [category]: { key, asc: false } };
+    });
+  };
+
   const categories = Object.entries(data);
 
   if (!categories.length) {
@@ -43,20 +56,42 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                 <div className="flex items-center justify-between pb-2 border-b border-white/10">
                   <span className="text-[9px] font-mono tracking-wider text-gray-500">SYMBOL</span>
                   <div className="flex gap-4 text-[9px] font-mono tracking-wider text-gray-500 w-[110px] justify-end">
-                    <span>ΔOI%</span>
-                    <span>ΔPRICE%</span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleSort(categoryName, "oi")}
+                      className={`hover:text-white transition-colors ${sortConfig[categoryName]?.key === "oi" ? "text-[var(--color-accent)] font-bold" : ""}`}
+                    >
+                      ΔOI%{sortConfig[categoryName]?.key === "oi" ? (sortConfig[categoryName].asc ? "↑" : "↓") : ""}
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => handleSort(categoryName, "price")}
+                      className={`hover:text-white transition-colors ${sortConfig[categoryName]?.key === "price" ? "text-[var(--color-accent)] font-bold" : ""}`}
+                    >
+                      ΔPRICE%{sortConfig[categoryName]?.key === "price" ? (sortConfig[categoryName].asc ? "↑" : "↓") : ""}
+                    </button>
                   </div>
                 </div>
-                {categoryData.rows.map((row: any, idx) => {
-                  let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
-                  if (!symbol && row.instrument_key) {
-                    const token = row.instrument_key.split('|').pop() || "";
-                    symbol = tokenMap[token] || token;
+                {(() => {
+                  const sConf = sortConfig[categoryName];
+                  let rowsToRender = [...categoryData.rows];
+                  if (sConf?.key) {
+                    rowsToRender.sort((a, b) => {
+                      const valA = sConf.key === "oi" ? (a.metric_chg_pct ?? a.OI_Chg_Pct ?? a.OIChgPct ?? 0) : (a.price_chg_pct ?? a.Price_Chg_Pct ?? a.PriceChgPct ?? 0);
+                      const valB = sConf.key === "oi" ? (b.metric_chg_pct ?? b.OI_Chg_Pct ?? b.OIChgPct ?? 0) : (b.price_chg_pct ?? b.Price_Chg_Pct ?? b.PriceChgPct ?? 0);
+                      return sConf.asc ? valA - valB : valB - valA;
+                    });
                   }
-                  if (!symbol) symbol = `row-${idx}`;
+                  return rowsToRender.map((row: any, idx) => {
+                    let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
+                    if (!symbol && row.instrument_key) {
+                      const token = row.instrument_key.split('|').pop() || "";
+                      symbol = tokenMap[token] || token;
+                    }
+                    if (!symbol) symbol = `row-${idx}`;
 
-                  const oiChg = row.metric_chg_pct ?? row.OI_Chg_Pct ?? row.OIChgPct ?? 0;
-                  const priceChg = row.price_chg_pct ?? row.Price_Chg_Pct ?? row.PriceChgPct ?? 0;
+                    const oiChg = row.metric_chg_pct ?? row.OI_Chg_Pct ?? row.OIChgPct ?? 0;
+                    const priceChg = row.price_chg_pct ?? row.Price_Chg_Pct ?? row.PriceChgPct ?? 0;
 
                   return (
                     <div key={symbol + idx} className="flex items-center justify-between py-1 border-b last:border-0 border-white/5">
@@ -84,7 +119,7 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                       </div>
                     </div>
                   );
-                })}
+                })()}
               </div>
             )}
           </div>
