@@ -119,7 +119,8 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                       </div>
                     </div>
                   );
-                })()}
+                });
+              })()}
               </div>
             )}
           </div>
