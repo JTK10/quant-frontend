@@ -10,9 +10,14 @@ type SortKey = "name" | "sector" | "oi" | "oichg" | "pricechg" | "score";
 export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("oichg");
   const [ascending, setAscending] = useState(false);
-  const [filter, setFilter] = useState<"ALL" | "CONFIRM" | "VETO" | "NEUTRAL">("ALL");
+  const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
 
-  const filtered = rows.filter((r) => filter === "ALL" || r.Verdict === filter);
+  const filtered = rows.filter((r) => {
+    if (filter === "ALL") return true;
+    if (filter === "LONG") return r.Buildup && r.Buildup.includes("LONG");
+    if (filter === "SHORT") return r.Buildup && r.Buildup.includes("SHORT");
+    return true;
+  });
 
   const sorted = [...filtered].sort((a, b) => {
     const cmp = (() => {
@@ -69,10 +74,10 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
         className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5 md:px-4"
         style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
       >
-        {(["ALL", "CONFIRM", "VETO", "NEUTRAL"] as const).map((v) => {
+        {(["ALL", "LONG", "SHORT"] as const).map((v) => {
           const active = filter === v;
           const c =
-            v === "CONFIRM" ? "var(--color-bull)" : v === "VETO" ? "var(--color-bear)" : "var(--color-accent)";
+            v === "LONG" ? "var(--color-bull)" : v === "SHORT" ? "var(--color-bear)" : "var(--color-accent)";
           return (
             <button
               key={v}
@@ -99,7 +104,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[1fr_80px_60px_60px_60px_60px_80px] min-w-[600px] lg:min-w-0"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[1fr_80px_60px_80px_70px_70px_100px] min-w-[700px] lg:min-w-0"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -141,7 +146,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
           return (
               <div
                 key={rowId}
-                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[1fr_80px_60px_60px_60px_60px_80px] min-w-[600px] lg:min-w-0"
+                className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[1fr_80px_60px_80px_70px_70px_100px] min-w-[700px] lg:min-w-0"
                 style={{ borderColor: "var(--color-border)" }}
               >
                 {/* NAME + symbol */}

@@ -2,6 +2,9 @@
 
 import type { FlowSmartlistCategory } from "@/utils/backend";
 import { buildTradingViewUrl } from "@/utils/backend";
+import tokenMapData from "@/utils/tokenMap.json";
+
+const tokenMap: Record<string, string> = tokenMapData;
 
 export default function FlowSmartlistBoard({ data }: { data: Record<string, FlowSmartlistCategory> }) {
   const categories = Object.entries(data);
@@ -36,10 +39,19 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
               <div className="text-center py-4 font-mono text-[10px] text-gray-500">EMPTY</div>
             ) : (
               <div className="space-y-2">
+                {/* Column Headers */}
+                <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                  <span className="text-[9px] font-mono tracking-wider text-gray-500">SYMBOL</span>
+                  <div className="flex gap-4 text-[9px] font-mono tracking-wider text-gray-500 w-[110px] justify-end">
+                    <span>ΔOI%</span>
+                    <span>ΔPRICE%</span>
+                  </div>
+                </div>
                 {categoryData.rows.map((row: any, idx) => {
                   let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
                   if (!symbol && row.instrument_key) {
-                    symbol = row.instrument_key.split('|').pop();
+                    const token = row.instrument_key.split('|').pop() || "";
+                    symbol = tokenMap[token] || token;
                   }
                   if (!symbol) symbol = `row-${idx}`;
 
@@ -58,15 +70,15 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                         {symbol}
                       </a>
                       
-                      <div className="flex gap-3 text-[11px] font-mono">
+                      <div className="flex gap-4 w-[110px] justify-end text-[11px] font-mono">
                         {oiChg !== 0 && (
-                          <span className={oiChg > 0 ? "text-green-400" : "text-red-400"}>
-                            {oiChg > 0 ? "+" : ""}{Number(oiChg).toFixed(1)}% OI
+                          <span className={oiChg > 0 ? "text-green-400 w-[45px] text-right" : "text-red-400 w-[45px] text-right"}>
+                            {oiChg > 0 ? "+" : ""}{Number(oiChg).toFixed(1)}%
                           </span>
                         )}
                         {priceChg !== 0 && (
-                          <span className={priceChg > 0 ? "text-green-400" : "text-red-400"}>
-                            {priceChg > 0 ? "+" : ""}{Number(priceChg).toFixed(1)}% P
+                          <span className={priceChg > 0 ? "text-green-400 w-[45px] text-right" : "text-red-400 w-[45px] text-right"}>
+                            {priceChg > 0 ? "+" : ""}{Number(priceChg).toFixed(1)}%
                           </span>
                         )}
                       </div>
