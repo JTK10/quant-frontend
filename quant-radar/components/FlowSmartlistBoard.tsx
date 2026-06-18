@@ -81,7 +81,7 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                   if (isGroupable) {
                     const grouped = new Map<string, any>();
                     for (const row of rowsToRender) {
-                      let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
+                      let symbol: string = String(row.trading_symbol || row.Symbol || row.Name || row.SK || "");
                       if (!symbol && typeof row.instrument_key === 'string') {
                         const token = row.instrument_key.split('|').pop() || "";
                         symbol = tokenMap[token] || token;
@@ -126,7 +126,7 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                   }
 
                   return rowsToRender.map((row: any, idx) => {
-                    let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
+                    let symbol: string = String(row.trading_symbol || row.Symbol || row.Name || row.SK || "");
                     if (!symbol && typeof row.instrument_key === 'string') {
                       const token = row.instrument_key.split('|').pop() || "";
                       symbol = tokenMap[token] || token;
