@@ -122,7 +122,7 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                       return sConf.asc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
                     });
                   } else if (isGroupable) {
-                    rowsToRender.sort((a, b) => (b.count || 0) - (a.count || 0));
+                    rowsToRender.sort((a, b) => Number(b.count || 0) - Number(a.count || 0));
                   }
 
                   return rowsToRender.map((row: any, idx) => {
