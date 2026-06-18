@@ -75,13 +75,56 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                 {(() => {
                   const sConf = sortConfig[categoryName];
                   let rowsToRender = [...categoryData.rows];
+                  
+                  const isGroupable = categoryName.includes("IV_") || categoryName.includes("ACTIVE");
+
+                  if (isGroupable) {
+                    const grouped = new Map<string, any>();
+                    for (const row of rowsToRender) {
+                      let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
+                      if (!symbol && row.instrument_key) {
+                        const token = row.instrument_key.split('|').pop() || "";
+                        symbol = tokenMap[token] || token;
+                      }
+                      if (!symbol) symbol = "UNKNOWN";
+
+                      const baseSymbol = symbol.replace(/[0-9].*$/, '') || symbol;
+                      const oiChg = Number(row.metric_chg_pct ?? row.OI_Chg_Pct ?? row.OIChgPct ?? row.IV_Chg_Pct ?? row.IVChgPct ?? row.iv_chg ?? 0);
+                      const priceChg = Number(row.price_chg_pct ?? row.Price_Chg_Pct ?? row.PriceChgPct ?? 0);
+
+                      if (!grouped.has(baseSymbol)) {
+                        grouped.set(baseSymbol, { 
+                          Symbol: baseSymbol, 
+                          count: 1, 
+                          oiChgSum: oiChg, 
+                          priceChgSum: priceChg 
+                        });
+                      } else {
+                        const g = grouped.get(baseSymbol);
+                        g.count += 1;
+                        g.oiChgSum += oiChg;
+                        g.priceChgSum += priceChg;
+                      }
+                    }
+
+                    rowsToRender = Array.from(grouped.values()).map(g => ({
+                      Symbol: g.Symbol,
+                      count: g.count,
+                      metric_chg_pct: g.oiChgSum / g.count,
+                      price_chg_pct: g.priceChgSum / g.count,
+                    }));
+                  }
+
                   if (sConf?.key) {
                     rowsToRender.sort((a, b) => {
                       const valA = sConf.key === "oi" ? (a.metric_chg_pct ?? a.OI_Chg_Pct ?? a.OIChgPct ?? a.IV_Chg_Pct ?? a.IVChgPct ?? a.iv_chg ?? 0) : (a.price_chg_pct ?? a.Price_Chg_Pct ?? a.PriceChgPct ?? 0);
                       const valB = sConf.key === "oi" ? (b.metric_chg_pct ?? b.OI_Chg_Pct ?? b.OIChgPct ?? b.IV_Chg_Pct ?? b.IVChgPct ?? b.iv_chg ?? 0) : (b.price_chg_pct ?? b.Price_Chg_Pct ?? b.PriceChgPct ?? 0);
                       return sConf.asc ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
                     });
+                  } else if (isGroupable) {
+                    rowsToRender.sort((a, b) => (b.count || 0) - (a.count || 0));
                   }
+
                   return rowsToRender.map((row: any, idx) => {
                     let symbol = row.trading_symbol || row.Symbol || row.Name || row.SK;
                     if (!symbol && row.instrument_key) {
@@ -92,18 +135,26 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
 
                     const oiChg = row.metric_chg_pct ?? row.OI_Chg_Pct ?? row.OIChgPct ?? row.IV_Chg_Pct ?? row.IVChgPct ?? row.iv_chg ?? 0;
                     const priceChg = row.price_chg_pct ?? row.Price_Chg_Pct ?? row.PriceChgPct ?? 0;
+                    const count = row.count || 1;
 
                   return (
                     <div key={symbol + idx} className="flex items-center justify-between py-1 border-b last:border-0 border-white/5">
-                      <a
-                        href={buildTradingViewUrl(symbol)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[12px] font-medium hover:underline min-w-[80px]"
-                        style={{ color: "var(--color-text2)" }}
-                      >
-                        {symbol}
-                      </a>
+                      <div className="flex items-center gap-2 min-w-[80px]">
+                        <a
+                          href={buildTradingViewUrl(symbol)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[12px] font-medium hover:underline"
+                          style={{ color: "var(--color-text2)" }}
+                        >
+                          {symbol}
+                        </a>
+                        {count > 1 && (
+                          <span className="text-[10px] font-bold text-gray-400 bg-gray-800 px-1.5 rounded-md">
+                            {count}
+                          </span>
+                        )}
+                      </div>
                       
                       <div className="flex gap-4 w-[110px] justify-end text-[11px] font-mono">
                         {oiChg !== 0 && (
