@@ -815,16 +815,16 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
   const rows = toArray(payload);
 
   return rows.map((row) => {
-    const symbol = textify(row.name);
+    const symbol = textify(row.name || row.stock);
     const sideRaw = textify(row.side).toUpperCase();
     const side = sideRaw === "SHORT" ? "SHORT" : sideRaw === "LONG" ? "LONG" : "NEUTRAL";
 
     return {
-      ts: numberify(row.ts),
-      time: textify(row.time),
+      ts: numberify(row.ts, 0),
+      time: textify(row.time || row.sig_time),
       side,
       k_level: textify(row.k_level, "K6"),
-      instrument_key: textify(row.instrument_key),
+      instrument_key: textify(row.instrument_key || ""),
       name: symbol,
       entry: numberify(row.entry),
       surge: numberify(row.surge),
