@@ -1,14 +1,15 @@
 import PageHeader from "@/components/PageHeader";
-import { AutoRefresh } from "@/components/Controls";
+import { AutoRefresh, DatePicker } from "@/components/Controls";
 import PantherClient from "./PantherClient";
 import type { PantherRow } from "@/utils/backend";
+import { resolveDate, type DateSearchParams } from "@/utils/date";
 import { getInternalApiUrl } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
-async function getPantherSignals(): Promise<PantherRow[]> {
+async function getPantherSignals(dateStr: string): Promise<PantherRow[]> {
   try {
-    const url = await getInternalApiUrl(`/api/panther-signals`);
+    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}`);
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error("Panther Signal route failed");
     return response.json();
@@ -18,21 +19,14 @@ async function getPantherSignals(): Promise<PantherRow[]> {
   }
 }
 
-export default async function PantherSignalPage() {
-  const signals = await getPantherSignals();
+export default async function PantherSignalPage({ searchParams }: { searchParams: DateSearchParams }) {
+  const dateStr = await resolveDate(searchParams);
+  const signals = await getPantherSignals(dateStr);
 
   const bulls = signals.filter(s => s.side === "LONG");
   const bears = signals.filter(s => s.side === "SHORT");
   
   const bias = bulls.length > bears.length ? "BULLISH" : bears.length > bulls.length ? "BEARISH" : "NEUTRAL";
-
-  // Use today's IST date just for display
-  const dateStr = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -43,10 +37,12 @@ export default async function PantherSignalPage() {
         dateStr={dateStr}
         accentColor="#f43f5e"
       >
+        <DatePicker />
         <AutoRefresh interval={45000} />
       </PageHeader>
 
       <div
+
         className="flex items-center gap-4 border-b px-3 py-2 md:px-6 z-10 relative shrink-0"
         style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
       >

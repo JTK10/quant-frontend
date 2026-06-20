@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { normalizePantherSignals } from "@/utils/backend";
+import { NextRequest, NextResponse } from "next/server";
+import { normalizePantherSignals, getTodayIstDate } from "@/utils/backend";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +38,10 @@ async function getToken() {
   return cache.token;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
+  const targetDate = dateStr.replace(/-/g, "");
+
   try {
     const t = await getToken();
     const signalsUrl = process.env.PANTHER_SIGNALS_URL;
@@ -70,7 +73,15 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(normalizePantherSignals(parsedSignals));
+    const filteredSignals = parsedSignals.filter((s: any) => {
+      // Ensure we only return signals for the selected date.
+      // Python's panther_live.py pushes sig_date as 'YYYYMMDD'
+      if (s.sig_date) return s.sig_date === targetDate;
+      // Fallback if sig_date isn't present
+      return true;
+    });
+
+    return NextResponse.json(normalizePantherSignals(filteredSignals));
   } catch (error) {
     console.error("Panther API Error:", error);
     return NextResponse.json(
