@@ -11,7 +11,11 @@ async function getPantherSignals(dateStr: string): Promise<PantherRow[]> {
   try {
     const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}`);
     const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error("Panther Signal route failed");
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`Panther Signal route failed: ${response.status} - ${errText}`);
+      throw new Error(`Panther Signal route failed: ${response.status}`);
+    }
     return response.json();
   } catch (err) {
     console.error("Error fetching Panther Signals:", err);
