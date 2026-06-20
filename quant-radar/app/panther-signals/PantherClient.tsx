@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { PantherRow } from '@/utils/backend';
 
-type SortKey = 'name' | 'side' | 'k_level' | 'entry' | 'surge' | 'win60s_cr' | 'spread_bps' | 'spread_vs_norm' | 'time';
+type SortKey = 'name' | 'side' | 'k_level' | 'entry' | 'surge' | 'win60s_cr' | 'time';
 
 function fmtPrice(v: number) {
   if (!v) return '—';
@@ -64,9 +64,7 @@ const COLUMNS: { key: SortKey; label: string; width: string }[] = [
   { key: 'k_level', label: 'LEVEL', width: '90px' },
   { key: 'entry', label: 'ENTRY', width: '90px' },
   { key: 'surge', label: 'SURGE', width: '90px' },
-  { key: 'win60s_cr', label: '60s MASS', width: '90px' },
-  { key: 'spread_bps', label: 'SPREAD BPS', width: '90px' },
-  { key: 'spread_vs_norm', label: 'SPREAD NORM', width: '100px' },
+  { key: 'win60s_cr', label: 'SMC', width: '90px' },
   { key: 'time', label: 'TIME', width: '90px' },
 ];
 
@@ -90,8 +88,6 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
         case 'entry': diff = a.entry - b.entry; break;
         case 'surge': diff = a.surge - b.surge; break;
         case 'win60s_cr': diff = a.win60s_cr - b.win60s_cr; break;
-        case 'spread_bps': diff = a.spread_bps - b.spread_bps; break;
-        case 'spread_vs_norm': diff = a.spread_vs_norm - b.spread_vs_norm; break;
         case 'time': diff = (a.time || '').localeCompare(b.time || ''); break;
         default: 
           diff = (a.time || '').localeCompare(b.time || '');
@@ -238,23 +234,11 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
 
                 <div style={{ width: COLUMNS[5].width, minWidth: COLUMNS[5].width }}>
                   <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: massColor }}>
-                    {sig.win60s_cr ? '₹' + sig.win60s_cr.toFixed(2) + 'Cr' : '—'}
+                    {sig.win60s_cr ? sig.win60s_cr.toFixed(2) : '—'}
                   </span>
                 </div>
 
                 <div style={{ width: COLUMNS[6].width, minWidth: COLUMNS[6].width }}>
-                  <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
-                    {sig.spread_bps !== undefined && sig.spread_bps !== null ? sig.spread_bps.toFixed(2) : '—'}
-                  </span>
-                </div>
-
-                <div style={{ width: COLUMNS[7].width, minWidth: COLUMNS[7].width }}>
-                  <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
-                    {sig.spread_vs_norm !== undefined && sig.spread_vs_norm !== null ? sig.spread_vs_norm.toFixed(2) + 'x' : '—'}
-                  </span>
-                </div>
-
-                <div style={{ width: COLUMNS[8].width, minWidth: COLUMNS[8].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
                     {sig.time || '—'}
                   </span>
