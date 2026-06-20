@@ -11,11 +11,14 @@ async function getPantherSignals(dateStr: string): Promise<PantherRow[]> {
   try {
     const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}`);
     const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error("Panther Signal route failed");
+    if (!response.ok) {
+      const errText = await response.text();
+      return [{ name: `API ERR: ${response.status} ${errText.substring(0, 50)}`, source: "panther", side: "NEUTRAL", ts: 0, time: "00:00:00", k_level: "K0", entry: 0, surge: 0, win60s_cr: 0, spread_bps: 0, spread_vs_norm: 0, instrument_key: "", Chart: "" } as any];
+    }
     return response.json();
   } catch (err) {
     console.error("Error fetching Panther Signals:", err);
-    return [];
+    return [{ name: `FETCH ERR: ${String(err)}`, source: "panther", side: "NEUTRAL", ts: 0, time: "00:00:00", k_level: "K0", entry: 0, surge: 0, win60s_cr: 0, spread_bps: 0, spread_vs_norm: 0, instrument_key: "", Chart: "" } as any];
   }
 }
 
