@@ -73,14 +73,34 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Temporarily skip date filtering so we can see what ORDS is returning
-    const filteredSignals = parsedSignals;
+    const filteredSignals = parsedSignals.filter((s: any) => {
+      // Ensure we only return signals for the selected date.
+      if (s.sig_date) return String(s.sig_date) === targetDate;
+      if (s.SIG_DATE) return String(s.SIG_DATE) === targetDate;
+      
+      // Since ORDS is returning the .doc JSON which only has `ts` (timestamp),
+      // we must convert `ts` to IST and check if it matches targetDate.
+      if (s.ts) {
+        const d = new Date(s.ts * 1000); // ts is in seconds
+        const istDateStr = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Kolkata",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).format(d).replace(/-/g, ""); // Returns "YYYYMMDD"
+        
+        return istDateStr === targetDate;
+      }
+
+      // Fallback if no date info is present
+      return true;
+    });
 
     return NextResponse.json(normalizePantherSignals(filteredSignals));
   } catch (error) {
     console.error("Panther API Error:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to load panther signals.", stack: (error as Error).stack },
+      { error: error instanceof Error ? error.message : "Unable to load panther signals." },
       { status: 500 },
     );
   }
