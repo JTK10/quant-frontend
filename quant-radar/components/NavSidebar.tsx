@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/v6-signals", icon: Zap, label: "V6 Momentum", sub: "Premium Alerts", color: "#00e89a" },
   { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6" },
   { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
+  { href: "/panther-signals", icon: Target, label: "Panther Signals", sub: "Live K-Engine", color: "#f43f5e" },
 ];
   
   // -- Temporarily Hidden Pages --

@@ -795,3 +795,44 @@ export function normalizeV6Signals(payload: unknown): V6Row[] {
   });
 }
 
+export type PantherRow = {
+  ts: number;
+  time: string;
+  side: "LONG" | "SHORT" | "NEUTRAL";
+  k_level: string;
+  instrument_key: string;
+  name: string;
+  entry: number;
+  surge: number;
+  win60s_cr: number;
+  spread_bps: number;
+  spread_vs_norm: number;
+  source: string;
+  Chart: string;
+};
+
+export function normalizePantherSignals(payload: unknown): PantherRow[] {
+  const rows = toArray(payload);
+
+  return rows.map((row) => {
+    const symbol = textify(row.name);
+    const sideRaw = textify(row.side).toUpperCase();
+    const side = sideRaw === "SHORT" ? "SHORT" : sideRaw === "LONG" ? "LONG" : "NEUTRAL";
+
+    return {
+      ts: numberify(row.ts),
+      time: textify(row.time),
+      side,
+      k_level: textify(row.k_level, "K6"),
+      instrument_key: textify(row.instrument_key),
+      name: symbol,
+      entry: numberify(row.entry),
+      surge: numberify(row.surge),
+      win60s_cr: numberify(row.win60s_cr),
+      spread_bps: numberify(row.spread_bps),
+      spread_vs_norm: numberify(row.spread_vs_norm),
+      source: textify(row.source, "panther"),
+      Chart: buildTradingViewUrl(symbol, symbol),
+    };
+  });
+}
