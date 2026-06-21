@@ -6,14 +6,14 @@ import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, T
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/panther-signals", icon: Cat, label: "Panther Signals", sub: "Live K-Engine", color: "#f43f5e" },
-  { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#9b6fff" },
-  { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308" },
-  { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#2d8eff" },
-  { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "Precision Setup", color: "#ff3b3b" },
-  { href: "/v6-signals", icon: Zap, label: "V6 Momentum", sub: "Premium Alerts", color: "#00e89a" },
-  { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6" },
-  { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#f59e0b" },
+  { href: "/panther-signals", icon: Cat, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
+  { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },
+  { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308", rgb: "234,179,8" },
+  { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#00f0ff", rgb: "0,240,255" },
+  { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "Precision Setup", color: "#ff00e6", rgb: "255,0,230" },
+  { href: "/v6-signals", icon: Zap, label: "V6 Momentum", sub: "Premium Alerts", color: "#00ff9d", rgb: "0,255,157" },
+  { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6", rgb: "20,184,166" },
+  { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#fce205", rgb: "252,226,5" },
 ];
   
   // -- Temporarily Hidden Pages --
@@ -84,8 +84,9 @@ export default function NavSidebar() {
     <aside
       className="w-full border-b px-3 py-3 lg:sticky lg:top-0 lg:h-screen lg:w-56 lg:border-b-0 lg:border-r lg:px-3 lg:py-4"
       style={{
-        background: "var(--color-bg)",
-        borderColor: "var(--color-border)",
+        background: "linear-gradient(180deg, #11131a 0%, #080a0f 100%)",
+        borderRight: "1px solid rgba(0, 240, 255, 0.1)",
+        boxShadow: "4px 0 20px rgba(0, 0, 0, 0.5)",
       }}
     >
       <div className="mb-3 flex items-center justify-between gap-3 lg:block">
@@ -118,41 +119,48 @@ export default function NavSidebar() {
       </div>
 
       <nav className="flex gap-1.5 overflow-x-auto lg:flex-col lg:overflow-visible">
-        {NAV_ITEMS.map(({ href, icon: Icon, label, sub, color }) => {
+        {NAV_ITEMS.map(({ href, icon: Icon, label, sub, color, rgb }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
             <Link
               key={href}
               href={href}
-              className="min-w-[140px] rounded-lg border px-2.5 py-2 transition-colors lg:min-w-0"
+              className="min-w-[140px] rounded-lg border px-2.5 py-2 transition-all duration-300 lg:min-w-0 mb-1"
               style={{
-                borderColor: active ? `${color}30` : "var(--color-border)",
-                background: active ? `${color}0c` : "transparent",
-                boxShadow: active ? `inset 2px 0 0 ${color}` : "none",
+                borderColor: active ? `rgba(${rgb}, 0.2)` : "transparent",
+                background: active ? `rgba(${rgb}, 0.1)` : "rgba(255, 255, 255, 0.02)",
+                boxShadow: active ? `0 0 15px rgba(${rgb}, 0.2), inset 2px 0 0 ${color}` : "none",
               }}
             >
               <div className="flex items-center gap-2.5">
                 <div
-                  className="flex h-7 w-7 items-center justify-center rounded-lg"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-300"
                   style={{
-                    borderColor: active ? `${color}40` : "var(--color-border)",
-                    background: active ? `${color}14` : "var(--color-surface)",
+                    borderColor: active ? color : "rgba(255,255,255,0.05)",
+                    background: active ? `rgba(${rgb}, 0.2)` : "rgba(255,255,255,0.03)",
+                    boxShadow: active ? `0 0 12px rgba(${rgb}, 0.6)` : "none",
                   }}
                 >
-                  <Icon size={13} style={{ color: active ? color : "var(--color-muted)" }} />
+                  <Icon size={13} style={{ color: active ? "#fff" : "var(--color-muted)", filter: active ? "drop-shadow(0 0 4px #fff)" : "none" }} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-semibold" style={{ color: "var(--color-text2)" }}>
+                  <div className="truncate text-xs font-semibold transition-all duration-300" style={{ 
+                    color: active ? "#ffffff" : "var(--color-muted2)",
+                    textShadow: active ? "0 0 8px rgba(255,255,255,0.5)" : "none"
+                  }}>
                     {label}
                   </div>
                   <div
-                    className="truncate font-mono text-[8px] tracking-[0.16em]"
-                    style={{ color: active ? color : "var(--color-muted)" }}
+                    className="truncate font-mono text-[8px] tracking-[0.16em] transition-all duration-300"
+                    style={{ 
+                      color: active ? color : "var(--color-muted)",
+                      textShadow: active ? `0 0 8px ${color}` : "none"
+                    }}
                   >
                     {sub}
                   </div>
                 </div>
-                {active ? <ChevronRight size={12} style={{ color }} /> : null}
+                {active ? <ChevronRight size={12} className="animate-pulse" style={{ color: "#fff", filter: "drop-shadow(0 0 5px #fff)" }} /> : null}
               </div>
             </Link>
           );
