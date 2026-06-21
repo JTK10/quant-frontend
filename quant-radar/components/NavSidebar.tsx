@@ -100,19 +100,18 @@ export default function NavSidebar() {
               {/* Subtle Horizontal Chart Grid */}
               <path d="M1 5h22 M1 10h22 M1 15h22 M1 20h22" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" strokeDasharray="1 2" />
 
-              {/* J - Bullish Green Arrow */}
+              {/* j - Bullish Green Lowercase with Arrow Dot */}
               <g stroke="#00e89a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(0,232,154,0.6))" }}>
-                <path d="M 4 13 A 3 3 0 0 1 10 13 L 10 5" className="transition-all duration-300" />
-                <path d="M 7 8 L 10 5 L 13 8" className="transition-all duration-300" />
-                <circle cx="4" cy="13" r="1.5" fill="#00e89a" stroke="none" />
+                {/* j body */}
+                <path d="M 3 16 L 3 18 A 2.5 2.5 0 0 0 8 18 L 8 9" className="transition-all duration-300 group-hover:stroke-white" />
+                {/* Floating upward arrow replacing the dot */}
+                <path d="M 5 6 L 8 3 L 11 6" className="transition-all duration-300 group-hover:stroke-white" />
               </g>
 
               {/* T - Bearish Red Arrow */}
               <g stroke="#ff3b6b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(255,59,107,0.6))" }}>
-                <path d="M 14 5 L 22 5 M 18 5 L 18 18" className="transition-all duration-300" />
-                <path d="M 15 15 L 18 18 L 21 15" className="transition-all duration-300" />
-                <circle cx="14" cy="5" r="1.5" fill="#ff3b6b" stroke="none" />
-                <circle cx="22" cy="5" r="1.5" fill="#ff3b6b" stroke="none" />
+                <path d="M 12 5 L 20 5 M 16 5 L 16 18" className="transition-all duration-300 group-hover:stroke-white" />
+                <path d="M 13 15 L 16 18 L 19 15" className="transition-all duration-300 group-hover:stroke-white" />
               </g>
             </svg>
           </div>
