@@ -6,7 +6,7 @@ import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, T
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/panther-signals", icon: Cat, customIcon: "/panther_icon.png", label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
+  { href: "/panther-signals", icon: Cat, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
   { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },
   { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308", rgb: "234,179,8" },
   { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#00f0ff", rgb: "0,240,255" },
@@ -90,20 +90,22 @@ export default function NavSidebar() {
       }}
     >
       <div className="mb-3 flex items-center justify-between gap-3 lg:block">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-xl overflow-hidden border border-[rgba(0,255,157,0.5)] shadow-[0_0_16px_rgba(0,255,157,0.4)] bg-black"
-          >
-            <img src="/main_logo.png" alt="Logo" className="w-full h-full object-cover" />
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-105">
+            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 6px rgba(0,240,255,0.6))" }}>
+              <path d="M21 12a9 9 0 1 1-9-9" />
+              <path d="M9 8h8" />
+              <path d="M13 8v8a2 2 0 0 1-4 0" />
+            </svg>
           </div>
           <div>
             <div
-              className="text-xs font-bold tracking-[0.12em]"
-              style={{ color: "var(--color-text2)" }}
+              className="text-[13px] font-bold tracking-[0.12em] transition-colors"
+              style={{ color: "#ffffff", textShadow: "0 0 10px rgba(255,255,255,0.3)" }}
             >
-              JT RADAR
+              <span style={{ color: "#00f0ff" }}>JT</span> RADAR
             </div>
-            <div className="font-mono text-[8px] tracking-[0.18em]" style={{ color: "var(--color-muted)" }}>
+            <div className="font-mono text-[8px] tracking-[0.18em] mt-0.5" style={{ color: "var(--color-muted)" }}>
               PROP TERMINAL
             </div>
           </div>
