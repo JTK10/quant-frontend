@@ -86,26 +86,43 @@ export default function NavSidebar() {
       style={{
         background: "linear-gradient(180deg, #11131a 0%, #080a0f 100%)",
         borderRight: "1px solid rgba(0, 240, 255, 0.1)",
-        boxShadow: "4px 0 20px rgba(0, 0, 0, 0.5)",
       }}
     >
-      <div className="mb-3 flex items-center justify-between gap-3 lg:block">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-9 w-9 items-center justify-center transition-transform group-hover:scale-105">
-            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 6px rgba(0,240,255,0.6))" }}>
-              <path d="M21 12a9 9 0 1 1-9-9" />
-              <path d="M9 8h8" />
-              <path d="M13 8v8a2 2 0 0 1-4 0" />
+      <div className="mb-4 flex items-center justify-between gap-3 lg:block px-2 mt-2">
+        <Link href="/" className="flex items-center gap-3.5 group">
+          
+          {/* Creative JT Upchart Logo */}
+          <div className="relative flex h-10 w-10 items-center justify-center transition-transform duration-500 group-hover:scale-110">
+            {/* Background ambient glow */}
+            <div className="absolute inset-0 rounded-full bg-[rgba(0,240,255,0.03)] blur-md group-hover:bg-[rgba(0,232,154,0.08)] transition-colors duration-500"></div>
+            
+            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round" className="relative z-10">
+              {/* Subtle Tech Grid */}
+              <path d="M2 12h20 M12 2v20 M4 6h16 M4 18h16 M6 4v16 M18 4v16" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+              
+              {/* J Hook and Upward Trend (Cyan) */}
+              <path d="M 5 16 A 3 3 0 0 1 11 16 L 11 11 L 15 7" stroke="#00f0ff" strokeWidth="2.5" style={{ filter: "drop-shadow(0 0 4px rgba(0,240,255,0.8))" }} className="transition-all duration-300" />
+              
+              {/* Start Pulse Dot */}
+              <circle cx="5" cy="16" r="1.5" fill="#00f0ff" stroke="none" style={{ filter: "drop-shadow(0 0 4px #00f0ff)" }} />
+              
+              {/* T Peak (Neon Green) */}
+              <path d="M 15 7 L 15 5 M 11 5 L 19 5" stroke="#00e89a" strokeWidth="2.5" style={{ filter: "drop-shadow(0 0 5px rgba(0,232,154,0.8))" }} className="transition-all duration-300" />
+              
+              {/* T Accents */}
+              <circle cx="19" cy="5" r="1" fill="#00e89a" stroke="none" />
+              <circle cx="11" cy="5" r="1" fill="#00e89a" stroke="none" />
             </svg>
           </div>
+
           <div>
             <div
-              className="text-[13px] font-bold tracking-[0.12em] transition-colors"
-              style={{ color: "#ffffff", textShadow: "0 0 10px rgba(255,255,255,0.3)" }}
+              className="text-[14px] font-black tracking-[0.18em] transition-colors duration-300"
+              style={{ color: "#ffffff", textShadow: "0 0 10px rgba(255,255,255,0.2)" }}
             >
-              <span style={{ color: "#00f0ff" }}>JT</span> RADAR
+              <span className="text-[#00f0ff] group-hover:text-[#00e89a] transition-colors duration-500">JT</span> RADAR
             </div>
-            <div className="font-mono text-[8px] tracking-[0.18em] mt-0.5" style={{ color: "var(--color-muted)" }}>
+            <div className="font-mono text-[8.5px] font-semibold tracking-[0.22em] mt-1" style={{ color: "var(--color-muted)" }}>
               PROP TERMINAL
             </div>
           </div>
