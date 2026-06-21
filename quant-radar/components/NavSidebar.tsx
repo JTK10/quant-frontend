@@ -6,7 +6,7 @@ import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, T
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/panther-signals", icon: Cat, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
+  { href: "/panther-signals", icon: Cat, customIcon: "/panther_icon.png", label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
   { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },
   { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308", rgb: "234,179,8" },
   { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#00f0ff", rgb: "0,240,255" },
@@ -92,13 +92,9 @@ export default function NavSidebar() {
       <div className="mb-3 flex items-center justify-between gap-3 lg:block">
         <Link href="/" className="flex items-center gap-2.5">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg"
-            style={{
-              background: "rgba(45, 142, 255, 0.10)",
-              border: "1px solid rgba(45, 142, 255, 0.20)",
-            }}
+            className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden border border-[rgba(0,255,157,0.4)] shadow-[0_0_12px_rgba(0,255,157,0.3)]"
           >
-            <Activity size={14} style={{ color: "#2d8eff" }} />
+            <img src="/main_logo.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <div
@@ -119,7 +115,7 @@ export default function NavSidebar() {
       </div>
 
       <nav className="flex gap-1.5 overflow-x-auto lg:flex-col lg:overflow-visible">
-        {NAV_ITEMS.map(({ href, icon: Icon, label, sub, color, rgb }) => {
+        {NAV_ITEMS.map(({ href, icon: Icon, customIcon, label, sub, color, rgb }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
             <Link
@@ -141,7 +137,11 @@ export default function NavSidebar() {
                     boxShadow: active ? `0 0 12px rgba(${rgb}, 0.6)` : "none",
                   }}
                 >
-                  <Icon size={13} style={{ color: active ? "#fff" : "var(--color-muted)", filter: active ? "drop-shadow(0 0 4px #fff)" : "none" }} />
+                  {customIcon ? (
+                    <img src={customIcon} alt={label} className="w-[18px] h-[18px] rounded object-cover" style={{ filter: active ? `drop-shadow(0 0 4px ${color})` : "grayscale(80%) opacity(0.5)", transition: "all 0.3s ease" }} />
+                  ) : (
+                    <Icon size={13} style={{ color: active ? "#fff" : "var(--color-muted)", filter: active ? "drop-shadow(0 0 4px #fff)" : "none" }} />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs font-semibold transition-all duration-300" style={{ 
