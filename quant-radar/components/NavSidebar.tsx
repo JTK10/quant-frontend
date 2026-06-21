@@ -92,7 +92,7 @@ export default function NavSidebar() {
       <div className="mb-3 flex items-center justify-between gap-3 lg:block">
         <Link href="/" className="flex items-center gap-2.5">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden border border-[rgba(0,255,157,0.4)] shadow-[0_0_12px_rgba(0,255,157,0.3)]"
+            className="flex h-11 w-11 items-center justify-center rounded-xl overflow-hidden border border-[rgba(0,255,157,0.5)] shadow-[0_0_16px_rgba(0,255,157,0.4)] bg-black"
           >
             <img src="/main_logo.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
@@ -138,7 +138,7 @@ export default function NavSidebar() {
                   }}
                 >
                   {customIcon ? (
-                    <img src={customIcon} alt={label} className="w-[18px] h-[18px] rounded object-cover" style={{ filter: active ? `drop-shadow(0 0 4px ${color})` : "grayscale(80%) opacity(0.5)", transition: "all 0.3s ease" }} />
+                    <img src={customIcon} alt={label} className="w-[22px] h-[22px] rounded-md object-cover" style={{ filter: active ? `drop-shadow(0 0 6px ${color}) brightness(1.2)` : "grayscale(40%) opacity(0.8)", transition: "all 0.3s ease" }} />
                   ) : (
                     <Icon size={13} style={{ color: active ? "#fff" : "var(--color-muted)", filter: active ? "drop-shadow(0 0 4px #fff)" : "none" }} />
                   )}
