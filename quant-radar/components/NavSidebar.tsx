@@ -91,27 +91,56 @@ export default function NavSidebar() {
       <div className="mb-4 flex items-center justify-between gap-3 lg:block px-2 mt-2">
         <Link href="/" className="flex items-center gap-3.5 group">
           
-          {/* Creative JT Upchart Logo */}
-          <div className="relative flex h-10 w-10 items-center justify-center transition-transform duration-500 group-hover:scale-110">
+          {/* Creative Candlestick JT Upchart Logo */}
+          <div className="relative flex h-11 w-11 items-center justify-center transition-transform duration-500 group-hover:scale-105">
             {/* Background ambient glow */}
-            <div className="absolute inset-0 rounded-full bg-[rgba(0,240,255,0.03)] blur-md group-hover:bg-[rgba(0,232,154,0.08)] transition-colors duration-500"></div>
+            <div className="absolute inset-0 rounded-full bg-[rgba(0,240,255,0.02)] blur-md group-hover:bg-[rgba(0,232,154,0.06)] transition-colors duration-500"></div>
             
-            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round" className="relative z-10">
-              {/* Subtle Tech Grid */}
-              <path d="M2 12h20 M12 2v20 M4 6h16 M4 18h16 M6 4v16 M18 4v16" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+            <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" className="relative z-10 overflow-visible">
+              <defs>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#00e89a" stopOpacity="0.3" />
+                  <stop offset="50%" stopColor="#00f0ff" stopOpacity="0.1" />
+                  <stop offset="100%" stopColor="#00f0ff" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {/* Subtle Horizontal Chart Grid */}
+              <path d="M1 5h22 M1 10h22 M1 15h22 M1 20h22" stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" strokeDasharray="1 2" />
+
+              {/* Background Candlesticks */}
+              {/* C1 Red (Drop) */}
+              <line x1="5" y1="8" x2="5" y2="15" stroke="rgba(255, 59, 107, 0.4)" strokeWidth="1" strokeLinecap="round" />
+              <rect x="3.5" y="10" width="3" height="4" rx="0.5" fill="rgba(255, 59, 107, 0.5)" />
               
-              {/* J Hook and Upward Trend (Cyan) */}
-              <path d="M 5 16 A 3 3 0 0 1 11 16 L 11 11 L 15 7" stroke="#00f0ff" strokeWidth="2.5" style={{ filter: "drop-shadow(0 0 4px rgba(0,240,255,0.8))" }} className="transition-all duration-300" />
+              {/* C2 Red Doji (Bottoming out) */}
+              <line x1="8" y1="15" x2="8" y2="19" stroke="rgba(255, 59, 107, 0.4)" strokeWidth="1" strokeLinecap="round" />
+              <rect x="6.5" y="16.5" width="3" height="1.5" rx="0.5" fill="rgba(255, 59, 107, 0.5)" />
               
-              {/* Start Pulse Dot */}
-              <circle cx="5" cy="16" r="1.5" fill="#00f0ff" stroke="none" style={{ filter: "drop-shadow(0 0 4px #00f0ff)" }} />
+              {/* C3 Green (Reversal) */}
+              <line x1="11" y1="11" x2="11" y2="17" stroke="rgba(0, 232, 154, 0.4)" strokeWidth="1" strokeLinecap="round" />
+              <rect x="9.5" y="12" width="3" height="4" rx="0.5" fill="rgba(0, 232, 154, 0.5)" />
               
-              {/* T Peak (Neon Green) */}
-              <path d="M 15 7 L 15 5 M 11 5 L 19 5" stroke="#00e89a" strokeWidth="2.5" style={{ filter: "drop-shadow(0 0 5px rgba(0,232,154,0.8))" }} className="transition-all duration-300" />
+              {/* C4 Green (Massive Breakout) */}
+              <line x1="15" y1="2" x2="15" y2="10" stroke="rgba(0, 232, 154, 0.4)" strokeWidth="1" strokeLinecap="round" />
+              <rect x="13.5" y="4" width="3" height="5" rx="0.5" fill="rgba(0, 232, 154, 0.5)" />
+
+              {/* Area Fill Under Trendline */}
+              <path d="M 5 11 L 5 14 C 5 18, 11 18, 11 14 L 15 8 L 15 4 L 15 20 L 5 20 Z" fill="url(#areaGrad)" />
+
+              {/* The JT Trendline */}
+              {/* J Curve (Cyan) */}
+              <path d="M 5 11 L 5 14 C 5 18, 11 18, 11 14" stroke="#00f0ff" strokeWidth="2.2" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 4px rgba(0,240,255,0.8))" }} />
               
-              {/* T Accents */}
-              <circle cx="19" cy="5" r="1" fill="#00e89a" stroke="none" />
-              <circle cx="11" cy="5" r="1" fill="#00e89a" stroke="none" />
+              {/* Breakout & T Stem (Green) */}
+              <path d="M 11 14 L 15 8 L 15 4" stroke="#00e89a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 5px rgba(0,232,154,0.8))" }} className="group-hover:stroke-white transition-colors duration-500" />
+              
+              {/* T Crossbar (Green) */}
+              <path d="M 11 4 L 19 4" stroke="#00e89a" strokeWidth="2.2" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 5px rgba(0,232,154,0.8))" }} className="group-hover:stroke-white transition-colors duration-500" />
+              
+              {/* Glowing Nodes */}
+              <circle cx="5" cy="11" r="1.5" fill="#ffffff" style={{ filter: "drop-shadow(0 0 4px #fff)" }} />
+              <circle cx="15" cy="4" r="1.5" fill="#ffffff" style={{ filter: "drop-shadow(0 0 4px #fff)" }} />
             </svg>
           </div>
 
