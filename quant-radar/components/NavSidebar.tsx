@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const NAV_ITEMS = [
-  { href: "/panther-signals", icon: Cat, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
+const NAV_ITEMS: any[] = [
+  { href: "/panther-signals", icon: Cat, customIcon: "/panther_icon.png", label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
   { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },
   { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308", rgb: "234,179,8" },
   { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#00f0ff", rgb: "0,240,255" },
