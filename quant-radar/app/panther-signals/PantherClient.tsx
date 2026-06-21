@@ -153,8 +153,8 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
       {/* Table */}
       <div className="flex-1 overflow-auto">
         <div
-          className="sticky top-0 z-10 flex items-center px-4 py-2 border-b gap-2"
-          style={{ background: 'rgba(10, 14, 23, 0.95)', backdropFilter: 'blur(6px)', borderColor: 'var(--color-border)', minWidth: '950px' }}
+          className="sticky top-0 z-10 flex items-center px-4 py-2.5 border-b gap-2"
+          style={{ background: 'rgba(10, 14, 23, 0.82)', backdropFilter: 'blur(12px) saturate(140%)', WebkitBackdropFilter: 'blur(12px) saturate(140%)', borderColor: 'var(--color-border)', minWidth: '950px' }}
         >
           {COLUMNS.map((col) => (
             <button
@@ -181,7 +181,7 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
             return (
               <div
                 key={rowKey}
-                className="flex items-center px-4 py-2.5 border-b hover:bg-white/[0.025] transition-colors gap-2"
+                className="group flex items-center px-4 py-2.5 border-b hover:bg-white/[0.04] hover:shadow-[inset_0_0_24px_-12px_rgba(45,142,255,0.5)] transition-all gap-2"
                 style={{
                   borderColor: 'rgba(28,45,69,0.6)',
                   background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',

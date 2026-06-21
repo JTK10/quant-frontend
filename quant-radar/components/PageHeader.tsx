@@ -20,8 +20,19 @@ export default function PageHeader({
   return (
     <header
       className="relative overflow-hidden border-b px-4 py-4 md:px-6 md:py-5"
-      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+      style={{
+        borderColor: "var(--color-border)",
+        background:
+          "linear-gradient(180deg, var(--color-surface2), var(--color-surface))",
+        boxShadow: "0 8px 24px -16px rgba(0,0,0,0.8)",
+      }}
     >
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{
+          background: `linear-gradient(90deg, transparent, ${accentColor}55, transparent)`,
+        }}
+      />
       <div
         className="pointer-events-none absolute inset-y-0 left-0 w-60"
         style={{

@@ -48,7 +48,11 @@ export default async function PantherSignalPage({ searchParams }: { searchParams
       <div
 
         className="flex items-center gap-4 border-b px-3 py-2 md:px-6 z-10 relative shrink-0"
-        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+        style={{
+          borderColor: "var(--color-border)",
+          background:
+            "linear-gradient(180deg, rgba(255,255,255,0.015), transparent), var(--color-surface)",
+        }}
       >
         <span className="font-mono text-[9px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
           BIAS
