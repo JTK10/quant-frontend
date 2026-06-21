@@ -7,39 +7,52 @@ import { useState, useEffect } from 'react';
 
 const NAV_ITEMS = [
   {
+    href: '/panther',
+    icon: Activity,
+    label: 'Panther Signals',
+    sub: 'Live K-Engine',
+    color: '#ff0055',
+    rgb: '255,0,85',
+  },
+  {
     href: '/',
     icon: Activity,
     label: 'Smart Radar',
     sub: 'Final Signals',
-    color: '#2d8eff',
+    color: '#00f0ff',
+    rgb: '0,240,255',
   },
   {
     href: '/sector',
     icon: BarChart2,
     label: 'Sector Flow',
     sub: 'Market Pressure',
-    color: '#f5a623',
+    color: '#fce205',
+    rgb: '252,226,5',
   },
   {
     href: '/v6-signals',
     icon: Zap,
     label: 'V6 Momentum',
     sub: 'PREMIUM ALERTS',
-    color: '#00e89a',
+    color: '#00ff9d',
+    rgb: '0,255,157',
   },
   {
     href: '/sniper-signal',
     icon: Crosshair,
     label: 'Sniper Signal',
     sub: 'BID/ASK SPREAD',
-    color: '#ff3b3b',
+    color: '#ff00e6',
+    rgb: '255,0,230',
   },
   {
     href: '/flow-radar',
     icon: Layers,
     label: 'Flow Radar',
     sub: 'OI & SMARTLIST',
-    color: '#9b6fff',
+    color: '#bd00ff',
+    rgb: '189,0,255',
   },
 ];
 
@@ -113,8 +126,9 @@ export default function NavSidebar() {
     <aside
       className="w-52 shrink-0 h-screen sticky top-0 flex flex-col"
       style={{
-        background: 'linear-gradient(180deg, #0a1018 0%, #070b12 100%)',
-        borderRight: '1px solid var(--color-border)',
+        background: 'linear-gradient(180deg, #11131a 0%, #080a0f 100%)',
+        borderRight: '1px solid rgba(0, 240, 255, 0.1)',
+        boxShadow: '4px 0 20px rgba(0, 0, 0, 0.5)',
       }}
     >
       {/* Logo */}
@@ -160,51 +174,60 @@ export default function NavSidebar() {
           MODULES
         </div>
         <ul className="space-y-0.5">
-          {NAV_ITEMS.map(({ href, icon: Icon, label, sub, color }) => {
+          {NAV_ITEMS.map(({ href, icon: Icon, label, sub, color, rgb }) => {
             const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
             return (
-              <li key={href}>
+              <li key={href} className="mb-1">
                 <Link
                   href={href}
-                  className="flex items-center gap-3 px-2.5 py-2.5 rounded-lg transition-all duration-150 group relative overflow-hidden"
+                  className="flex items-center gap-3 px-2.5 py-2.5 rounded-lg transition-all duration-300 group relative overflow-hidden"
                   style={
                     isActive
                       ? {
-                          background: `rgba(${color === '#f5a623' ? '245,166,35' : color === '#00e89a' ? '0,232,154' : color === '#9b6fff' ? '155,111,255' : color === '#ff3b3b' ? '255,59,59' : '45,142,255'},0.12)`,
-                          boxShadow: `inset 2px 0 0 ${color}`,
+                          background: `rgba(${rgb}, 0.1)`,
+                          boxShadow: `0 0 15px rgba(${rgb}, 0.2), inset 2px 0 0 ${color}`,
+                          border: `1px solid rgba(${rgb}, 0.2)`,
                         }
                       : {
-                          background: 'transparent',
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          border: '1px solid transparent',
                         }
                   }
                 >
                   <div
-                    className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-all"
+                    className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-all duration-300"
                     style={{
                       background: isActive
-                        ? `rgba(${color === '#f5a623' ? '245,166,35' : color === '#00e89a' ? '0,232,154' : color === '#9b6fff' ? '155,111,255' : color === '#ff3b3b' ? '255,59,59' : '45,142,255'},0.15)`
-                        : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${isActive ? color + '40' : 'var(--color-border)'}`,
+                        ? `rgba(${rgb}, 0.2)`
+                        : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isActive ? color : 'rgba(255,255,255,0.05)'}`,
+                      boxShadow: isActive ? `0 0 12px rgba(${rgb}, 0.6)` : 'none',
                     }}
                   >
-                    <Icon size={13} style={{ color: isActive ? color : 'var(--color-muted)' }} />
+                    <Icon size={13} style={{ color: isActive ? '#fff' : 'var(--color-muted)', filter: isActive ? `drop-shadow(0 0 4px #fff)` : 'none' }} />
                   </div>
                   <div className="min-w-0">
                     <div
-                      className="text-[12px] font-semibold leading-none truncate"
-                      style={{ color: isActive ? 'var(--color-text2)' : 'var(--color-muted2)' }}
+                      className="text-[12px] font-semibold leading-none truncate transition-all duration-300"
+                      style={{ 
+                        color: isActive ? '#ffffff' : 'var(--color-muted2)',
+                        textShadow: isActive ? `0 0 8px rgba(255,255,255,0.5)` : 'none'
+                      }}
                     >
                       {label}
                     </div>
                     <div
-                      className="font-mono text-[9px] mt-0.5 truncate"
-                      style={{ color: isActive ? color : 'var(--color-muted)' }}
+                      className="font-mono text-[9px] mt-1 truncate transition-all duration-300"
+                      style={{ 
+                        color: isActive ? color : 'var(--color-muted)',
+                        textShadow: isActive ? `0 0 8px ${color}` : 'none'
+                      }}
                     >
                       {sub}
                     </div>
                   </div>
                   {isActive && (
-                    <ChevronRight size={12} className="ml-auto shrink-0" style={{ color }} />
+                    <ChevronRight size={12} className="ml-auto shrink-0 animate-pulse" style={{ color: '#fff', filter: `drop-shadow(0 0 5px #fff)` }} />
                   )}
                 </Link>
               </li>
