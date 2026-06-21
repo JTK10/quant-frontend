@@ -1,37 +1,19 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { PantherRow } from '@/utils/backend';
 
-type SortKey = 'name' | 'side' | 'k_level' | 'entry' | 'surge' | 'win60s_cr' | 'time';
+type SectorItem = {
+  Sector: string;
+  Stocks?: string;
+};
+
+type SortKey = 'name' | 'side' | 'entry' | 'surge' | 'win60s_cr' | 'time' | 'sector';
 
 function fmtPrice(v: number) {
   if (!v) return '—';
   return `₹${v.toFixed(2)}`;
-}
-
-function KLevelBadge({ k_level }: { k_level: string }) {
-  const upper = (k_level || '').toUpperCase();
-  if (upper.includes('K6')) {
-    return (
-      <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded" style={{ color: 'var(--color-gold)', background: 'var(--color-goldbg)', border: '1px solid var(--color-goldborder)' }}>
-        🔥 K6
-      </span>
-    );
-  }
-  if (upper.includes('K5')) {
-    return (
-      <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded" style={{ color: '#00e89a', background: 'rgba(0, 232, 154, 0.1)', border: '1px solid rgba(0, 232, 154, 0.2)' }}>
-        ⚡ K5
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded" style={{ color: '#2d8eff', background: 'rgba(45,142,255,0.1)', border: '1px solid rgba(45,142,255,0.2)' }}>
-      {upper || 'K3'}
-    </span>
-  );
 }
 
 function SideBadge({ direction }: { direction: string }) {
@@ -51,32 +33,52 @@ function SideBadge({ direction }: { direction: string }) {
   );
 }
 
-function getKLevelRank(k: string): number {
-  const upper = (k || '').toUpperCase();
-  if (upper.includes('K6')) return 3;
-  if (upper.includes('K5')) return 2;
-  return 1;
-}
-
 const COLUMNS: { key: SortKey; label: string; width: string }[] = [
   { key: 'name', label: 'STOCK', width: '150px' },
   { key: 'side', label: 'DIR', width: '80px' },
-  { key: 'k_level', label: 'LEVEL', width: '90px' },
   { key: 'entry', label: 'ENTRY', width: '90px' },
   { key: 'surge', label: 'SURGE', width: '90px' },
   { key: 'win60s_cr', label: 'SMC', width: '90px' },
   { key: 'time', label: 'TIME', width: '90px' },
+  { key: 'sector', label: 'SECTOR BIAS', width: '280px' },
 ];
 
 export default function PantherClient({ signals }: { signals: PantherRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('time');
   const [sortAsc, setSortAsc] = useState(false);
-  const [filter, setFilter] = useState<'ALL' | 'K6' | 'K5' | 'K3'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'LONG' | 'SHORT'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sectorData, setSectorData] = useState<SectorItem[]>([]);
+
+  useEffect(() => {
+    fetch('/api/sector-sentiment?date=' + new Date().toISOString().split('T')[0])
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d)) setSectorData(d);
+      }).catch(() => {});
+  }, []);
+
+  const stockToSector = useMemo(() => {
+    const map = new Map<string, SectorItem>();
+    sectorData.forEach(sec => {
+      try {
+        const stocks = JSON.parse(sec.Stocks || '[]');
+        stocks.forEach((s: any) => {
+          map.set(s.Stock, sec);
+        });
+      } catch (e) {}
+    });
+    return map;
+  }, [sectorData]);
 
   const sorted = useMemo(() => {
     let rows = [...signals];
     if (filter !== 'ALL') {
-      rows = rows.filter((r) => (r.k_level || '').toUpperCase().includes(filter));
+      rows = rows.filter((r) => (r.side || '').toUpperCase() === filter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      rows = rows.filter((r) => r.name.toLowerCase().includes(q) || r.instrument_key?.toLowerCase().includes(q));
     }
 
     rows.sort((a, b) => {
@@ -84,23 +86,32 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
       switch (sortKey) {
         case 'name': diff = a.name.localeCompare(b.name); break;
         case 'side': diff = a.side.localeCompare(b.side); break;
-        case 'k_level': diff = getKLevelRank(a.k_level) - getKLevelRank(b.k_level); break;
         case 'entry': diff = a.entry - b.entry; break;
         case 'surge': diff = a.surge - b.surge; break;
         case 'win60s_cr': diff = a.win60s_cr - b.win60s_cr; break;
         case 'time': diff = (a.time || '').localeCompare(b.time || ''); break;
+        case 'sector': 
+          const sA = stockToSector.get(a.name)?.Sector || '';
+          const sB = stockToSector.get(b.name)?.Sector || '';
+          diff = sA.localeCompare(sB);
+          break;
         default: 
           diff = (a.time || '').localeCompare(b.time || '');
       }
       return sortAsc ? diff : -diff;
     });
     return rows;
-  }, [signals, sortKey, sortAsc, filter]);
+  }, [signals, sortKey, sortAsc, filter, searchQuery]);
 
   const toggle = (key: SortKey) => {
     if (sortKey === key) setSortAsc((p) => !p);
     else { setSortKey(key); setSortAsc(false); }
   };
+
+  const totalLong = signals.filter((s) => s.side === 'LONG').length;
+  const totalShort = signals.filter((s) => s.side === 'SHORT').length;
+  const pctLong = signals.length ? ((totalLong / signals.length) * 100).toFixed(2) : "0.00";
+  const pctShort = signals.length ? ((totalShort / signals.length) * 100).toFixed(2) : "0.00";
 
   if (!signals.length) {
     return (
@@ -122,32 +133,46 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
     <div className="flex flex-col h-full bg-[var(--color-bg)] absolute inset-0">
       {/* Toolbar */}
       <div
-        className="flex items-center gap-3 px-4 py-2.5 border-b shrink-0"
+        className="flex flex-col gap-4 px-4 py-3 border-b shrink-0"
         style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
       >
-        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
-          {(['ALL', 'K6', 'K5', 'K3'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="px-3 py-1 font-mono text-[9px] tracking-widest transition-all"
-              style={{
-                background: filter === f
-                  ? f === 'K6' ? 'var(--color-goldbg)' : f === 'K5' ? 'rgba(0, 232, 154, 0.1)' : f === 'K3' ? 'rgba(45,142,255,0.1)' : 'var(--color-accentbg)'
-                  : 'transparent',
-                color: filter === f
-                  ? f === 'K6' ? 'var(--color-gold)' : f === 'K5' ? '#00e89a' : f === 'K3' ? '#2d8eff' : 'var(--color-accent)'
-                  : 'var(--color-muted)',
-                borderRight: f !== 'K3' ? '1px solid var(--color-border)' : 'none',
-              }}
-            >
-              {f} {f !== 'ALL' && `(${signals.filter((s) => (s.k_level || '').toUpperCase().includes(f)).length})`}
-            </button>
-          ))}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+              {(['ALL', 'LONG', 'SHORT'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className="px-4 py-1.5 font-mono text-[10px] tracking-widest transition-all"
+                  style={{
+                    background: filter === f
+                      ? f === 'LONG' ? 'var(--color-bullbg)' : f === 'SHORT' ? 'var(--color-bearbg)' : 'var(--color-accentbg)'
+                      : 'transparent',
+                    color: filter === f
+                      ? f === 'LONG' ? 'var(--color-bull)' : f === 'SHORT' ? 'var(--color-bear)' : 'var(--color-accent)'
+                      : 'var(--color-muted)',
+                    borderRight: f !== 'SHORT' ? '1px solid var(--color-border)' : 'none',
+                  }}
+                >
+                  {f} {f !== 'ALL' && `(${signals.filter((s) => (s.side || '').toUpperCase() === f).length})`}
+                </button>
+              ))}
+            </div>
+            <span className="font-mono text-[9px] tracking-widest" style={{ color: 'var(--color-muted)' }}>
+              {sorted.length} MATCHES
+            </span>
+          </div>
+
+          <div className="w-48 h-8 bg-[rgba(255,255,255,0.04)] rounded-md border border-[rgba(255,255,255,0.06)] flex items-center px-3">
+            <input
+              type="text"
+              placeholder="Search stocks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent border-none outline-none text-[11px] font-mono text-white w-full placeholder:text-[rgba(255,255,255,0.3)]"
+            />
+          </div>
         </div>
-        <span className="font-mono text-[9px] tracking-widest" style={{ color: 'var(--color-muted)' }}>
-          {sorted.length} SIGNALS
-        </span>
       </div>
 
       {/* Table */}
@@ -185,7 +210,7 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
                 style={{
                   borderColor: 'rgba(28,45,69,0.6)',
                   background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                  borderLeft: `3px solid ${(sig.k_level || '').toUpperCase().includes('K6') ? 'var(--color-gold)' : (sig.k_level || '').toUpperCase().includes('K5') ? '#00e89a' : '#2d8eff'}`
+                  borderLeft: `3px solid ${sig.side === 'LONG' ? 'var(--color-bull)' : sig.side === 'SHORT' ? 'var(--color-bear)' : 'transparent'}`
                 }}
               >
                 <div style={{ width: COLUMNS[0].width, minWidth: COLUMNS[0].width }}>
@@ -217,31 +242,65 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
                 </div>
 
                 <div style={{ width: COLUMNS[2].width, minWidth: COLUMNS[2].width }}>
-                  <KLevelBadge k_level={sig.k_level} />
-                </div>
-
-                <div style={{ width: COLUMNS[3].width, minWidth: COLUMNS[3].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text2)' }}>
                     {fmtPrice(sig.entry)}
                   </span>
                 </div>
 
-                <div style={{ width: COLUMNS[4].width, minWidth: COLUMNS[4].width }}>
+                <div style={{ width: COLUMNS[3].width, minWidth: COLUMNS[3].width }}>
                   <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: surgeColor }}>
                     {sig.surge ? sig.surge.toFixed(1) + 'x' : '—'}
                   </span>
                 </div>
 
-                <div style={{ width: COLUMNS[5].width, minWidth: COLUMNS[5].width }}>
+                <div style={{ width: COLUMNS[4].width, minWidth: COLUMNS[4].width }}>
                   <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: massColor }}>
                     {sig.win60s_cr ? sig.win60s_cr.toFixed(2) : '—'}
                   </span>
                 </div>
 
-                <div style={{ width: COLUMNS[6].width, minWidth: COLUMNS[6].width }}>
+                <div style={{ width: COLUMNS[5].width, minWidth: COLUMNS[5].width }}>
                   <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
                     {sig.time || '—'}
                   </span>
+                </div>
+
+                <div className="flex-1 flex items-center min-w-[280px]">
+                  {(() => {
+                    const sec = stockToSector.get(sig.name);
+                    if (!sec) return <span className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono">NO SECTOR DATA</span>;
+                    
+                    let secStocks: any[] = [];
+                    try { secStocks = JSON.parse(sec.Stocks || '[]'); } catch(e) {}
+                    const sUp = secStocks.filter(s => s.Signal === 'up').length;
+                    const sDn = secStocks.filter(s => s.Signal === 'down').length;
+                    const pUp = secStocks.length ? ((sUp / secStocks.length) * 100).toFixed(2) : "0.00";
+                    const pDn = secStocks.length ? ((sDn / secStocks.length) * 100).toFixed(2) : "0.00";
+                    const cleanSector = (sec.Sector || "").replace("NIFTY_", "").replace("_", " ");
+
+                    return (
+                      <div className="w-full pr-4">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <h3 className="text-[10px] font-semibold text-[rgba(255,255,255,0.9)] tracking-widest uppercase">{cleanSector}</h3>
+                          <span className="bg-[#ff1e56] text-white text-[8px] font-bold px-1 py-[1px] rounded tracking-wide">LIVE</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden mb-1.5 bg-[rgba(255,255,255,0.05)] flex shadow-inner">
+                           <div style={{ width: `${pUp}%`, backgroundColor: '#00e89a', boxShadow: `0 0 10px #00e89a` }}></div>
+                           <div style={{ width: `${pDn}%`, backgroundColor: '#ff3b6b', boxShadow: `0 0 10px #ff3b6b` }}></div>
+                        </div>
+                        <div className="flex justify-between items-center text-[9px] font-mono text-[rgba(255,255,255,0.5)]">
+                           <div className="flex items-center gap-1.5">
+                             <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#00e89a', boxShadow: `0 0 4px #00e89a`}}></div>
+                             <span>{sUp} stocks ({pUp}% Up)</span>
+                           </div>
+                           <div className="flex items-center gap-1.5">
+                             <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#ff3b6b', boxShadow: `0 0 4px #ff3b6b`}}></div>
+                             <span>{sDn} stocks ({pDn}% Down)</span>
+                           </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
               </div>
