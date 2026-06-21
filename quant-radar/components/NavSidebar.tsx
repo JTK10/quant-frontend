@@ -5,8 +5,25 @@ import { usePathname } from "next/navigation";
 import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat } from "lucide-react";
 import { useEffect, useState } from "react";
 
+const PantherIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M 4 10 L 2 3 L 8 5" /> {/* Left ear */}
+    <path d="M 20 10 L 22 3 L 16 5" /> {/* Right ear */}
+    <path d="M 8 5 C 10 4, 14 4, 16 5" /> {/* Top head */}
+    <path d="M 4 10 C 3 15, 6 20, 10 21 L 12 22 L 14 21 C 18 20, 21 15, 20 10" /> {/* Jaw */}
+    <path d="M 6 9 L 9 10" /> {/* Left eyebrow */}
+    <path d="M 18 9 L 15 10" /> {/* Right eyebrow */}
+    <path d="M 10 14 L 14 14 L 12 17 Z" /> {/* Nose */}
+    <path d="M 12 17 L 12 19" /> {/* Mouth */}
+    <path d="M 2 13 L 5 14" /> {/* Left whisker 1 */}
+    <path d="M 2 16 L 6 15" /> {/* Left whisker 2 */}
+    <path d="M 22 13 L 19 14" /> {/* Right whisker 1 */}
+    <path d="M 22 16 L 18 15" /> {/* Right whisker 2 */}
+  </svg>
+);
+
 const NAV_ITEMS: any[] = [
-  { href: "/panther-signals", icon: Cat, customIcon: "/panther_icon.png", label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
+  { href: "/panther-signals", icon: PantherIcon, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
   { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },
   { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308", rgb: "234,179,8" },
   { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#00f0ff", rgb: "0,240,255" },
