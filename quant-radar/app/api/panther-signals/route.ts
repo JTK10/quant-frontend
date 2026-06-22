@@ -50,33 +50,17 @@ export async function GET(request: NextRequest) {
       throw new Error("Missing PANTHER_SIGNALS_URL");
     }
 
-    let allItems: any[] = [];
-    let nextUrl: string | null = signalsUrl;
-    let pages = 0;
-
-    while (nextUrl && pages < 20) {
-      pages++;
-
-      const r: Response = await fetch(nextUrl, {
-        headers: { Authorization: `Bearer ${t}` },
-        cache: "no-store",
-      });
-      
-      if (!r.ok) {
-        throw new Error(`Failed to fetch Panther signals: ${r.status}`);
-      }
-
-      const data: any = await r.json();
-      allItems = allItems.concat(data.items || []);
-      
-      const nextLink = (data.links || []).find((l: any) => l.rel === "next");
-      nextUrl = nextLink ? nextLink.href : null;
-      
-      // Fix Oracle ORDS proxy protocol issues
-      if (nextUrl && nextUrl.startsWith("http://")) {
-        nextUrl = nextUrl.replace("http://", "https://");
-      }
+    const r: Response = await fetch(signalsUrl, {
+      headers: { Authorization: `Bearer ${t}` },
+      cache: "no-store",
+    });
+    
+    if (!r.ok) {
+      throw new Error(`Failed to fetch Panther signals: ${r.status}`);
     }
+
+    const data: any = await r.json();
+    const allItems = data.items || [];
     
     const parsedSignals = allItems.map((it: any) => {
       let doc = {};
