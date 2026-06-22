@@ -51,14 +51,18 @@ export async function GET(request: NextRequest) {
     }
 
     let allItems: any[] = [];
-    let nextUrl: string | null = signalsUrl;
+    let offset = 0;
+    let hasMore = true;
     let pages = 0;
 
-    while (nextUrl && pages < 20) {
+    while (hasMore && pages < 20) {
       pages++;
-      // Proceed without limit=1000, let it fetch default 25 per page in a loop
+      
+      const fetchUrl = signalsUrl.includes("?") 
+        ? `${signalsUrl}&offset=${offset}` 
+        : `${signalsUrl}?offset=${offset}`;
 
-      const r: Response = await fetch(nextUrl, {
+      const r: Response = await fetch(fetchUrl, {
         headers: { Authorization: `Bearer ${t}` },
         cache: "no-store",
       });
@@ -70,8 +74,17 @@ export async function GET(request: NextRequest) {
       const data: any = await r.json();
       allItems = allItems.concat(data.items || []);
       
-      const nextLink = (data.links || []).find((l: any) => l.rel === "next");
-      nextUrl = nextLink ? nextLink.href : null;
+      if (data.hasMore) {
+        hasMore = true;
+        const limit = data.limit || 25;
+        offset += limit;
+      } else if (data.hasMore === undefined && data.items && data.items.length >= 25) {
+        // Fallback: If ORDS doesn't return hasMore, but we got a full page, keep fetching
+        hasMore = true;
+        offset += 25;
+      } else {
+        hasMore = false;
+      }
     }
     
     const parsedSignals = allItems.map((it: any) => {
