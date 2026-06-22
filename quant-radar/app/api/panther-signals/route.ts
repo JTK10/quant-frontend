@@ -51,18 +51,13 @@ export async function GET(request: NextRequest) {
     }
 
     let allItems: any[] = [];
-    let offset = 0;
-    let hasMore = true;
+    let nextUrl: string | null = signalsUrl;
     let pages = 0;
 
-    while (hasMore && pages < 20) {
+    while (nextUrl && pages < 20) {
       pages++;
-      
-      const fetchUrl = signalsUrl.includes("?") 
-        ? `${signalsUrl}&offset=${offset}` 
-        : `${signalsUrl}?offset=${offset}`;
 
-      const r: Response = await fetch(fetchUrl, {
+      const r: Response = await fetch(nextUrl, {
         headers: { Authorization: `Bearer ${t}` },
         cache: "no-store",
       });
@@ -74,16 +69,12 @@ export async function GET(request: NextRequest) {
       const data: any = await r.json();
       allItems = allItems.concat(data.items || []);
       
-      if (data.hasMore) {
-        hasMore = true;
-        const limit = data.limit || 25;
-        offset += limit;
-      } else if (data.hasMore === undefined && data.items && data.items.length >= 25) {
-        // Fallback: If ORDS doesn't return hasMore, but we got a full page, keep fetching
-        hasMore = true;
-        offset += 25;
-      } else {
-        hasMore = false;
+      const nextLink = (data.links || []).find((l: any) => l.rel === "next");
+      nextUrl = nextLink ? nextLink.href : null;
+      
+      // Fix Oracle ORDS proxy protocol issues
+      if (nextUrl && nextUrl.startsWith("http://")) {
+        nextUrl = nextUrl.replace("http://", "https://");
       }
     }
     
