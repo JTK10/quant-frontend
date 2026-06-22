@@ -56,13 +56,14 @@ export async function GET(request: NextRequest) {
 
     while (nextUrl && pages < 20) {
       pages++;
-      // Set limit=1000 to fetch in larger batches
       if (pages === 1 && !nextUrl.includes("limit=")) {
         try {
-          const u = new URL(nextUrl);
-          u.searchParams.set("limit", "1000");
-          nextUrl = u.toString();
-        } catch (e) {}
+          const urlObj = new URL(nextUrl);
+          urlObj.searchParams.set("limit", "1000");
+          nextUrl = urlObj.toString();
+        } catch {
+          // ignore
+        }
       }
 
       const r = await fetch(nextUrl, {
