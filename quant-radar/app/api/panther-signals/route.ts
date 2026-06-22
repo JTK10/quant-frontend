@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         nextUrl = nextUrl + (nextUrl.includes("?") ? "&" : "?") + "limit=1000";
       }
 
-      const r = await fetch(nextUrl, {
+      const r: Response = await fetch(nextUrl, {
         headers: { Authorization: `Bearer ${t}` },
         cache: "no-store",
       });
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         throw new Error(`Failed to fetch Panther signals: ${r.status}`);
       }
 
-      const data = await r.json();
+      const data: any = await r.json();
       allItems = allItems.concat(data.items || []);
       
       const nextLink = (data.links || []).find((l: any) => l.rel === "next");
