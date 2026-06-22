@@ -4,6 +4,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { PantherRow } from '@/utils/backend';
 
+type GroupedPantherRow = PantherRow & {
+  count: number;
+  allSignals: PantherRow[];
+};
+
 type SectorItem = {
   Sector: string;
   Stocks?: string;
@@ -49,6 +54,16 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
   const [filter, setFilter] = useState<'ALL' | 'LONG' | 'SHORT'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sectorData, setSectorData] = useState<SectorItem[]>([]);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleRow = (key: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetch('/api/sector-sentiment?date=' + new Date().toISOString().split('T')[0])
@@ -71,8 +86,29 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
     return map;
   }, [sectorData]);
 
+  const groupedSignals = useMemo(() => {
+    const map = new Map<string, PantherRow[]>();
+    signals.forEach(s => {
+      const key = `${s.name}-${s.side}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    });
+
+    const grouped: GroupedPantherRow[] = [];
+    map.forEach((arr) => {
+      arr.sort((a, b) => a.ts - b.ts);
+      const firstSignal = arr[0];
+      grouped.push({
+        ...firstSignal,
+        count: arr.length,
+        allSignals: arr
+      });
+    });
+    return grouped;
+  }, [signals]);
+
   const sorted = useMemo(() => {
-    let rows = [...signals];
+    let rows = [...groupedSignals];
     if (filter !== 'ALL') {
       rows = rows.filter((r) => (r.side || '').toUpperCase() === filter);
     }
@@ -108,10 +144,10 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
     else { setSortKey(key); setSortAsc(false); }
   };
 
-  const totalLong = signals.filter((s) => s.side === 'LONG').length;
-  const totalShort = signals.filter((s) => s.side === 'SHORT').length;
-  const pctLong = signals.length ? ((totalLong / signals.length) * 100).toFixed(2) : "0.00";
-  const pctShort = signals.length ? ((totalShort / signals.length) * 100).toFixed(2) : "0.00";
+  const totalLong = groupedSignals.filter((s) => s.side === 'LONG').length;
+  const totalShort = groupedSignals.filter((s) => s.side === 'SHORT').length;
+  const pctLong = groupedSignals.length ? ((totalLong / groupedSignals.length) * 100).toFixed(2) : "0.00";
+  const pctShort = groupedSignals.length ? ((totalShort / groupedSignals.length) * 100).toFixed(2) : "0.00";
 
   if (!signals.length) {
     return (
@@ -154,7 +190,7 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
                     borderRight: f !== 'SHORT' ? '1px solid var(--color-border)' : 'none',
                   }}
                 >
-                  {f} {f !== 'ALL' && `(${signals.filter((s) => (s.side || '').toUpperCase() === f).length})`}
+                  {f} {f !== 'ALL' && `(${groupedSignals.filter((s) => (s.side || '').toUpperCase() === f).length})`}
                 </button>
               ))}
             </div>
@@ -197,112 +233,140 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
         </div>
 
         <div style={{ minWidth: '950px' }}>
-          {sorted.map((sig, idx) => {
-            const rowKey = `${sig.name}-${sig.side}-${idx}-${sig.ts}`;
-            
-            const surgeColor = sig.surge >= 10 ? 'var(--color-gold)' : sig.surge >= 6 ? 'var(--color-bull)' : 'var(--color-text)';
-            const massColor = sig.win60s_cr >= 15 ? 'var(--color-gold)' : sig.win60s_cr >= 5 ? '#00e89a' : 'var(--color-text)';
+          {sorted.map((group, idx) => {
+            const rowKey = `${group.name}-${group.side}`;
+            const isExpanded = expandedRows.has(rowKey);
 
-            return (
-              <div
-                key={rowKey}
-                className="group flex items-center px-4 py-2.5 border-b hover:bg-white/[0.04] hover:shadow-[inset_0_0_24px_-12px_rgba(45,142,255,0.5)] transition-all gap-2"
-                style={{
-                  borderColor: 'rgba(28,45,69,0.6)',
-                  background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
-                  borderLeft: `3px solid ${sig.side === 'LONG' ? 'var(--color-bull)' : sig.side === 'SHORT' ? 'var(--color-bear)' : 'transparent'}`
-                }}
-              >
-                <div style={{ width: COLUMNS[0].width, minWidth: COLUMNS[0].width }}>
-                  <div className="flex items-center gap-1.5">
-                    {sig.Chart ? (
-                      <a
-                        href={sig.Chart}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-semibold text-[13px] truncate hover:underline"
-                        style={{ color: 'var(--color-text2)' }}
-                        title="Open in TradingView"
-                      >
-                        {sig.name}
-                      </a>
-                    ) : (
-                      <span className="font-semibold text-[13px] truncate" style={{ color: 'var(--color-text2)' }}>
-                        {sig.name}
-                      </span>
+            const renderRow = (sig: PantherRow, isSubRow = false) => {
+              const surgeColor = sig.surge >= 10 ? 'var(--color-gold)' : sig.surge >= 6 ? 'var(--color-bull)' : 'var(--color-text)';
+              const massColor = sig.win60s_cr >= 15 ? 'var(--color-gold)' : sig.win60s_cr >= 5 ? '#00e89a' : 'var(--color-text)';
+
+              return (
+                <div
+                  key={`${sig.name}-${sig.side}-${sig.ts}`}
+                  onClick={() => { if (!isSubRow && group.count > 1) toggleRow(rowKey); }}
+                  className={`group flex items-center px-4 py-2.5 border-b transition-all gap-2 ${!isSubRow && group.count > 1 ? 'cursor-pointer hover:bg-white/[0.06]' : 'hover:bg-white/[0.04]'}`}
+                  style={{
+                    borderColor: 'rgba(28,45,69,0.6)',
+                    background: isSubRow ? 'rgba(0,0,0,0.2)' : (idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)'),
+                    borderLeft: `3px solid ${sig.side === 'LONG' ? 'var(--color-bull)' : sig.side === 'SHORT' ? 'var(--color-bear)' : 'transparent'}`,
+                    paddingLeft: isSubRow ? '3rem' : '1rem'
+                  }}
+                >
+                  <div style={{ width: COLUMNS[0].width, minWidth: COLUMNS[0].width }}>
+                    <div className="flex items-center gap-1.5">
+                      {sig.Chart ? (
+                        <a
+                          href={sig.Chart}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => { e.stopPropagation(); }}
+                          className="font-semibold text-[13px] truncate hover:underline"
+                          style={{ color: isSubRow ? 'var(--color-muted2)' : 'var(--color-text2)' }}
+                          title="Open in TradingView"
+                        >
+                          {sig.name}
+                        </a>
+                      ) : (
+                        <span className="font-semibold text-[13px] truncate" style={{ color: isSubRow ? 'var(--color-muted2)' : 'var(--color-text2)' }}>
+                          {sig.name}
+                        </span>
+                      )}
+                      
+                      {!isSubRow && group.count > 1 && (
+                        <span className="ml-1 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded transition-colors"
+                              style={{ 
+                                background: isExpanded ? 'rgba(45,142,255,0.3)' : 'rgba(45,142,255,0.15)', 
+                                color: 'var(--color-accent)', 
+                                border: '1px solid rgba(45,142,255,0.3)' 
+                              }}>
+                          ×{group.count} {isExpanded ? '▲' : '▼'}
+                        </span>
+                      )}
+                    </div>
+                    {!isSubRow && (
+                      <div className="font-mono text-[9px] truncate" style={{ color: 'var(--color-muted)' }}>
+                        {sig.instrument_key?.split('|').pop() || sig.instrument_key}
+                      </div>
                     )}
                   </div>
-                  <div className="font-mono text-[9px] truncate" style={{ color: 'var(--color-muted)' }}>
-                    {sig.instrument_key?.split('|').pop() || sig.instrument_key}
+
+                  <div style={{ width: COLUMNS[1].width, minWidth: COLUMNS[1].width }}>
+                    <SideBadge direction={sig.side} />
+                  </div>
+
+                  <div style={{ width: COLUMNS[2].width, minWidth: COLUMNS[2].width }}>
+                    <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text2)' }}>
+                      {fmtPrice(sig.entry)}
+                    </span>
+                  </div>
+
+                  <div style={{ width: COLUMNS[3].width, minWidth: COLUMNS[3].width }}>
+                    <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: surgeColor }}>
+                      {sig.surge ? sig.surge.toFixed(1) + 'x' : '—'}
+                    </span>
+                  </div>
+
+                  <div style={{ width: COLUMNS[4].width, minWidth: COLUMNS[4].width }}>
+                    <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: massColor }}>
+                      {sig.win60s_cr ? sig.win60s_cr.toFixed(2) : '—'}
+                    </span>
+                  </div>
+
+                  <div style={{ width: COLUMNS[5].width, minWidth: COLUMNS[5].width }}>
+                    <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
+                      {sig.time || '—'}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 flex items-center min-w-[280px]">
+                    {!isSubRow && (() => {
+                      const sec = stockToSector.get(sig.name);
+                      if (!sec) return <span className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono">NO SECTOR DATA</span>;
+                      
+                      let secStocks: any[] = [];
+                      try { secStocks = JSON.parse(sec.Stocks || '[]'); } catch(e) {}
+                      const sUp = secStocks.filter(s => s.Signal === 'up').length;
+                      const sDn = secStocks.filter(s => s.Signal === 'down').length;
+                      const pUp = secStocks.length ? ((sUp / secStocks.length) * 100).toFixed(2) : "0.00";
+                      const pDn = secStocks.length ? ((sDn / secStocks.length) * 100).toFixed(2) : "0.00";
+                      const cleanSector = (sec.Sector || "").replace("NIFTY_", "").replace("_", " ");
+
+                      return (
+                        <div className="w-full pr-4">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <h3 className="text-[10px] font-semibold text-[rgba(255,255,255,0.9)] tracking-widest uppercase">{cleanSector}</h3>
+                            <span className="bg-[#ff1e56] text-white text-[8px] font-bold px-1 py-[1px] rounded tracking-wide">LIVE</span>
+                          </div>
+                          <div className="w-full h-1.5 rounded-full overflow-hidden mb-1.5 bg-[rgba(255,255,255,0.05)] flex shadow-inner">
+                             <div style={{ width: `${pUp}%`, backgroundColor: '#00e89a', boxShadow: `0 0 10px #00e89a` }}></div>
+                             <div style={{ width: `${pDn}%`, backgroundColor: '#ff3b6b', boxShadow: `0 0 10px #ff3b6b` }}></div>
+                          </div>
+                          <div className="flex justify-between items-center text-[9px] font-mono text-[rgba(255,255,255,0.5)]">
+                             <div className="flex items-center gap-1.5">
+                               <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#00e89a', boxShadow: `0 0 4px #00e89a`}}></div>
+                               <span>{sUp} stocks ({pUp}% Up)</span>
+                             </div>
+                             <div className="flex items-center gap-1.5">
+                               <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#ff3b6b', boxShadow: `0 0 4px #ff3b6b`}}></div>
+                               <span>{sDn} stocks ({pDn}% Down)</span>
+                             </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
+              );
+            };
 
-                <div style={{ width: COLUMNS[1].width, minWidth: COLUMNS[1].width }}>
-                  <SideBadge direction={sig.side} />
-                </div>
-
-                <div style={{ width: COLUMNS[2].width, minWidth: COLUMNS[2].width }}>
-                  <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text2)' }}>
-                    {fmtPrice(sig.entry)}
-                  </span>
-                </div>
-
-                <div style={{ width: COLUMNS[3].width, minWidth: COLUMNS[3].width }}>
-                  <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: surgeColor }}>
-                    {sig.surge ? sig.surge.toFixed(1) + 'x' : '—'}
-                  </span>
-                </div>
-
-                <div style={{ width: COLUMNS[4].width, minWidth: COLUMNS[4].width }}>
-                  <span className="font-mono text-[11px] tabular-nums font-semibold" style={{ color: massColor }}>
-                    {sig.win60s_cr ? sig.win60s_cr.toFixed(2) : '—'}
-                  </span>
-                </div>
-
-                <div style={{ width: COLUMNS[5].width, minWidth: COLUMNS[5].width }}>
-                  <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
-                    {sig.time || '—'}
-                  </span>
-                </div>
-
-                <div className="flex-1 flex items-center min-w-[280px]">
-                  {(() => {
-                    const sec = stockToSector.get(sig.name);
-                    if (!sec) return <span className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono">NO SECTOR DATA</span>;
-                    
-                    let secStocks: any[] = [];
-                    try { secStocks = JSON.parse(sec.Stocks || '[]'); } catch(e) {}
-                    const sUp = secStocks.filter(s => s.Signal === 'up').length;
-                    const sDn = secStocks.filter(s => s.Signal === 'down').length;
-                    const pUp = secStocks.length ? ((sUp / secStocks.length) * 100).toFixed(2) : "0.00";
-                    const pDn = secStocks.length ? ((sDn / secStocks.length) * 100).toFixed(2) : "0.00";
-                    const cleanSector = (sec.Sector || "").replace("NIFTY_", "").replace("_", " ");
-
-                    return (
-                      <div className="w-full pr-4">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <h3 className="text-[10px] font-semibold text-[rgba(255,255,255,0.9)] tracking-widest uppercase">{cleanSector}</h3>
-                          <span className="bg-[#ff1e56] text-white text-[8px] font-bold px-1 py-[1px] rounded tracking-wide">LIVE</span>
-                        </div>
-                        <div className="w-full h-1.5 rounded-full overflow-hidden mb-1.5 bg-[rgba(255,255,255,0.05)] flex shadow-inner">
-                           <div style={{ width: `${pUp}%`, backgroundColor: '#00e89a', boxShadow: `0 0 10px #00e89a` }}></div>
-                           <div style={{ width: `${pDn}%`, backgroundColor: '#ff3b6b', boxShadow: `0 0 10px #ff3b6b` }}></div>
-                        </div>
-                        <div className="flex justify-between items-center text-[9px] font-mono text-[rgba(255,255,255,0.5)]">
-                           <div className="flex items-center gap-1.5">
-                             <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#00e89a', boxShadow: `0 0 4px #00e89a`}}></div>
-                             <span>{sUp} stocks ({pUp}% Up)</span>
-                           </div>
-                           <div className="flex items-center gap-1.5">
-                             <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#ff3b6b', boxShadow: `0 0 4px #ff3b6b`}}></div>
-                             <span>{sDn} stocks ({pDn}% Down)</span>
-                           </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-
+            return (
+              <div key={rowKey} className="flex flex-col">
+                {renderRow(group, false)}
+                {isExpanded && group.allSignals.map((subSig, subIdx) => {
+                  if (subIdx === 0) return null; // Skip the first signal since it's the main row
+                  return renderRow(subSig, true);
+                })}
               </div>
             );
           })}
