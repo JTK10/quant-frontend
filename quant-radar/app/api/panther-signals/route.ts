@@ -50,18 +50,38 @@ export async function GET(request: NextRequest) {
       throw new Error("Missing PANTHER_SIGNALS_URL");
     }
 
-    const r = await fetch(signalsUrl, {
-      headers: { Authorization: `Bearer ${t}` },
-      cache: "no-store",
-    });
-    
-    if (!r.ok) {
-      throw new Error(`Failed to fetch Panther signals: ${r.status}`);
-    }
+    let allItems: any[] = [];
+    let nextUrl: string | null = signalsUrl;
+    let pages = 0;
 
-    const data = await r.json();
+    while (nextUrl && pages < 20) {
+      pages++;
+      // Set limit=1000 to fetch in larger batches
+      if (pages === 1 && !nextUrl.includes("limit=")) {
+        try {
+          const u = new URL(nextUrl);
+          u.searchParams.set("limit", "1000");
+          nextUrl = u.toString();
+        } catch (e) {}
+      }
+
+      const r = await fetch(nextUrl, {
+        headers: { Authorization: `Bearer ${t}` },
+        cache: "no-store",
+      });
+      
+      if (!r.ok) {
+        throw new Error(`Failed to fetch Panther signals: ${r.status}`);
+      }
+
+      const data = await r.json();
+      allItems = allItems.concat(data.items || []);
+      
+      const nextLink = (data.links || []).find((l: any) => l.rel === "next");
+      nextUrl = nextLink ? nextLink.href : null;
+    }
     
-    const parsedSignals = (data.items || []).map((it: any) => {
+    const parsedSignals = allItems.map((it: any) => {
       let doc = {};
       if (it.doc && typeof it.doc === "string") {
         try { doc = JSON.parse(it.doc); } catch (e) {}
