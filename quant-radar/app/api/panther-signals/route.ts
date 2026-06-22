@@ -56,9 +56,7 @@ export async function GET(request: NextRequest) {
 
     while (nextUrl && pages < 20) {
       pages++;
-      if (pages === 1 && !nextUrl.includes("limit=")) {
-        nextUrl = nextUrl + (nextUrl.includes("?") ? "&" : "?") + "limit=1000";
-      }
+      // Proceed without limit=1000, let it fetch default 25 per page in a loop
 
       const r: Response = await fetch(nextUrl, {
         headers: { Authorization: `Bearer ${t}` },
