@@ -57,13 +57,7 @@ export async function GET(request: NextRequest) {
     while (nextUrl && pages < 20) {
       pages++;
       if (pages === 1 && !nextUrl.includes("limit=")) {
-        try {
-          const urlObj = new URL(nextUrl);
-          urlObj.searchParams.set("limit", "1000");
-          nextUrl = urlObj.toString();
-        } catch {
-          // ignore
-        }
+        nextUrl = nextUrl + (nextUrl.includes("?") ? "&" : "?") + "limit=1000";
       }
 
       const r = await fetch(nextUrl, {
