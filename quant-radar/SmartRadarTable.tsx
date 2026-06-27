@@ -12,9 +12,10 @@ type Signal = {
   SectorTheme: boolean; Direction: string; LevelPrice: number; PDH: number; PDL: number;
   BreakTime: string; RetestTime: string; EntryTime: string; SLPct: number; T1MovePct: number;
   ATMIV: number; HasOptions: boolean; FiredAt: string; SignalRank: number; Chart: string;
+  aligator?: string;
 };
 
-type SortKey = 'rank' | 'name' | 'side' | 'module' | 'entry' | 'conf' | 'rvol' | 'pcr' | 'rr' | 'move' | 'time';
+type SortKey = 'rank' | 'name' | 'side' | 'module' | 'entry' | 'conf' | 'rvol' | 'pcr' | 'rr' | 'move' | 'time' | 'aligator';
 
 function fmtPrice(v: number) {
   if (!v) return '—';
@@ -192,6 +193,7 @@ function ExpandedRow({ sig }: { sig: Signal }) {
 
 const COLUMNS: { key: SortKey; label: string; width: string }[] = [
   { key: 'time', label: 'TIME', width: '70px' },
+  { key: 'aligator', label: 'ACTION', width: '70px' },
   { key: 'name', label: 'STOCK', width: '140px' },
   { key: 'side', label: 'SIDE', width: '60px' },
   { key: 'module', label: 'MOD', width: '68px' },
@@ -208,10 +210,12 @@ export default function SmartRadarTable({ signals }: { signals: Signal[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [sortAsc, setSortAsc] = useState(false);
   const [filter, setFilter] = useState<'ALL' | 'BULL' | 'BEAR'>('ALL');
+  const [aligatorFilter, setAligatorFilter] = useState<'ALL' | 'TAKE' | 'SKIP'>('ALL');
 
   const sorted = useMemo(() => {
     let rows = [...signals];
     if (filter !== 'ALL') rows = rows.filter((r) => r.Side === filter);
+    if (aligatorFilter !== 'ALL') rows = rows.filter((r) => r.aligator === aligatorFilter);
 
     rows.sort((a, b) => {
       let diff = 0;
@@ -226,12 +230,13 @@ export default function SmartRadarTable({ signals }: { signals: Signal[] }) {
         case 'rr': diff = a.RR.localeCompare(b.RR); break;
         case 'move': diff = a.DayMovePct - b.DayMovePct; break;
         case 'time': diff = (a.FiredAt || a.EntryTime).localeCompare(b.FiredAt || b.EntryTime); break;
+        case 'aligator': diff = (a.aligator || '').localeCompare(b.aligator || ''); break;
         default: diff = b.SignalRank - a.SignalRank;
       }
       return sortAsc ? diff : -diff;
     });
     return rows;
-  }, [signals, sortKey, sortAsc, filter]);
+  }, [signals, sortKey, sortAsc, filter, aligatorFilter]);
 
   const toggle = (key: SortKey) => {
     if (sortKey === key) setSortAsc((p) => !p);
@@ -290,7 +295,30 @@ export default function SmartRadarTable({ signals }: { signals: Signal[] }) {
             </button>
           ))}
         </div>
-        <span className="font-mono text-[9px] tracking-widest" style={{ color: 'var(--color-muted)' }}>
+
+        {/* ALIGATOR Filter */}
+        <div className="flex rounded-lg overflow-hidden ml-2" style={{ border: '1px solid var(--color-border)' }}>
+          {(['ALL', 'TAKE', 'SKIP'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setAligatorFilter(f)}
+              className="px-3 py-1 font-mono text-[9px] tracking-widest transition-all"
+              style={{
+                background: aligatorFilter === f
+                  ? f === 'TAKE' ? 'rgba(0,232,154,0.1)' : f === 'SKIP' ? 'rgba(255,255,255,0.05)' : 'var(--color-accentbg)'
+                  : 'transparent',
+                color: aligatorFilter === f
+                  ? f === 'TAKE' ? 'rgba(0,232,154,1)' : f === 'SKIP' ? 'var(--color-muted)' : 'var(--color-accent)'
+                  : 'var(--color-muted)',
+                borderRight: f !== 'SKIP' ? '1px solid var(--color-border)' : 'none',
+              }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <span className="font-mono text-[9px] tracking-widest ml-3" style={{ color: 'var(--color-muted)' }}>
           {sorted.length} SIGNALS
         </span>
         <div className="ml-auto font-mono text-[8px] tracking-widest" style={{ color: 'var(--color-muted)' }}>
@@ -303,7 +331,7 @@ export default function SmartRadarTable({ signals }: { signals: Signal[] }) {
         {/* Header */}
         <div
           className="sticky top-0 z-10 flex items-center px-4 py-2 border-b"
-          style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', minWidth: '960px' }}
+          style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)', minWidth: '1030px' }}
         >
           <div className="w-7 shrink-0" />
           {COLUMNS.map((col) => (
@@ -325,7 +353,7 @@ export default function SmartRadarTable({ signals }: { signals: Signal[] }) {
         </div>
 
         {/* Rows */}
-        <div style={{ minWidth: '960px' }}>
+        <div style={{ minWidth: '1030px' }}>
           {sorted.map((sig, idx) => {
             const isOpen = expanded.has(sig.Name);
             const rowKey = `${sig.Name}-${sig.FiredAt}-${idx}`;
@@ -362,6 +390,17 @@ export default function SmartRadarTable({ signals }: { signals: Signal[] }) {
                     <span className="font-mono text-[10px] tabular-nums" style={{ color: 'var(--color-muted2)' }}>
                       {timeShort}
                     </span>
+                  </div>
+
+                  {/* ACTION (ALIGATOR) */}
+                  <div style={{ width: '70px', minWidth: '70px' }}>
+                    {sig.aligator ? (
+                      <span className="font-mono text-[10px] font-semibold" style={{ color: sig.aligator === 'TAKE' ? 'rgba(0,232,154,1)' : 'var(--color-muted2)' }}>
+                        {sig.aligator}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted)' }}>—</span>
+                    )}
                   </div>
 
                   {/* STOCK */}
