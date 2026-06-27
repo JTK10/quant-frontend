@@ -809,6 +809,7 @@ export type PantherRow = {
   spread_vs_norm: number;
   source: string;
   Chart: string;
+  aligator?: string;
 };
 
 export function normalizePantherSignals(payload: unknown): PantherRow[] {
@@ -833,6 +834,7 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       spread_vs_norm: numberify(row.spread_vs_norm),
       source: textify(row.source, "panther"),
       Chart: buildTradingViewUrl(symbol, symbol),
+      aligator: textify(row.aligator),
     };
   });
 }
