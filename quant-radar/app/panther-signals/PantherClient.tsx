@@ -14,7 +14,7 @@ type SectorItem = {
   Stocks?: string;
 };
 
-type SortKey = 'name' | 'side' | 'entry' | 'surge' | 'win60s_cr' | 'time' | 'sector';
+type SortKey = 'name' | 'side' | 'entry' | 'surge' | 'win60s_cr' | 'time' | 'sector' | 'aligator';
 
 function fmtPrice(v: number) {
   if (!v) return '—';
@@ -45,6 +45,7 @@ const COLUMNS: { key: SortKey; label: string; width: string }[] = [
   { key: 'surge', label: 'SURGE', width: '90px' },
   { key: 'win60s_cr', label: 'SMC', width: '90px' },
   { key: 'time', label: 'TIME', width: '90px' },
+  { key: 'aligator', label: 'ACTION', width: '80px' },
   { key: 'sector', label: 'SECTOR BIAS', width: '280px' },
 ];
 
@@ -52,6 +53,7 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('time');
   const [sortAsc, setSortAsc] = useState(false);
   const [filter, setFilter] = useState<'ALL' | 'LONG' | 'SHORT'>('ALL');
+  const [aligatorFilter, setAligatorFilter] = useState<'ALL' | 'TAKE' | 'SKIP'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [sectorData, setSectorData] = useState<SectorItem[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -112,6 +114,9 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
     if (filter !== 'ALL') {
       rows = rows.filter((r) => (r.side || '').toUpperCase() === filter);
     }
+    if (aligatorFilter !== 'ALL') {
+      rows = rows.filter((r) => r.aligator === aligatorFilter);
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       rows = rows.filter((r) => r.name.toLowerCase().includes(q) || r.instrument_key?.toLowerCase().includes(q));
@@ -126,6 +131,7 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
         case 'surge': diff = a.surge - b.surge; break;
         case 'win60s_cr': diff = a.win60s_cr - b.win60s_cr; break;
         case 'time': diff = (a.time || '').localeCompare(b.time || ''); break;
+        case 'aligator': diff = (a.aligator || '').localeCompare(b.aligator || ''); break;
         case 'sector': 
           const sA = stockToSector.get(a.name)?.Sector || '';
           const sB = stockToSector.get(b.name)?.Sector || '';
@@ -137,7 +143,7 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
       return sortAsc ? diff : -diff;
     });
     return rows;
-  }, [signals, sortKey, sortAsc, filter, searchQuery]);
+  }, [signals, sortKey, sortAsc, filter, aligatorFilter, searchQuery]);
 
   const toggle = (key: SortKey) => {
     if (sortKey === key) setSortAsc((p) => !p);
@@ -194,7 +200,30 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
                 </button>
               ))}
             </div>
-            <span className="font-mono text-[9px] tracking-widest" style={{ color: 'var(--color-muted)' }}>
+
+            {/* ALIGATOR Filter */}
+            <div className="flex rounded-lg overflow-hidden ml-2" style={{ border: '1px solid var(--color-border)' }}>
+              {(['ALL', 'TAKE', 'SKIP'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setAligatorFilter(f)}
+                  className="px-4 py-1.5 font-mono text-[10px] tracking-widest transition-all"
+                  style={{
+                    background: aligatorFilter === f
+                      ? f === 'TAKE' ? 'rgba(0,232,154,0.1)' : f === 'SKIP' ? 'rgba(255,255,255,0.05)' : 'var(--color-accentbg)'
+                      : 'transparent',
+                    color: aligatorFilter === f
+                      ? f === 'TAKE' ? 'rgba(0,232,154,1)' : f === 'SKIP' ? 'var(--color-muted)' : 'var(--color-accent)'
+                      : 'var(--color-muted)',
+                    borderRight: f !== 'SKIP' ? '1px solid var(--color-border)' : 'none',
+                  }}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            <span className="font-mono text-[9px] tracking-widest ml-3" style={{ color: 'var(--color-muted)' }}>
               {sorted.length} MATCHES
             </span>
           </div>
@@ -215,7 +244,7 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
       <div className="flex-1 overflow-auto">
         <div
           className="sticky top-0 z-10 flex items-center px-4 py-2.5 border-b gap-2"
-          style={{ background: 'rgba(10, 14, 23, 0.82)', backdropFilter: 'blur(12px) saturate(140%)', WebkitBackdropFilter: 'blur(12px) saturate(140%)', borderColor: 'var(--color-border)', minWidth: '950px' }}
+          style={{ background: 'rgba(10, 14, 23, 0.82)', backdropFilter: 'blur(12px) saturate(140%)', WebkitBackdropFilter: 'blur(12px) saturate(140%)', borderColor: 'var(--color-border)', minWidth: '1030px' }}
         >
           {COLUMNS.map((col) => (
             <button
@@ -232,7 +261,7 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
           ))}
         </div>
 
-        <div style={{ minWidth: '950px' }}>
+        <div style={{ minWidth: '1030px' }}>
           {sorted.map((group, idx) => {
             const rowKey = `${group.name}-${group.side}`;
             const isExpanded = expandedRows.has(rowKey);
@@ -317,6 +346,16 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
                     <span className="font-mono text-[11px] tabular-nums" style={{ color: 'var(--color-text)' }}>
                       {sig.time || '—'}
                     </span>
+                  </div>
+
+                  <div style={{ width: COLUMNS[6].width, minWidth: COLUMNS[6].width }}>
+                    {sig.aligator ? (
+                      <span className="font-mono text-[10px] font-semibold" style={{ color: sig.aligator === 'TAKE' ? 'rgba(0,232,154,1)' : 'var(--color-muted2)' }}>
+                        {sig.aligator}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted)' }}>—</span>
+                    )}
                   </div>
 
                   <div className="flex-1 flex items-center min-w-[280px]">

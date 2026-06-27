@@ -421,7 +421,6 @@ export function normalizeRadarSignals(payload: unknown): RadarSignal[] {
       HasOptions: truthy(row.HasOptions) || Boolean(pcr || atmStrike || maxPain),
       SignalRank: numberify(row.SignalRank ?? row.SmartRank ?? row.Confidence, rows.length - index),
       Chart: textify(row.Chart, buildTradingViewUrl(symbol, name)),
-      aligator: textify(row.aligator),
     };
   });
 }
