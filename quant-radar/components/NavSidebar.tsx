@@ -23,12 +23,12 @@ const PantherIcon = (props: any) => (
 );
 
 const NAV_ITEMS: any[] = [
+  { href: "/caps", icon: Activity, label: "Caps Engine", sub: "Mass Scanner", color: "#8b5cf6", rgb: "139,92,246" },
   { href: "/panther-signals", icon: PantherIcon, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
   { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },
   { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308", rgb: "234,179,8" },
   { href: "/", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#00f0ff", rgb: "0,240,255" },
   { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "Precision Setup", color: "#ff00e6", rgb: "255,0,230" },
-  { href: "/v6-signals", icon: Zap, label: "V6 Momentum", sub: "Premium Alerts", color: "#00ff9d", rgb: "0,255,157" },
   { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6", rgb: "20,184,166" },
   { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#fce205", rgb: "252,226,5" },
 ];

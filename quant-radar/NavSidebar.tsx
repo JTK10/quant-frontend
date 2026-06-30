@@ -7,6 +7,14 @@ import { useState, useEffect } from 'react';
 
 const NAV_ITEMS = [
   {
+    href: '/caps',
+    icon: Activity,
+    label: 'Caps Engine',
+    sub: 'Mass Scanner',
+    color: '#8b5cf6',
+    rgb: '139,92,246',
+  },
+  {
     href: '/panther',
     icon: Activity,
     label: 'Panther Signals',
