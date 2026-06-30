@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { formatCurrency, formatNumber } from "@/utils/formatters"; // Assume these exist, or inline
+
 
 export default function CapsClient({ signals }: { signals: any[] }) {
   const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
