@@ -835,6 +835,11 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       source: textify(row.source, "panther"),
       Chart: buildTradingViewUrl(symbol, symbol),
       aligator: textify(row.aligator),
+      // Preserve Caps fields so they aren't stripped before hitting the frontend
+      cap: row.cap,
+      mass_cr: row.mass_cr,
+      delta: row.delta,
+      imb: row.imb,
     };
   });
 }
