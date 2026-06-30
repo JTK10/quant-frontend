@@ -22,8 +22,24 @@ const PantherIcon = (props: any) => (
   </svg>
 );
 
+const ElephantIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    {/* Ears */}
+    <path d="M 7 10 C 2 10, 2 17, 6 17 L 7 17" />
+    <path d="M 17 10 C 22 10, 22 17, 18 17 L 17 17" />
+    {/* Head */}
+    <path d="M 7 10 C 7 4, 17 4, 17 10 L 17 12 C 17 14, 15 15, 15 15" />
+    <path d="M 7 10 L 7 12 C 7 14, 9 15, 9 15" />
+    {/* Trunk */}
+    <path d="M 10 12 L 10 21 C 10 23, 14 23, 14 21 L 14 12" />
+    {/* Tusks */}
+    <path d="M 9 15 L 7 19" />
+    <path d="M 15 15 L 17 19" />
+  </svg>
+);
+
 const NAV_ITEMS: any[] = [
-  { href: "/caps", icon: Activity, label: "Caps Engine", sub: "Mass Scanner", color: "#8b5cf6", rgb: "139,92,246" },
+  { href: "/caps", icon: ElephantIcon, label: "Elephant Scan", sub: "Mass Scanner", color: "#8b5cf6", rgb: "139,92,246" },
   { href: "/panther-signals", icon: PantherIcon, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
   { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },
   { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308", rgb: "234,179,8" },
