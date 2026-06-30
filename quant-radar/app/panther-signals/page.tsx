@@ -16,7 +16,9 @@ async function getPantherSignals(dateStr: string): Promise<PantherRow[]> {
       console.error(`Panther Signal route failed: ${response.status} - ${errText}`);
       throw new Error(`Panther Signal route failed: ${response.status}`);
     }
-    return response.json();
+    const data = await response.json();
+    // Filter out Caps signals (which have cap or mass_cr) to prevent polluting Panther
+    return data.filter((s: any) => s.cap === undefined && s.mass_cr === undefined);
   } catch (err) {
     console.error("Error fetching Panther Signals:", err);
     return [];
