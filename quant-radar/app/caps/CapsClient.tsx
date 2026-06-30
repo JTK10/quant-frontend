@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { buildTradingViewUrl } from "@/utils/backend";
 
 
 export default function CapsClient({ signals }: { signals: any[] }) {
@@ -145,6 +146,7 @@ export default function CapsClient({ signals }: { signals: any[] }) {
           const delta = typeof signal.delta === "number" ? signal.delta.toFixed(1) : (signal.delta || "--");
           const imb = typeof signal.imb === "number" ? signal.imb.toFixed(2) : (signal.imb || "--");
           const surge = typeof signal.surge === "number" ? signal.surge.toFixed(2) : (signal.surge || "--");
+          const name = signal.name || signal.tkr;
           
           return (
             <div
@@ -170,9 +172,15 @@ export default function CapsClient({ signals }: { signals: any[] }) {
               </span>
 
               {/* NAME */}
-              <div className="min-w-0 truncate text-[13px] font-semibold" style={{ color: "var(--color-text2)" }}>
-                {signal.name || signal.tkr}
-              </div>
+              <a 
+                href={buildTradingViewUrl(name, name)} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="min-w-0 truncate text-[13px] font-semibold hover:underline" 
+                style={{ color: "var(--color-text2)" }}
+              >
+                {name}
+              </a>
 
               {/* TIER */}
               <span
