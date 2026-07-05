@@ -14,7 +14,7 @@ type SectorItem = {
   Stocks?: string;
 };
 
-type SortKey = 'name' | 'side' | 'entry' | 'surge' | 'win60s_cr' | 'time' | 'sector' | 'aligator';
+type SortKey = 'name' | 'side' | 'entry' | 'surge' | 'win60s_cr' | 'time' | 'aligator';
 
 function fmtPrice(v: number) {
   if (!v) return '—';
@@ -46,7 +46,6 @@ const COLUMNS: { key: SortKey; label: string; width: string }[] = [
   { key: 'win60s_cr', label: 'SMC', width: '90px' },
   { key: 'time', label: 'TIME', width: '90px' },
   { key: 'aligator', label: 'ACTION', width: '80px' },
-  { key: 'sector', label: 'SECTOR BIAS', width: '280px' },
 ];
 
 export default function PantherClient({ signals }: { signals: PantherRow[] }) {
@@ -132,11 +131,6 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
         case 'win60s_cr': diff = a.win60s_cr - b.win60s_cr; break;
         case 'time': diff = (a.time || '').localeCompare(b.time || ''); break;
         case 'aligator': diff = (a.aligator || '').localeCompare(b.aligator || ''); break;
-        case 'sector': 
-          const sA = stockToSector.get(a.name)?.Sector || '';
-          const sB = stockToSector.get(b.name)?.Sector || '';
-          diff = sA.localeCompare(sB);
-          break;
         default: 
           diff = (a.time || '').localeCompare(b.time || '');
       }
@@ -356,44 +350,6 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
                     ) : (
                       <span className="font-mono text-[10px]" style={{ color: 'var(--color-muted)' }}>—</span>
                     )}
-                  </div>
-
-                  <div className="flex-1 flex items-center min-w-[280px]">
-                    {!isSubRow && (() => {
-                      const sec = stockToSector.get(sig.name);
-                      if (!sec) return <span className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono">NO SECTOR DATA</span>;
-                      
-                      let secStocks: any[] = [];
-                      try { secStocks = JSON.parse(sec.Stocks || '[]'); } catch(e) {}
-                      const sUp = secStocks.filter(s => s.Signal === 'up').length;
-                      const sDn = secStocks.filter(s => s.Signal === 'down').length;
-                      const pUp = secStocks.length ? ((sUp / secStocks.length) * 100).toFixed(2) : "0.00";
-                      const pDn = secStocks.length ? ((sDn / secStocks.length) * 100).toFixed(2) : "0.00";
-                      const cleanSector = (sec.Sector || "").replace("NIFTY_", "").replace("_", " ");
-
-                      return (
-                        <div className="w-full pr-4">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <h3 className="text-[10px] font-semibold text-[rgba(255,255,255,0.9)] tracking-widest uppercase">{cleanSector}</h3>
-                            <span className="bg-[#ff1e56] text-white text-[8px] font-bold px-1 py-[1px] rounded tracking-wide">LIVE</span>
-                          </div>
-                          <div className="w-full h-1.5 rounded-full overflow-hidden mb-1.5 bg-[rgba(255,255,255,0.05)] flex shadow-inner">
-                             <div style={{ width: `${pUp}%`, backgroundColor: '#00e89a', boxShadow: `0 0 10px #00e89a` }}></div>
-                             <div style={{ width: `${pDn}%`, backgroundColor: '#ff3b6b', boxShadow: `0 0 10px #ff3b6b` }}></div>
-                          </div>
-                          <div className="flex justify-between items-center text-[9px] font-mono text-[rgba(255,255,255,0.5)]">
-                             <div className="flex items-center gap-1.5">
-                               <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#00e89a', boxShadow: `0 0 4px #00e89a`}}></div>
-                               <span>{sUp} stocks ({pUp}% Up)</span>
-                             </div>
-                             <div className="flex items-center gap-1.5">
-                               <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#ff3b6b', boxShadow: `0 0 4px #ff3b6b`}}></div>
-                               <span>{sDn} stocks ({pDn}% Down)</span>
-                             </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
                   </div>
                 </div>
               );

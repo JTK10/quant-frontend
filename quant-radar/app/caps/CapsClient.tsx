@@ -8,11 +8,15 @@ export default function CapsClient({ signals }: { signals: any[] }) {
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
+  const [tierFilter, setTierFilter] = useState<"ALL" | "LARGE" | "MID" | "SMALL">("ALL");
 
   const filtered = useMemo(() => {
     let f = signals;
     if (filter !== "ALL") {
       f = f.filter(s => s.side === filter);
+    }
+    if (tierFilter !== "ALL") {
+      f = f.filter(s => (s.cap || "LARGE").toUpperCase() === tierFilter);
     }
     
     return f.sort((a, b) => {
@@ -36,7 +40,7 @@ export default function CapsClient({ signals }: { signals: any[] }) {
       })();
       return ascending ? cmp : -cmp;
     });
-  }, [signals, filter, sortKey, ascending]);
+  }, [signals, filter, tierFilter, sortKey, ascending]);
 
   const headers: [string, string][] = [
     ["time", "TIME"],
@@ -96,6 +100,27 @@ export default function CapsClient({ signals }: { signals: any[] }) {
             </button>
           );
         })}
+
+        <div className="flex rounded-lg overflow-hidden ml-2" style={{ border: '1px solid var(--color-border)' }}>
+          {(["ALL", "LARGE", "MID", "SMALL"] as const).map((t) => {
+            const active = tierFilter === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTierFilter(t)}
+                className="px-3 py-1 font-mono text-[10px] tracking-[0.18em] transition-all"
+                style={{
+                  background: active ? "rgba(168,85,247,0.15)" : "transparent",
+                  color: active ? "var(--color-purple)" : "var(--color-muted)",
+                  borderRight: t !== "SMALL" ? "1px solid var(--color-border)" : "none",
+                }}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
 
         <span className="ml-auto font-mono text-[10px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
           {filtered.length} SIGNALS
