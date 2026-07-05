@@ -38,7 +38,7 @@ export default async function CapsSignalPage({ searchParams }: { searchParams: D
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
       <PageHeader
         title="Caps Signals Engine"
-        subtitle="LARGE CAP MASS SCANNER"
+        subtitle="ELEPHANT FOOTPRINT SCANNER"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="#8b5cf6" // Violet accent for this page

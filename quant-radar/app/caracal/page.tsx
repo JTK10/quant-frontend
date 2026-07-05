@@ -41,7 +41,7 @@ export default async function CaracalPage({ searchParams }: { searchParams: Date
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
       <PageHeader
         title="Caracal"
-        subtitle="COIL & STRIKE — TIERED BODY-BREAK ENGINE"
+        subtitle="PRECISION ENTRY ENGINE"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="#f59e0b" // Amber accent for the desert cat
