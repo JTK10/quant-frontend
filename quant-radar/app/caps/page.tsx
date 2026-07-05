@@ -16,8 +16,9 @@ async function getCapsSignals(dateStr: string) {
       throw new Error(`Caps Signal route failed: ${response.status}`);
     }
     const data = await response.json();
-    // Filter out intraday panther_live signals by ensuring 'cap' or 'mass_cr' exists
-    return data.filter((s: any) => s.cap || s.mass_cr !== undefined);
+    // Filter out intraday panther_live signals by ensuring 'cap' or 'mass_cr' exists.
+    // CARACAL signals also carry 'cap' (CAR-*) — they have their own page.
+    return data.filter((s: any) => (s.cap || s.mass_cr !== undefined) && s.source !== "caracal");
   } catch (err) {
     console.error("Error fetching Caps Signals:", err);
     return [];

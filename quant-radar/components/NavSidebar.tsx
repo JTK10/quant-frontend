@@ -38,7 +38,24 @@ const ElephantIcon = (props: any) => (
   </svg>
 );
 
+const CaracalIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    {/* Tall tufted ears — the caracal's signature */}
+    <path d="M 6 9 L 5 2 L 9 6" />   {/* Left ear */}
+    <path d="M 5 2 L 4.5 1" />        {/* Left tuft */}
+    <path d="M 18 9 L 19 2 L 15 6" /> {/* Right ear */}
+    <path d="M 19 2 L 19.5 1" />      {/* Right tuft */}
+    <path d="M 9 6 C 10.5 5, 13.5 5, 15 6" /> {/* Top head */}
+    <path d="M 6 9 C 5 14, 8 19, 12 21 C 16 19, 19 14, 18 9" /> {/* Face outline */}
+    <path d="M 8.5 11 L 10.5 11.5" /> {/* Left eye */}
+    <path d="M 15.5 11 L 13.5 11.5" /> {/* Right eye */}
+    <path d="M 10.5 15 L 13.5 15 L 12 17 Z" /> {/* Nose */}
+    <path d="M 12 17 L 12 18.5" />    {/* Mouth */}
+  </svg>
+);
+
 const NAV_ITEMS: any[] = [
+  { href: "/caracal", icon: CaracalIcon, label: "Caracal", sub: "Coil & Strike", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/caps", icon: ElephantIcon, label: "Elephant Scan", sub: "Mass Scanner", color: "#8b5cf6", rgb: "139,92,246" },
   { href: "/panther-signals", icon: PantherIcon, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
   { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },

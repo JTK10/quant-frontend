@@ -810,6 +810,12 @@ export type PantherRow = {
   source: string;
   Chart: string;
   aligator?: string;
+  cap?: any;
+  mass_cr?: any;
+  delta?: any;
+  imb?: any;
+  event?: any;
+  detail?: any;
 };
 
 export function normalizePantherSignals(payload: unknown): PantherRow[] {
@@ -840,6 +846,9 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       mass_cr: row.mass_cr,
       delta: row.delta,
       imb: row.imb,
+      // Preserve CARACAL event-stream fields
+      event: row.event,
+      detail: row.detail,
     };
   });
 }
