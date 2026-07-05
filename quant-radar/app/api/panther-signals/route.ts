@@ -97,7 +97,21 @@ export async function GET(request: NextRequest) {
       return true;
     });
 
-    return NextResponse.json(normalizePantherSignals(filteredSignals));
+    // The rank engine's snapshot-so-far design means a signal that fired at,
+    // say, 10:15 legitimately reappears in every cycle's output through session
+    // end, and (until a backend fix) got re-inserted as a new document each
+    // time -- so the same signal can show up 10-15x. Collapse to one per
+    // name+side+time regardless of source, since a genuine repeat would have
+    // identical values anyway.
+    const seen = new Set<string>();
+    const dedupedSignals = filteredSignals.filter((s: any) => {
+      const key = `${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return NextResponse.json(normalizePantherSignals(dedupedSignals));
   } catch (error) {
     console.error("Panther API Error:", error);
     return NextResponse.json(
