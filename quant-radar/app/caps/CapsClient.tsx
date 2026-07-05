@@ -8,7 +8,7 @@ export default function CapsClient({ signals }: { signals: any[] }) {
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
-  const [tierFilter, setTierFilter] = useState<"ALL" | "LARGE" | "MID" | "SMALL">("ALL");
+  const [tierFilter, setTierFilter] = useState<"ALL" | "LARGE" | "MID" | "SMALL" | "OOS">("ALL");
 
   const filtered = useMemo(() => {
     let f = signals;
@@ -102,7 +102,7 @@ export default function CapsClient({ signals }: { signals: any[] }) {
         })}
 
         <div className="flex rounded-lg overflow-hidden ml-2" style={{ border: '1px solid var(--color-border)' }}>
-          {(["ALL", "LARGE", "MID", "SMALL"] as const).map((t) => {
+          {(["ALL", "LARGE", "MID", "SMALL", "OOS"] as const).map((t) => {
             const active = tierFilter === t;
             return (
               <button
@@ -113,7 +113,7 @@ export default function CapsClient({ signals }: { signals: any[] }) {
                 style={{
                   background: active ? "rgba(168,85,247,0.15)" : "transparent",
                   color: active ? "var(--color-purple)" : "var(--color-muted)",
-                  borderRight: t !== "SMALL" ? "1px solid var(--color-border)" : "none",
+                  borderRight: t !== "OOS" ? "1px solid var(--color-border)" : "none",
                 }}
               >
                 {t}
