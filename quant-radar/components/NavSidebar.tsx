@@ -55,7 +55,7 @@ const CaracalIcon = (props: any) => (
 );
 
 const NAV_ITEMS: any[] = [
-  { href: "/caracal", icon: CaracalIcon, label: "Caracal", sub: "Coil & Strike", color: "#f59e0b", rgb: "245,158,11" },
+  { href: "/caracal", icon: CaracalIcon, label: "Caracal", sub: "Precision Strike", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/caps", icon: ElephantIcon, label: "Elephant Scan", sub: "Mass Scanner", color: "#8b5cf6", rgb: "139,92,246" },
   { href: "/panther-signals", icon: PantherIcon, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
 ];
