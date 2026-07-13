@@ -74,7 +74,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     ["cap", "TIER"],
     ["surge", "RVOL"],
     ["entry", "ENTRY"],
-    ["roughtgt_pct", "TARGET%"],
+    ["roughtgt_pct", "TGT%"],
     ["st_aligned", "TREND"],
     ["detail", "DETAIL"],
   ];
@@ -161,7 +161,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       <div className="flex-1 overflow-auto custom-scrollbar">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_58px_54px_1.3fr] min-w-[980px]"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_74px_60px_1.2fr] min-w-[1040px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -182,7 +182,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                     setAscending(false);
                   }
                 }}
-                className={`font-mono text-[9px] tracking-[0.14em] ${isRightAligned ? "text-right" : "text-left"}`}
+                className={`whitespace-nowrap font-mono text-[9px] tracking-[0.14em] ${isRightAligned ? "text-right" : "text-left"}`}
                 style={{ color: active ? "#f59e0b" : "var(--color-muted)" }}
               >
                 {label}
@@ -210,7 +210,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
           return (
             <div
               key={rowId}
-              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_58px_54px_1.3fr] min-w-[980px] hover:bg-[#ffffff04] transition-colors"
+              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_74px_60px_1.2fr] min-w-[1040px] hover:bg-[#ffffff04] transition-colors"
               style={{
                 borderColor: "var(--color-border)",
                 background: isTierQ ? "rgba(251,191,36,0.05)" : "transparent",

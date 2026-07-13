@@ -138,7 +138,7 @@ export default function NavSidebar() {
 
   return (
     <aside
-      className="w-full border-b px-3 py-3 lg:sticky lg:top-0 lg:h-screen lg:w-56 lg:border-b-0 lg:border-r lg:px-3 lg:py-4"
+      className="w-full border-b px-3 py-3 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:flex-col lg:border-b-0 lg:border-r lg:px-3 lg:py-4"
       style={{
         background: "linear-gradient(180deg, #11131a 0%, #080a0f 100%)",
         borderRight: "1px solid rgba(0, 240, 255, 0.1)",
@@ -243,7 +243,7 @@ export default function NavSidebar() {
         })}
       </nav>
 
-      <div className="mt-3 hidden lg:block">
+      <div className="mt-auto hidden lg:block">
         <div className="rounded-lg border px-3 py-2" style={{ borderColor: "var(--color-border)" }}>
           <div className="font-mono text-[8px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
             NSE F&O
