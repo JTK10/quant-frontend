@@ -17,13 +17,14 @@ const TIER_STYLE: Record<string, string> = {
   "CAR-Qc": "#38bdf8",
   "CAR-Q":  "#fbbf24",
   "CAR-Qx": "#6b7280",
+  "OOS":    "#10b981",
 };
 
 export default function CaracalClient({ signals }: { signals: any[] }) {
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
-  const [tierFilter, setTierFilter] = useState<"ALL" | "A" | "Q" | "B">("ALL");
+  const [tierFilter, setTierFilter] = useState<"ALL" | "A" | "Q" | "B" | "OOS">("ALL");
 
   const filtered = useMemo(() => {
     let f = signals;
@@ -33,6 +34,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
         const cap = String(s.cap || "");
         if (tierFilter === "A") return cap === "CAR-A";
         if (tierFilter === "B") return cap === "CAR-B";
+        if (tierFilter === "OOS") return cap === "OOS";
         return cap === "CAR-Q" || cap === "CAR-Qc" || cap === "CAR-Qx";
       });
     }
@@ -52,6 +54,10 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
             return (a.surge || 0) - (b.surge || 0);
           case "entry":
             return (a.entry || 0) - (b.entry || 0);
+          case "roughtgt_pct":
+            return (a.roughtgt_pct || 0) - (b.roughtgt_pct || 0);
+          case "st_aligned":
+            return Number(!!a.st_aligned) - Number(!!b.st_aligned);
           default:
             return 0;
         }
@@ -68,6 +74,8 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     ["cap", "TIER"],
     ["surge", "RVOL"],
     ["entry", "ENTRY"],
+    ["roughtgt_pct", "TARGET%"],
+    ["st_aligned", "TREND"],
     ["detail", "DETAIL"],
   ];
 
@@ -123,9 +131,9 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
 
         <span className="mx-1 h-4 w-px" style={{ background: "var(--color-border)" }} />
 
-        {(["ALL", "A", "Q", "B"] as const).map((v) => {
+        {(["ALL", "A", "Q", "B", "OOS"] as const).map((v) => {
           const active = tierFilter === v;
-          const c = v === "A" ? "#f59e0b" : v === "Q" ? "#fbbf24" : v === "B" ? "#8b5cf6" : "#9ca3af";
+          const c = v === "A" ? "#f59e0b" : v === "Q" ? "#fbbf24" : v === "B" ? "#8b5cf6" : v === "OOS" ? "#10b981" : "#9ca3af";
           return (
             <button
               key={`tier-${v}`}
@@ -139,7 +147,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                 boxShadow: active ? `0 0 10px ${c}20` : "none",
               }}
             >
-              {v === "ALL" ? "ALL TIERS" : `TIER ${v}`}
+              {v === "ALL" ? "ALL TIERS" : v === "OOS" ? "OOS" : `TIER ${v}`}
             </button>
           );
         })}
@@ -153,7 +161,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       <div className="flex-1 overflow-auto custom-scrollbar">
         {/* Header */}
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_1.4fr] min-w-[860px]"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_58px_54px_1.3fr] min-w-[980px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -162,7 +170,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
         >
           {headers.map(([key, label], idx) => {
             const active = sortKey === key;
-            const isRightAligned = idx === 5 || idx === 6;
+            const isRightAligned = idx === 5 || idx === 6 || idx === 7;
             return (
               <button
                 key={key}
@@ -195,11 +203,14 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
           const rvol = typeof signal.surge === "number" && signal.surge > 0 ? signal.surge.toFixed(1) : "--";
           const entry = typeof signal.entry === "number" && signal.entry > 0 ? signal.entry.toFixed(2) : "--";
           const isTierQ = signal.event === "TIER_Q";
+          const roughtgt = typeof signal.roughtgt_pct === "number" ? `${signal.roughtgt_pct.toFixed(1)}%` : "--";
+          const stKnown = signal.st_trend === "UP" || signal.st_trend === "DN";
+          const stColor = !stKnown ? "#6b7280" : signal.st_aligned ? "var(--color-bull)" : "#9ca3af";
 
           return (
             <div
               key={rowId}
-              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_1.4fr] min-w-[860px] hover:bg-[#ffffff04] transition-colors"
+              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_58px_54px_1.3fr] min-w-[980px] hover:bg-[#ffffff04] transition-colors"
               style={{
                 borderColor: "var(--color-border)",
                 background: isTierQ ? "rgba(251,191,36,0.05)" : "transparent",
@@ -265,6 +276,19 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
               {/* ENTRY */}
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
                 {entry}
+              </span>
+
+              {/* TARGET% (rough measured-move target, informational) */}
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text2)" }}>
+                {roughtgt}
+              </span>
+
+              {/* TREND (Supertrend alignment, informational) */}
+              <span
+                className="inline-flex justify-center rounded-md border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                style={{ color: stColor, borderColor: `${stColor}40`, background: `${stColor}12` }}
+              >
+                {stKnown ? `${signal.st_trend}${signal.st_aligned ? "*" : ""}` : "--"}
               </span>
 
               {/* DETAIL */}

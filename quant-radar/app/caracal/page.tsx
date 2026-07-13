@@ -16,8 +16,24 @@ async function getCaracalSignals(dateStr: string) {
       throw new Error(`Caracal Signal route failed: ${response.status}`);
     }
     const data = await response.json();
-    // CARACAL rows are tagged source:"caracal" (cap = CAR-A / CAR-B / CAR-Qc / CAR-Q / CAR-Qx)
-    return data.filter((s: any) => s.source === "caracal" || (typeof s.cap === "string" && s.cap.startsWith("CAR-")));
+    // CARACAL rows: source:"caracal" (cap = CAR-A / CAR-B / CAR-Qc / CAR-Q / CAR-Qx).
+    // OOS shakeout rows: source:"shakeout", cap:"OOS" -- merged onto this page (2026-07,
+    // panther-live/elephant retired) since OOS has no separate page anymore. OOS's publish
+    // doc has no event/detail fields (single-shot signal, no CONFIRM/SCRATCH lifecycle), so
+    // synthesize both here to fit CaracalClient's row shape without touching the VM payload.
+    const merged = data.filter((s: any) =>
+      s.source === "caracal" || (typeof s.cap === "string" && s.cap.startsWith("CAR-")) ||
+      s.source === "shakeout" || s.cap === "OOS"
+    );
+    return merged.map((s: any) => {
+      if (s.cap !== "OOS") return s;
+      const parts = [
+        typeof s.surge === "number" ? `rvol=${s.surge.toFixed(2)}` : null,
+        typeof s.mass_cr === "number" ? `score=${s.mass_cr.toFixed(2)}` : null,
+        typeof s.delta === "number" ? `delta=${s.delta.toFixed(2)}` : null,
+      ].filter(Boolean);
+      return { ...s, event: s.event || "ENTRY", detail: s.detail || `SHAKEOUT LONG ${parts.join(" ")}` };
+    });
   } catch (err) {
     console.error("Error fetching Caracal Signals:", err);
     return [];
