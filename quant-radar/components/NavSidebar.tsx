@@ -56,6 +56,7 @@ const CaracalIcon = (props: any) => (
 
 const NAV_ITEMS: any[] = [
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", sub: "Precision Strike", color: "#f59e0b", rgb: "245,158,11" },
+  { href: "/rfac", icon: Zap, label: "RFAC", sub: "RVOL Velocity", color: "#10b981", rgb: "16,185,129" },
 ];
 
 // -- Hidden 2026-07: Panther-live and Elephant (panther-rank) engines retired on
