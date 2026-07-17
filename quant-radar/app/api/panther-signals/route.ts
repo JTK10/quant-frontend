@@ -38,9 +38,21 @@ async function getToken() {
   return cache.token;
 }
 
+// Short-lived in-memory response cache. The ORDS GET returns all 7 days of
+// rows (~9k docs, ~6s) on every call; signals only change every 5 min, so a
+// 30s TTL makes page-to-page navigation instant on a warm instance without
+// meaningfully staling the data.
+const RESP_TTL_MS = 30_000;
+const respCache = new Map<string, { exp: number; body: any }>();
+
 export async function GET(request: NextRequest) {
   const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
   const targetDate = dateStr.replace(/-/g, "");
+
+  const hit = respCache.get(targetDate);
+  if (hit && Date.now() < hit.exp) {
+    return NextResponse.json(hit.body);
+  }
 
   try {
     const t = await getToken();
@@ -111,7 +123,9 @@ export async function GET(request: NextRequest) {
       return true;
     });
 
-    return NextResponse.json(normalizePantherSignals(dedupedSignals));
+    const body = normalizePantherSignals(dedupedSignals);
+    respCache.set(targetDate, { exp: Date.now() + RESP_TTL_MS, body });
+    return NextResponse.json(body);
   } catch (error) {
     console.error("Panther API Error:", error);
     return NextResponse.json(
