@@ -18,13 +18,14 @@ const TIER_STYLE: Record<string, string> = {
   "CAR-Q":  "#fbbf24",
   "CAR-Qx": "#6b7280",
   "OOS":    "#10b981",
+  "CAR-V2": "#ec4899",
 };
 
 export default function CaracalClient({ signals }: { signals: any[] }) {
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(false);
   const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
-  const [tierFilter, setTierFilter] = useState<"ALL" | "A" | "Q" | "B" | "OOS">("ALL");
+  const [tierFilter, setTierFilter] = useState<"ALL" | "A" | "Q" | "B" | "OOS" | "V2">("ALL");
 
   const filtered = useMemo(() => {
     let f = signals;
@@ -35,6 +36,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
         if (tierFilter === "A") return cap === "CAR-A";
         if (tierFilter === "B") return cap === "CAR-B";
         if (tierFilter === "OOS") return cap === "OOS";
+        if (tierFilter === "V2") return cap === "CAR-V2";
         return cap === "CAR-Q" || cap === "CAR-Qc" || cap === "CAR-Qx";
       });
     }
@@ -131,9 +133,9 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
 
         <span className="mx-1 h-4 w-px" style={{ background: "var(--color-border)" }} />
 
-        {(["ALL", "A", "Q", "B", "OOS"] as const).map((v) => {
+        {(["ALL", "A", "Q", "B", "OOS", "V2"] as const).map((v) => {
           const active = tierFilter === v;
-          const c = v === "A" ? "#f59e0b" : v === "Q" ? "#fbbf24" : v === "B" ? "#8b5cf6" : v === "OOS" ? "#10b981" : "#9ca3af";
+          const c = v === "A" ? "#f59e0b" : v === "Q" ? "#fbbf24" : v === "B" ? "#8b5cf6" : v === "OOS" ? "#10b981" : v === "V2" ? "#ec4899" : "#9ca3af";
           return (
             <button
               key={`tier-${v}`}
@@ -147,7 +149,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                 boxShadow: active ? `0 0 10px ${c}20` : "none",
               }}
             >
-              {v === "ALL" ? "ALL TIERS" : v === "OOS" ? "OOS" : `TIER ${v}`}
+              {v === "ALL" ? "ALL TIERS" : v === "OOS" ? "OOS" : v === "V2" ? "CARACAL V2" : `TIER ${v}`}
             </button>
           );
         })}
