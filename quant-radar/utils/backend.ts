@@ -816,6 +816,16 @@ export type PantherRow = {
   imb?: any;
   event?: any;
   detail?: any;
+  // SERVAL causal fields
+  flag_time?: any;
+  dpoc?: any;
+  vol_ahead?: any;
+  rt5?: any;
+  atr?: any;
+  dyn_ratio?: any;
+  tier?: any;
+  target?: any;
+  stop?: any;
 };
 
 export function normalizePantherSignals(payload: unknown): PantherRow[] {
@@ -849,6 +859,16 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       // Preserve CARACAL event-stream fields
       event: row.event,
       detail: row.detail,
+      // Preserve SERVAL causal fields
+      flag_time: row.flag_time,
+      dpoc: row.dpoc,
+      vol_ahead: row.vol_ahead,
+      rt5: row.rt5,
+      atr: row.atr,
+      dyn_ratio: row.dyn_ratio,
+      tier: row.tier,
+      target: row.target,
+      stop: row.stop,
     };
   });
 }
