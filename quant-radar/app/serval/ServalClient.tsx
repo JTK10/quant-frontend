@@ -122,15 +122,12 @@ export default function ServalClient({ signals }: { signals: any[] }) {
                   {sortKey === key ? (ascending ? " ↑" : " ↓") : ""}
                 </th>
               ))}
-              <th className="border-b border-[#ffffff14] px-2 py-2.5 font-mono text-[10px] tracking-[0.18em] text-[#9ca3af]">
-                CHART
-              </th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-2 py-10 text-center font-mono text-xs text-[#6b7280]">
+                <td colSpan={11} className="px-2 py-10 text-center font-mono text-xs text-[#6b7280]">
                   No SERVAL signals for this date. Funnel entries appear from ~10:00 IST.
                 </td>
               </tr>
@@ -155,8 +152,15 @@ export default function ServalClient({ signals }: { signals: any[] }) {
                       </span>
                     )}
                   </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs font-semibold text-white">
-                    {s.name}
+                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs font-semibold">
+                    <a
+                      href={buildTradingViewUrl(s.name, s.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white transition-colors hover:text-[#ec4899] hover:underline"
+                    >
+                      {s.name}
+                    </a>
                   </td>
                   <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs" style={{ color: sideColor }}>
                     {s.side}
@@ -187,16 +191,6 @@ export default function ServalClient({ signals }: { signals: any[] }) {
                   </td>
                   <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs" style={{ color: "#ef4444" }}>
                     {isTier ? fmt(s.stop) : "—"}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2">
-                    <a
-                      href={buildTradingViewUrl(s.name, s.name)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-mono text-[10px] tracking-[0.14em] text-[#6b7280] hover:text-white"
-                    >
-                      TV ↗
-                    </a>
                   </td>
                 </tr>
               );
