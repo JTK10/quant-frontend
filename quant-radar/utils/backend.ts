@@ -826,6 +826,17 @@ export type PantherRow = {
   tier?: any;
   target?: any;
   stop?: any;
+  // FABLE paper-bot fields
+  kind?: any;
+  signal_id?: any;
+  reason?: any;
+  entry_fill?: any;
+  lot?: any;
+  pnl?: any;
+  u_entry?: any;
+  u_target?: any;
+  u_stop?: any;
+  underlying?: any;
 };
 
 export function normalizePantherSignals(payload: unknown): PantherRow[] {
@@ -869,6 +880,17 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       tier: row.tier,
       target: row.target,
       stop: row.stop,
+      // Preserve FABLE paper-bot fields
+      kind: row.kind,
+      signal_id: row.signal_id,
+      reason: row.reason,
+      entry_fill: row.entry_fill,
+      lot: row.lot,
+      pnl: row.pnl,
+      u_entry: row.u_entry,
+      u_target: row.u_target,
+      u_stop: row.u_stop,
+      underlying: row.underlying,
     };
   });
 }

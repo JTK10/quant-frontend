@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat } from "lucide-react";
+import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat, Bot } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const PantherIcon = (props: any) => (
@@ -58,6 +58,7 @@ const NAV_ITEMS: any[] = [
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", sub: "Precision Strike", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/rfac", icon: Zap, label: "RFAC", sub: "RVOL Velocity", color: "#10b981", rgb: "16,185,129" },
   { href: "/serval", icon: Cat, label: "Serval", sub: "Dynamic Breakout", color: "#ec4899", rgb: "236,72,153" },
+  { href: "/fable", icon: Bot, label: "Fable", sub: "Paper Options Bot", color: "#22d3ee", rgb: "34,211,238" },
 ];
 
 // -- Hidden 2026-07: Panther-live and Elephant (panther-rank) engines retired on
