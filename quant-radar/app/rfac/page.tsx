@@ -55,7 +55,7 @@ export default async function RfacPage({ searchParams }: { searchParams: DateSea
       >
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] tracking-[0.2em] text-[#10b981] font-semibold bg-[#10b98115] px-2 py-1 rounded-sm border border-[#10b98130]">
-            FUTURES UNIVERSE
+            NSE UNIVERSE
           </span>
           <span className="font-mono text-sm font-bold tracking-[0.18em] text-[#10b981]">
             ~215 CONTRACTS

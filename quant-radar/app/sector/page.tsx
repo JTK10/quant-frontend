@@ -31,7 +31,7 @@ export default async function SectorPage({ searchParams }: { searchParams: DateS
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
       <PageHeader
         title="SECTOR SCOPE"
-        subtitle="AFAC.2 ROTATION — SAFEST-MOVER LEADERBOARD"
+        subtitle="SECTOR LEADER BOARD"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="#fce205"

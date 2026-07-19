@@ -59,8 +59,8 @@ const NAV_ITEMS: any[] = [
   { href: "/rfac", icon: Zap, label: "RFAC", sub: "RVOL Velocity", color: "#10b981", rgb: "16,185,129" },
   { href: "/serval", icon: Cat, label: "Serval", sub: "Dynamic Breakout", color: "#ec4899", rgb: "236,72,153" },
   { href: "/fable", icon: Bot, label: "Fable", sub: "Paper Options Bot", color: "#22d3ee", rgb: "34,211,238" },
-  { href: "/sector", icon: BarChart2, label: "Sector Scope", sub: "AFAC.2 Rotation", color: "#fce205", rgb: "252,226,5" },
-  { href: "/afac", icon: Target, label: "AFAC", sub: "Safest-Mover Scanner", color: "#fce205", rgb: "252,226,5" },
+  { href: "/sector", icon: BarChart2, label: "Sector Scope", sub: "Sector Leader Board", color: "#fce205", rgb: "252,226,5" },
+  { href: "/afac", icon: Target, label: "AFAC", sub: "SMC Scanner", color: "#fce205", rgb: "252,226,5" },
 ];
 
 // -- Hidden 2026-07: Panther-live and Elephant (panther-rank) engines retired on
