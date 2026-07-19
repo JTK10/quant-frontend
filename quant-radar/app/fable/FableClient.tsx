@@ -173,10 +173,6 @@ export default function FableClient({ events }: { events: any[] }) {
           </tbody>
         </table>
       </div>
-
-      <div className="mt-4 font-mono text-[10px] tracking-[0.14em] text-[#6b7280]">
-        PAPER TRADING — fills at real bid/ask, 1 lot per signal, no live orders. Marks refresh ~60s.
-      </div>
     </div>
   );
 }

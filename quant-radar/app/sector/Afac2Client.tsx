@@ -8,8 +8,13 @@ const ACCENT = "#fce205";
 const GLASS_POS = "rgba(0, 34, 23, 0.45)";
 const GLASS_NEG = "rgba(34, 9, 0, 0.45)";
 const GLASS_NEU = "rgba(20, 20, 24, 0.45)";
-const GREEN = "#26a69a";
-const RED = "#ef5350";
+// exact tokens read off tradefinder.in/sector-scope
+const PILL_GREEN_BG = "rgb(185, 227, 168)";
+const PILL_GREEN_FG = "rgb(70, 100, 46)";
+const PILL_RED_BG = "rgb(251, 168, 168)";
+const PILL_RED_FG = "rgb(179, 21, 12)";
+const HEAD_BG = "rgb(39, 39, 42)";
+const HEAD_FG = "rgb(161, 161, 170)";
 
 function num(v: any): number | null {
   const n = typeof v === "number" ? v : parseFloat(v);
@@ -62,26 +67,19 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
 
   return (
     <div className="min-h-0 flex-1 overflow-auto px-3 pb-10 md:px-6" style={{ background: "#000" }}>
-      <div className="my-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="font-mono text-[10px] tracking-[0.22em] text-[#6b7280]">
-          AS OF {String(latest?.time || "--:--").slice(0, 5)} IST
-        </span>
-        <span className="font-mono text-[10px] tracking-[0.14em] text-[#4b5563]">
-          Bar = signed net sector strength. Card score = AFAC.2 &quot;safest mover&quot; quality (always rises). Entries remain SERVAL&apos;s job.
-        </span>
-      </div>
-
       {cards.length === 0 ? (
         <div className="mt-16 text-center font-mono text-xs text-[#6b7280]">
           No AFAC.2 data for this date — snapshots publish every 5 min from ~09:45 IST.
         </div>
       ) : (
         <>
-          <SectorBarChart
-            sectors={sectors.map((s) => ({ sec: s.sec, net: num(s.net) ?? 0, n: s.n }))}
-            onSelect={setSecFilter}
-            selected={secFilter}
-          />
+          <div className="mt-3">
+            <SectorBarChart
+              sectors={sectors.map((s) => ({ sec: s.sec, net: num(s.net) ?? 0, n: s.n }))}
+              onSelect={setSecFilter}
+              selected={secFilter}
+            />
+          </div>
 
           {secFilter && (
             <div className="mt-3 flex items-center gap-2">
@@ -105,106 +103,126 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
               const glass = upFrac >= 0.6 ? GLASS_POS : upFrac <= 0.4 ? GLASS_NEG : GLASS_NEU;
               const upN = card.long_n;
               const dnN = card.n - card.long_n;
+              const upPct = card.n > 0 ? (upN / card.n) * 100 : 0;
+              const dnPct = 100 - upPct;
               return (
                 <div
                   key={card.sec}
-                  className="max-h-[70vh] overflow-y-auto px-4 pb-3 pt-3"
+                  className="overflow-hidden pb-2"
                   style={{
                     background: glass,
                     backdropFilter: "blur(10px)",
                     WebkitBackdropFilter: "blur(10px)",
                     border: "1px solid rgba(255,255,255,0.18)",
-                    borderRadius: 12,
+                    borderRadius: 10,
                     boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
                   }}
                 >
-                  {/* header: sector + net score + breadth */}
-                  <div className="sticky top-0 z-10 -mx-4 -mt-3 mb-1 px-4 pt-3" style={{ background: glass, backdropFilter: "blur(10px)" }}>
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold tracking-wide text-white" style={{ fontSize: 15 }}>
-                        {String(card.sec).replace(/^NIFTY_/, "").replace(/_/g, " ")}
-                      </span>
-                      <span
-                        className="rounded-full px-2.5 py-0.5 font-mono text-xs font-bold"
-                        style={{ color: "#0A0A0B", background: ACCENT }}
-                      >
-                        {card.net >= 0 ? "+" : ""}
-                        {fmt(card.net, 1)}
-                      </span>
+                  {/* header: sector name (16px, regular weight, matches tradefinder) */}
+                  <div className="flex items-center justify-between px-4 pt-3">
+                    <span style={{ fontSize: 16, fontWeight: 400, color: "#fff" }}>
+                      {String(card.sec).replace(/^NIFTY_/, "").replace(/_/g, " ")}
+                    </span>
+                    <span
+                      className="rounded-full px-2.5 py-0.5 font-mono text-xs font-bold"
+                      style={{ color: "#0A0A0B", background: ACCENT }}
+                    >
+                      {card.net >= 0 ? "+" : ""}
+                      {fmt(card.net, 1)}
+                    </span>
+                  </div>
+
+                  {/* gainer/loser proportion bar, mirrors tradefinder's slider gauge */}
+                  <div className="px-4 pt-2">
+                    <div className="flex h-1.5 w-full overflow-hidden rounded-full" style={{ background: "#ffffff14" }}>
+                      <div style={{ width: `${dnPct}%`, background: PILL_RED_FG }} />
+                      <div style={{ width: `${upPct}%`, background: PILL_GREEN_FG }} />
                     </div>
-                    <div className="mb-2 font-mono text-[10px] text-[#9ca3af]">
-                      <span style={{ color: GREEN }}>
-                        {upN} stocks ({fmt((upN / Math.max(card.n, 1)) * 100, 0)}% Up)
-                      </span>
-                      <span className="mx-2 text-[#4b5563]">|</span>
-                      <span style={{ color: RED }}>
-                        {dnN} stocks ({fmt((dnN / Math.max(card.n, 1)) * 100, 0)}% Down)
-                      </span>
+                    <div className="mt-1 flex justify-between" style={{ fontSize: 10, fontWeight: 400, color: "#fff" }}>
+                      <span>{dnN} stocks ({fmt(dnPct, 2)}% Down)</span>
+                      <span>{upN} stocks ({fmt(upPct, 2)}% Up)</span>
                     </div>
                   </div>
 
                   {/* stock rows -- ALL gated stocks in this sector */}
-                  <table className="w-full border-separate" style={{ borderSpacing: "0 4px" }}>
-                    <thead>
-                      <tr>
-                        {["SYMBOL", "CHG %", "AFAC.2", "Δ15M", "SIGNAL"].map((h, hi) => (
-                          <th
-                            key={h}
-                            className={`font-mono text-[9px] tracking-[0.16em] text-[#6b7280] ${hi === 0 ? "text-left" : "text-right"}`}
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {card.stocks.map((r: any) => {
-                        const long = r.side === "LONG";
-                        const delta = prevScores.has(r.n) ? (num(r.score) ?? 0) - (prevScores.get(r.n) ?? 0) : null;
-                        return (
-                          <tr key={r.n}>
-                            <td>
-                              <a
-                                href={buildTradingViewUrl(r.n, r.n)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-block rounded-full px-3 py-1 font-bold transition-transform hover:scale-[1.03]"
-                                style={{
-                                  fontSize: 13,
-                                  background: long ? "rgb(185,227,168)" : "rgb(251,168,168)",
-                                  color: "#111",
-                                }}
-                              >
-                                {r.n}
-                              </a>
-                            </td>
-                            <td className="text-right font-mono text-xs" style={{ color: (num(r.chg) ?? 0) >= 0 ? GREEN : RED }}>
-                              {(num(r.chg) ?? 0) >= 0 ? "+" : ""}
-                              {fmt(r.chg, 2)}
-                            </td>
-                            <td className="text-right font-mono text-sm font-bold" style={{ color: ACCENT }}>
-                              {fmt(r.score, 0)}
-                            </td>
-                            <td className="text-right font-mono text-[11px]" style={{ color: delta && delta > 0 ? GREEN : "#6b7280" }}>
-                              {delta === null ? "—" : `+${fmt(delta, 0)}`}
-                            </td>
-                            <td className="text-right">
-                              <span
-                                className="rounded px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-[0.1em]"
-                                style={{
-                                  color: long ? GREEN : RED,
-                                  border: `1px solid ${long ? GREEN : RED}55`,
-                                  background: `${long ? GREEN : RED}14`,
-                                }}
-                              >
-                                {long ? "LONG ▲" : "SHORT ▼"}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  <div className="mt-2 max-h-[60vh] overflow-y-auto">
+                    <table className="w-full border-separate border-spacing-0">
+                      <thead>
+                        <tr>
+                          {["Symbol", "", "Pre C", "%", "AFAC.2", "Signal"].map((h) => (
+                            <th
+                              key={h}
+                              className="sticky top-0 z-10 text-left"
+                              style={{
+                                fontSize: 12.5,
+                                fontWeight: 600,
+                                color: HEAD_FG,
+                                background: HEAD_BG,
+                                padding: "8px 10px",
+                              }}
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {card.stocks.map((r: any) => {
+                          const long = r.side === "LONG";
+                          const chg = num(r.chg) ?? 0;
+                          const delta = prevScores.has(r.n) ? (num(r.score) ?? 0) - (prevScores.get(r.n) ?? 0) : null;
+                          return (
+                            <tr key={r.n} className="transition-colors hover:bg-white/5">
+                              <td style={{ padding: "7px 0 7px 10px" }}>
+                                <a
+                                  href={buildTradingViewUrl(r.n, r.n)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}
+                                  className="hover:underline"
+                                >
+                                  {r.n}
+                                </a>
+                              </td>
+                              <td />
+                              <td style={{ fontSize: 15, fontWeight: 700, color: "#fff", padding: "7px 10px" }}>
+                                {fmt(r.px, 2)}
+                              </td>
+                              <td style={{ padding: "7px 10px 7px 24px" }}>
+                                <span
+                                  className="inline-block rounded-full"
+                                  style={{
+                                    fontSize: 15,
+                                    fontWeight: 700,
+                                    padding: "7px 10px",
+                                    borderRadius: 25,
+                                    background: chg >= 0 ? PILL_GREEN_BG : PILL_RED_BG,
+                                    color: chg >= 0 ? PILL_GREEN_FG : PILL_RED_FG,
+                                  }}
+                                >
+                                  {chg >= 0 ? "+" : ""}
+                                  {fmt(chg, 2)}
+                                </span>
+                              </td>
+                              <td style={{ fontSize: 15, fontWeight: 700, color: "#fff", padding: "7px 10px" }}>
+                                {fmt(r.score, 0)}
+                                {delta !== null && delta > 0 && (
+                                  <span className="ml-1 font-mono" style={{ fontSize: 10, fontWeight: 400, color: PILL_GREEN_FG }}>
+                                    +{fmt(delta, 0)}
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ padding: "7px 10px" }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: long ? PILL_GREEN_FG : PILL_RED_FG }}>
+                                  {long ? "▲" : "▼"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               );
             })}
