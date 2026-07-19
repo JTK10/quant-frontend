@@ -13,8 +13,9 @@ async function getAfac2Snaps(dateStr: string) {
     if (!response.ok) throw new Error(`AFAC2 route failed: ${response.status}`);
     const data = await response.json();
     // AFAC.2 snapshots: one doc per 5-min cycle, source:"afac2", with embedded
-    // rows (top-30 stocks by score) and sectors (aggregates). Monotonic
-    // "safest mover" quality score -- descriptive leaderboard, not an entry signal.
+    // rows (every gated stock, multi-sector tagged) and sectors (signed net
+    // score for the bar chart + breadth). Monotonic "safest mover" quality
+    // score -- descriptive leaderboard, not an entry signal.
     return data.filter((s: any) => s.source === "afac2" || s.cap === "AFAC2");
   } catch (err) {
     console.error("Error fetching AFAC2 snapshots:", err);
