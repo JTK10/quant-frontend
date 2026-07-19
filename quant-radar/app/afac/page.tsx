@@ -36,6 +36,7 @@ async function getAfacRows(dateStr: string) {
       const seenThisCycle = new Set<string>();
       top.forEach((r, i) => {
         const prev = prevScoreByStock.get(r.n);
+        const secs: string[] = Array.isArray(r.secs) ? r.secs : typeof r.secs === "string" && r.secs ? [r.secs] : [];
         flat.push({
           time: snap.time,
           imb: i + 1, // rank within this cycle's top-30
@@ -45,6 +46,7 @@ async function getAfacRows(dateStr: string) {
           scoreDelta: prev !== undefined ? (r.score ?? 0) - prev : null,
           chg: r.chg,
           entry: r.px,
+          sector: secs.map((s) => s.replace(/^NIFTY_/, "").replace(/_/g, " ")).join(" / "),
         });
         seenThisCycle.add(r.n);
       });

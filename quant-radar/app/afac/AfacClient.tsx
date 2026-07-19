@@ -29,6 +29,8 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
             return (a.time || "").localeCompare(b.time || "");
           case "name":
             return (a.name || "").localeCompare(b.name || "");
+          case "sector":
+            return (a.sector || "").localeCompare(b.sector || "");
           case "score":
             return (a.score || 0) - (b.score || 0);
           case "scoreDelta":
@@ -49,6 +51,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
     ["imb", "RANK"],
     ["time", "TIME"],
     ["name", "STOCK"],
+    ["sector", "SECTOR"],
     ["score", "AFAC.2"],
     ["scoreDelta", "Δ CYCLE"],
     ["chg", "CHG%"],
@@ -127,7 +130,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar-afac">
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[48px_66px_1fr_74px_78px_72px_80px] min-w-[720px]"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[44px_60px_1fr_150px_64px_70px_64px_74px] min-w-[880px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -136,7 +139,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
         >
           {headers.map(([key, label], idx) => {
             const active = sortKey === key;
-            const isRightAligned = idx >= 3;
+            const isRightAligned = idx >= 4;
             return (
               <button
                 key={key}
@@ -172,7 +175,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
           return (
             <div
               key={rowId}
-              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[48px_66px_1fr_74px_78px_72px_80px] min-w-[720px] hover:bg-[#ffffff04] transition-colors"
+              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[44px_60px_1fr_150px_64px_70px_64px_74px] min-w-[880px] hover:bg-[#ffffff04] transition-colors"
               style={{
                 borderColor: "var(--color-border)",
                 background: isTop3 ? `${ACCENT}0d` : "transparent",
@@ -204,6 +207,13 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
                   {signal.name}
                 </a>
               </div>
+              <span
+                className="truncate font-mono text-[10px]"
+                style={{ color: "var(--color-muted)" }}
+                title={signal.sector || ""}
+              >
+                {signal.sector || "—"}
+              </span>
               <span className="text-right font-mono text-[11px] font-bold" style={{ color: ACCENT }}>
                 {score}
               </span>
