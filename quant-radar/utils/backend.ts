@@ -837,6 +837,9 @@ export type PantherRow = {
   u_target?: any;
   u_stop?: any;
   underlying?: any;
+  // AFAC.2 snapshot fields
+  rows?: any;
+  sectors?: any;
 };
 
 export function normalizePantherSignals(payload: unknown): PantherRow[] {
@@ -891,6 +894,9 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       u_target: row.u_target,
       u_stop: row.u_stop,
       underlying: row.underlying,
+      // Preserve AFAC.2 snapshot fields
+      rows: row.rows,
+      sectors: row.sectors,
     };
   });
 }
