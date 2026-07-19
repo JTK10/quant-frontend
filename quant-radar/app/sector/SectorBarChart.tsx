@@ -24,14 +24,20 @@ export default function SectorBarChart({
   const W = 1180, H = 360, PAD_L = 40, PAD_R = 16, PAD_T = 16, PAD_B = 90;
   const plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
   const maxAbs = Math.max(6, ...data.map((d) => Math.abs(d.net)));
-  const yMax = Math.ceil(maxAbs / 2) * 2;
+  // pick a "nice" tick step (1/2/5 x10^n) so we get ~6-8 gridlines regardless of scale
+  const rawStep = maxAbs / 3.5;
+  const mag = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1e-9))));
+  const norm = rawStep / mag;
+  const niceNorm = norm >= 5 ? 10 : norm >= 2 ? 5 : norm >= 1 ? 2 : 1;
+  const step = Math.max(1, Math.round(niceNorm * mag));
+  const yMax = Math.ceil(maxAbs / step) * step;
   const yMin = -yMax;
   const yToPx = (v: number) => PAD_T + ((yMax - v) / (yMax - yMin)) * plotH;
   const zeroY = yToPx(0);
   const barW = Math.min(56, (plotW / data.length) * 0.55);
   const gap = plotW / data.length;
   const ticks = [];
-  for (let v = yMin; v <= yMax; v += 2) ticks.push(v);
+  for (let v = yMin; v <= yMax; v += step) ticks.push(Math.round(v * 100) / 100);
 
   return (
     <div className="w-full overflow-x-auto rounded-xl border border-[#ffffff14] bg-[#050506] p-3">
