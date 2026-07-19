@@ -61,7 +61,13 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
   const cards = useMemo(() => {
     const bySec = new Map<string, any[]>();
     for (const r of rows) {
-      const tags: string[] = Array.isArray(r.secs) && r.secs.length ? r.secs : ["OTHER"];
+      const tags: string[] = Array.isArray(r.secs)
+        ? r.secs.length
+          ? r.secs
+          : ["OTHER"]
+        : typeof r.secs === "string" && r.secs
+        ? [r.secs]
+        : ["OTHER"];
       for (const s of tags) {
         if (!bySec.has(s)) bySec.set(s, []);
         bySec.get(s)!.push(r);
