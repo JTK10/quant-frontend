@@ -34,7 +34,7 @@ export default function SectorBarChart({
   const yMin = -yMax;
   const yToPx = (v: number) => PAD_T + ((yMax - v) / (yMax - yMin)) * plotH;
   const zeroY = yToPx(0);
-  const barW = Math.min(56, (plotW / data.length) * 0.55);
+  const barW = Math.min(28, (plotW / data.length) * 0.32);
   const gap = plotW / data.length;
   const ticks = [];
   for (let v = yMin; v <= yMax; v += step) ticks.push(Math.round(v * 100) / 100);

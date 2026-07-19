@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 import SectorBarChart from "./SectorBarChart";
 
@@ -43,7 +43,19 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
     return m;
   }, [ordered]);
 
-  const [secFilter, setSecFilter] = useState<string | null>(null);
+  // "selected" is only ever used to briefly highlight the clicked bar/card and
+  // to scroll to it -- it never hides other sectors, every card always shows.
+  const [selected, setSelected] = useState<string | null>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSelect = useCallback((sec: string | null) => {
+    if (!sec) return;
+    setSelected(sec);
+    cardRefs.current.get(sec)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setSelected(null), 1600);
+  }, []);
 
   // group leaderboard rows into EVERY sector they belong to (multi-membership)
   const cards = useMemo(() => {
@@ -63,8 +75,6 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
       }));
   }, [rows, sectors]);
 
-  const shownCards = secFilter ? cards.filter((c) => c.sec === secFilter) : cards;
-
   return (
     <div className="min-h-0 flex-1 overflow-auto px-3 pb-10 md:px-6" style={{ background: "#000" }}>
       {cards.length === 0 ? (
@@ -76,46 +86,40 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
           <div className="mt-3">
             <SectorBarChart
               sectors={sectors.map((s) => ({ sec: s.sec, net: num(s.net) ?? 0, n: s.n }))}
-              onSelect={setSecFilter}
-              selected={secFilter}
+              onSelect={handleSelect}
+              selected={selected}
             />
           </div>
 
-          {secFilter && (
-            <div className="mt-3 flex items-center gap-2">
-              <span className="font-mono text-[11px] tracking-[0.18em] text-white">
-                {secFilter.replace(/^NIFTY_/, "").replace(/_/g, " ")}
-              </span>
-              <button
-                type="button"
-                onClick={() => setSecFilter(null)}
-                className="rounded border border-[#ffffff20] px-2 py-0.5 font-mono text-[9px] text-[#9ca3af] hover:text-white"
-              >
-                CLEAR
-              </button>
-            </div>
-          )}
-
-          {/* glass sector cards, 2-col like tradefinder detail view */}
+          {/* glass sector cards, 2-col like tradefinder detail view -- ALWAYS all shown;
+              clicking a bar above scrolls to + briefly highlights its card. */}
           <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {shownCards.map((card) => {
+            {cards.map((card) => {
               const upFrac = card.n > 0 ? card.long_n / card.n : 0.5;
               const glass = upFrac >= 0.6 ? GLASS_POS : upFrac <= 0.4 ? GLASS_NEG : GLASS_NEU;
               const upN = card.long_n;
               const dnN = card.n - card.long_n;
               const upPct = card.n > 0 ? (upN / card.n) * 100 : 0;
               const dnPct = 100 - upPct;
+              const isHighlighted = selected === card.sec;
               return (
                 <div
                   key={card.sec}
-                  className="overflow-hidden pb-2"
+                  ref={(el) => {
+                    if (el) cardRefs.current.set(card.sec, el);
+                    else cardRefs.current.delete(card.sec);
+                  }}
+                  className="overflow-hidden pb-2 transition-shadow duration-500"
                   style={{
                     background: glass,
                     backdropFilter: "blur(10px)",
                     WebkitBackdropFilter: "blur(10px)",
-                    border: "1px solid rgba(255,255,255,0.18)",
+                    border: isHighlighted ? `1px solid ${ACCENT}99` : "1px solid rgba(255,255,255,0.18)",
                     borderRadius: 10,
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.35)",
+                    boxShadow: isHighlighted
+                      ? `0 0 0 3px ${ACCENT}33, 0 4px 24px rgba(0,0,0,0.35)`
+                      : "0 4px 24px rgba(0,0,0,0.35)",
+                    scrollMarginTop: 16,
                   }}
                 >
                   {/* header: sector name (16px, regular weight, matches tradefinder) */}
