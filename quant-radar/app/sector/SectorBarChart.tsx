@@ -67,9 +67,18 @@ export default function SectorBarChart({
           return (
             <g
               key={d.sec}
+              role="button"
+              tabIndex={0}
+              aria-label={`Scroll to ${d.sec.replace(/^NIFTY_/, "").replace(/_/g, " ")}`}
               onMouseEnter={() => setHover(d.sec)}
               onMouseLeave={() => setHover(null)}
-              onClick={() => onSelect(selected === d.sec ? null : d.sec)}
+              onClick={() => onSelect(d.sec)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(d.sec);
+                }
+              }}
               style={{ cursor: "pointer" }}
             >
               <rect
