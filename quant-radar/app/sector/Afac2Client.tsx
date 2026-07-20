@@ -99,7 +99,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
 
           {/* glass sector cards, 2-col like tradefinder detail view -- ALWAYS all shown;
               clicking a bar above scrolls to + briefly highlights its card. */}
-          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {cards.map((card) => {
               const upFrac = card.n > 0 ? card.long_n / card.n : 0.5;
               const glass = upFrac >= 0.6 ? GLASS_POS : upFrac <= 0.4 ? GLASS_NEG : GLASS_NEU;
