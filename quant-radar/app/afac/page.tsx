@@ -47,6 +47,9 @@ async function getAfacRows(dateStr: string) {
           chg: r.chg,
           entry: r.px,
           sector: secs.map((s) => s.replace(/^NIFTY_/, "").replace(/_/g, " ")).join(" / "),
+          dpoc: r.dpoc,
+          ahead: r.vol_ahead,
+          dyn: r.dyn_ratio,
         });
         seenThisCycle.add(r.n);
       });

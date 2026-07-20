@@ -35,6 +35,12 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
             return (a.score || 0) - (b.score || 0);
           case "scoreDelta":
             return (a.scoreDelta || 0) - (b.scoreDelta || 0);
+          case "dyn":
+            return (a.dyn || 0) - (b.dyn || 0);
+          case "dpoc":
+            return (a.dpoc || 0) - (b.dpoc || 0);
+          case "ahead":
+            return (a.ahead || 0) - (b.ahead || 0);
           case "chg":
             return (a.chg || 0) - (b.chg || 0);
           case "entry":
@@ -54,6 +60,9 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
     ["sector", "SECTOR"],
     ["score", "AFAC.2"],
     ["scoreDelta", "Δ CYCLE"],
+    ["dyn", "DYN"],
+    ["dpoc", "DPOC%"],
+    ["ahead", "AHEAD"],
     ["chg", "CHG%"],
     ["entry", "PRICE"],
   ];
@@ -130,7 +139,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar-afac">
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[44px_60px_1fr_150px_64px_70px_64px_74px] min-w-[880px]"
+          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[44px_60px_1fr_130px_56px_60px_48px_58px_58px_56px_66px] min-w-[1010px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -168,6 +177,9 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
           const long = signal.side === "LONG";
           const score = typeof signal.score === "number" ? signal.score.toFixed(0) : "--";
           const delta = typeof signal.scoreDelta === "number" ? signal.scoreDelta : null;
+          const dyn = typeof signal.dyn === "number" ? signal.dyn.toFixed(2) : "--";
+          const dpoc = typeof signal.dpoc === "number" ? signal.dpoc.toFixed(2) : "--";
+          const ahead = typeof signal.ahead === "number" ? signal.ahead.toFixed(3) : "--";
           const chg = typeof signal.chg === "number" ? signal.chg.toFixed(2) : "--";
           const price = typeof signal.entry === "number" && signal.entry > 0 ? signal.entry.toFixed(2) : "--";
           const isTop3 = rank <= 3;
@@ -175,7 +187,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
           return (
             <div
               key={rowId}
-              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[44px_60px_1fr_150px_64px_70px_64px_74px] min-w-[880px] hover:bg-[#ffffff04] transition-colors"
+              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[44px_60px_1fr_130px_56px_60px_48px_58px_58px_56px_66px] min-w-[1010px] hover:bg-[#ffffff04] transition-colors"
               style={{
                 borderColor: "var(--color-border)",
                 background: isTop3 ? `${ACCENT}0d` : "transparent",
@@ -222,6 +234,18 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
                 style={{ color: delta === null ? "var(--color-muted2)" : delta > 0 ? "var(--color-bull)" : "var(--color-muted2)" }}
               >
                 {delta === null ? "—" : delta > 0 ? `+${delta.toFixed(0)}` : delta.toFixed(0)}
+              </span>
+              <span
+                className="text-right font-mono text-[11px]"
+                style={{ color: (signal.dyn ?? 0) >= 1.5 ? ACCENT : "var(--color-muted2)" }}
+              >
+                {dyn}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
+                {dpoc}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {ahead}
               </span>
               <span
                 className="text-right font-mono text-[11px]"
