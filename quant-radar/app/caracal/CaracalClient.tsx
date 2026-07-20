@@ -53,6 +53,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
   ];
 
   const nTier = signals.filter((s) => s.tier === true || s.cap === "CAR-V2-T").length;
+  const nOos = signals.filter((s) => s.cap === "OOS").length;
   const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px] gap-3 min-w-[820px]";
 
   return (
@@ -79,9 +80,15 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
             {nTier} TIER SIGNALS TODAY
           </span>
         </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: "#10b981", boxShadow: "0 0 8px #10b98180" }} />
+          <span className="font-mono text-[11px] font-medium" style={{ color: "#10b981" }}>
+            {nOos} OOS SHAKEOUT
+          </span>
+        </div>
         <div className="ml-auto flex items-center gap-2 px-3 py-1 bg-[#ffffff05] rounded-md border border-[#ffffff10]">
           <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}cc` }} />
-          <span className="font-mono text-[11px] text-gray-400">{signals.length} FUNNEL ENTRIES</span>
+          <span className="font-mono text-[11px] text-gray-400">{signals.length - nOos} FUNNEL ENTRIES</span>
         </div>
       </div>
 
@@ -208,6 +215,14 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                     style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
                   >
                     TIER
+                  </span>
+                )}
+                {s.cap === "OOS" && (
+                  <span
+                    className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                    style={{ color: "#10b981", background: "#10b9811a", border: "1px solid #10b98144" }}
+                  >
+                    OOS
                   </span>
                 )}
               </div>

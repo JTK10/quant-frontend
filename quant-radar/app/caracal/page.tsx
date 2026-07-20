@@ -22,7 +22,12 @@ async function getCaracalSignals(dateStr: string) {
     // (source:"caracal", cap CAR-A/CAR-B/CAR-Qc/CAR-Q/CAR-Qx) is retired --
     // this page now shows every CARACAL v2 funnel entry, same as /serval,
     // with cap:"CAR-V2-T" rows highlighted as tier signals.
-    return (data as any[]).filter((s) => s.source === "caracal2");
+    // OOS shakeout rows (source:"shakeout", cap:"OOS") stay merged onto this
+    // page (no separate page since panther-live/elephant retired). Their doc
+    // has no dpoc/vol_ahead/rt5 -- the grid renders those cells as em-dashes.
+    return (data as any[]).filter(
+      (s) => s.source === "caracal2" || s.source === "shakeout" || s.cap === "OOS"
+    );
   } catch (err) {
     console.error("Error fetching Caracal Signals:", err);
     return [];
