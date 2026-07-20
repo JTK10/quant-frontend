@@ -43,7 +43,7 @@ export default function ServalClient({ signals }: { signals: any[] }) {
   }, [signals, sideFilter, tierOnly, sortKey, ascending]);
 
   const headers: Array<[string, string]> = [
-    ["time", "ENTRY TIME"],
+    ["time", "TIME"],
     ["name", "STOCK"],
     ["side", "SIDE"],
     ["entry", "ENTRY"],
@@ -57,12 +57,42 @@ export default function ServalClient({ signals }: { signals: any[] }) {
   ];
 
   const nTier = signals.filter((s) => s.tier === true || s.cap === "SERVAL-T").length;
+  const GRID = "grid-cols-[44px_60px_minmax(130px,1.2fr)_60px_78px_60px_62px_62px_60px_58px_72px_72px] gap-3 min-w-[980px]";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {/* info bar, same language as RFAC/AFAC */}
       <div
-        className="flex flex-wrap items-center gap-2 border-b border-[#ffffff10] px-3 py-3 md:px-6"
+        className="flex flex-wrap items-center gap-4 border-b border-[#ffffff10] px-3 py-3 md:px-6 shrink-0"
         style={{ background: `linear-gradient(180deg, ${ACCENT}0d, transparent), #0A0A0B` }}
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className="font-mono text-[10px] tracking-[0.2em] font-semibold px-2 py-1 rounded-sm border"
+            style={{ color: ACCENT, background: `${ACCENT}15`, borderColor: `${ACCENT}30` }}
+          >
+            FUTURES UNIVERSE
+          </span>
+          <span className="font-mono text-sm font-bold tracking-[0.18em]" style={{ color: ACCENT }}>
+            SPLIT-POOL FUNNEL
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}80` }} />
+          <span className="font-mono text-[11px] font-medium" style={{ color: ACCENT }}>
+            {nTier} TIER SIGNALS TODAY
+          </span>
+        </div>
+        <div className="ml-auto flex items-center gap-2 px-3 py-1 bg-[#ffffff05] rounded-md border border-[#ffffff10]">
+          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}cc` }} />
+          <span className="font-mono text-[11px] text-gray-400">{signals.length} FUNNEL ENTRIES</span>
+        </div>
+      </div>
+
+      {/* filter bar */}
+      <div
+        className="flex flex-wrap items-center gap-2 border-b border-[#ffffff10] px-3 py-2.5 md:px-6 shrink-0"
+        style={{ background: "var(--color-surface)" }}
       >
         {(["ALL", "LONG", "SHORT"] as const).map((v) => {
           const active = sideFilter === v;
@@ -98,106 +128,134 @@ export default function ServalClient({ signals }: { signals: any[] }) {
           TIER ONLY ({nTier})
         </button>
         <span className="ml-auto font-mono text-[10px] tracking-[0.22em] text-[#6b7280]">
-          {rows.length} SIGNALS
+          {rows.length} ROWS
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto px-3 pb-8 md:px-6">
-        <table className="w-full border-separate border-spacing-0 text-left">
-          <thead className="sticky top-0 z-10">
-            <tr style={{ background: "#0A0A0B" }}>
-              {headers.map(([key, label]) => (
-                <th
-                  key={key}
-                  onClick={() => {
-                    if (sortKey === key) setAscending(!ascending);
-                    else {
-                      setSortKey(key);
-                      setAscending(key === "time" || key === "name");
-                    }
-                  }}
-                  className="cursor-pointer select-none border-b border-[#ffffff14] px-2 py-2.5 font-mono text-[10px] tracking-[0.18em] text-[#9ca3af] hover:text-white"
+      {/* grid table, same pattern as RFAC/AFAC */}
+      <div className="min-h-0 flex-1 overflow-auto custom-scrollbar-serval">
+        <div
+          className={`sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 ${GRID}`}
+          style={{
+            borderColor: "var(--color-border)",
+            background: "rgba(10, 14, 23, 0.95)",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          <span className="font-mono text-[9px] tracking-[0.14em] text-left" style={{ color: "var(--color-muted)" }}>
+            #
+          </span>
+          {headers.map(([key, label], idx) => {
+            const active = sortKey === key;
+            const isRightAligned = idx >= 2;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  if (sortKey === key) setAscending((c) => !c);
+                  else {
+                    setSortKey(key);
+                    setAscending(key === "time" || key === "name");
+                  }
+                }}
+                className={`font-mono text-[9px] tracking-[0.14em] ${isRightAligned ? "text-right" : "text-left"}`}
+                style={{ color: active ? ACCENT : "var(--color-muted)" }}
+              >
+                {label}
+                {active ? (ascending ? " ↑" : " ↓") : ""}
+              </button>
+            );
+          })}
+        </div>
+
+        {rows.length === 0 && (
+          <div className="px-3 py-10 text-center font-mono text-xs" style={{ color: "var(--color-muted)" }}>
+            No SERVAL signals for this date. Funnel entries appear from ~10:00 IST.
+          </div>
+        )}
+
+        {rows.map((s, i) => {
+          const isTier = s.tier === true || s.cap === "SERVAL-T";
+          const long = s.side === "LONG";
+          const sideColor = long ? "var(--color-bull, #10b981)" : "#ef4444";
+          const rank = i + 1;
+          const isTop3 = rank <= 3;
+          return (
+            <div
+              key={`${s.name}-${s.side}-${s.time}-${i}`}
+              className={`grid items-center border-b px-3 py-3 md:px-4 ${GRID} hover:bg-[#ffffff04] transition-colors`}
+              style={{
+                borderColor: "var(--color-border)",
+                background: isTier ? `${ACCENT}0e` : isTop3 ? `${ACCENT}06` : "transparent",
+              }}
+            >
+              <span className="font-mono text-[11px] font-bold" style={{ color: isTop3 ? ACCENT : "var(--color-muted2)" }}>
+                #{rank}
+              </span>
+              <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {String(s.time || "").slice(0, 5)}
+              </span>
+              <div className="min-w-0 flex items-center gap-1.5">
+                <a
+                  href={buildTradingViewUrl(s.name, s.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 truncate text-[13px] font-semibold hover:underline"
+                  style={{ color: "var(--color-text2)" }}
                 >
-                  {label}
-                  {sortKey === key ? (ascending ? " ↑" : " ↓") : ""}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={11} className="px-2 py-10 text-center font-mono text-xs text-[#6b7280]">
-                  No SERVAL signals for this date. Funnel entries appear from ~10:00 IST.
-                </td>
-              </tr>
-            )}
-            {rows.map((s, i) => {
-              const isTier = s.tier === true || s.cap === "SERVAL-T";
-              const sideColor = s.side === "LONG" ? "#10b981" : "#ef4444";
-              return (
-                <tr
-                  key={`${s.name}-${s.side}-${s.time}-${i}`}
-                  className="transition-colors hover:bg-[#ffffff06]"
-                  style={isTier ? { background: `${ACCENT}0e` } : undefined}
-                >
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs text-[#d1d5db]">
-                    {String(s.time || "").slice(0, 5)}
-                    {isTier && (
-                      <span
-                        className="ml-2 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.14em]"
-                        style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
-                      >
-                        TIER
-                      </span>
-                    )}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs font-semibold">
-                    <a
-                      href={buildTradingViewUrl(s.name, s.name)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-white transition-colors hover:text-[#ec4899] hover:underline"
-                    >
-                      {s.name}
-                    </a>
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs" style={{ color: sideColor }}>
-                    {s.side}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs text-[#d1d5db]">
-                    {fmt(s.entry)}
-                  </td>
-                  <td
-                    className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs"
-                    style={{ color: (num(s.dyn_ratio) ?? 0) >= 1.5 ? ACCENT : "#9ca3af" }}
+                  {s.name}
+                </a>
+                {isTier && (
+                  <span
+                    className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                    style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
                   >
-                    {fmt(s.dyn_ratio)}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs text-[#d1d5db]">
-                    {fmt(s.dpoc, 1)}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs text-[#d1d5db]">
-                    {fmt(s.vol_ahead, 3)}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs text-[#d1d5db]">
-                    {fmt(s.rt5, 1)}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs text-[#d1d5db]">
-                    {fmt(s.atr)}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs" style={{ color: "#10b981" }}>
-                    {isTier ? fmt(s.target) : "—"}
-                  </td>
-                  <td className="border-b border-[#ffffff0a] px-2 py-2 font-mono text-xs" style={{ color: "#ef4444" }}>
-                    {isTier ? fmt(s.stop) : "—"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    TIER
+                  </span>
+                )}
+              </div>
+              <span className="text-right font-mono text-[11px] font-semibold" style={{ color: sideColor }}>
+                {long ? "▲" : "▼"}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
+                {fmt(s.entry)}
+              </span>
+              <span
+                className="text-right font-mono text-[11px] font-semibold"
+                style={{ color: (num(s.dyn_ratio) ?? 0) >= 1.5 ? ACCENT : "var(--color-muted2)" }}
+              >
+                {fmt(s.dyn_ratio)}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
+                {fmt(s.dpoc, 1)}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {fmt(s.vol_ahead, 3)}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {fmt(s.rt5, 1)}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {fmt(s.atr)}
+              </span>
+              <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "#10b981" }}>
+                {isTier ? fmt(s.target) : "—"}
+              </span>
+              <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "#ef4444" }}>
+                {isTier ? fmt(s.stop) : "—"}
+              </span>
+            </div>
+          );
+        })}
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .custom-scrollbar-serval::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar-serval::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar-serval::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        .custom-scrollbar-serval::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+      ` }} />
     </div>
   );
 }

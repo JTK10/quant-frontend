@@ -139,7 +139,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar-afac">
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[44px_60px_1fr_130px_56px_60px_48px_58px_58px_56px_66px] min-w-[1010px]"
+          className="sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 grid-cols-[40px_56px_minmax(150px,1.3fr)_84px_58px_62px_50px_60px_60px_58px_68px] gap-3 min-w-[1080px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -187,7 +187,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
           return (
             <div
               key={rowId}
-              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[44px_60px_1fr_130px_56px_60px_48px_58px_58px_56px_66px] min-w-[1010px] hover:bg-[#ffffff04] transition-colors"
+              className="grid items-center border-b px-3 py-3 md:px-4 grid-cols-[40px_56px_minmax(150px,1.3fr)_84px_58px_62px_50px_60px_60px_58px_68px] gap-3 min-w-[1080px] hover:bg-[#ffffff04] transition-colors"
               style={{
                 borderColor: "var(--color-border)",
                 background: isTop3 ? `${ACCENT}0d` : "transparent",
@@ -219,13 +219,24 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
                   {signal.name}
                 </a>
               </div>
-              <span
-                className="truncate font-mono text-[10px]"
-                style={{ color: "var(--color-muted)" }}
-                title={signal.sector || ""}
-              >
-                {signal.sector || "—"}
-              </span>
+              {(() => {
+                const tags = (signal.sector || "").split(" / ").filter(Boolean);
+                return (
+                  <div className="min-w-0 flex items-center gap-1" title={signal.sector || ""}>
+                    <span className="truncate font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>
+                      {tags[0] || "—"}
+                    </span>
+                    {tags.length > 1 && (
+                      <span
+                        className="shrink-0 rounded px-1 font-mono text-[9px]"
+                        style={{ color: ACCENT, background: `${ACCENT}18` }}
+                      >
+                        +{tags.length - 1}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               <span className="text-right font-mono text-[11px] font-bold" style={{ color: ACCENT }}>
                 {score}
               </span>

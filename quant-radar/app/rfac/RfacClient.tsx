@@ -125,7 +125,7 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[48px_66px_1fr_78px_78px_72px_80px] min-w-[720px]"
+          className="sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 grid-cols-[44px_60px_minmax(140px,1.2fr)_82px_82px_76px_84px] gap-3 min-w-[820px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -169,7 +169,7 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
           return (
             <div
               key={rowId}
-              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[48px_66px_1fr_78px_78px_72px_80px] min-w-[720px] hover:bg-[#ffffff04] transition-colors"
+              className="grid items-center border-b px-3 py-3 md:px-4 grid-cols-[44px_60px_minmax(140px,1.2fr)_82px_82px_76px_84px] gap-3 min-w-[820px] hover:bg-[#ffffff04] transition-colors"
               style={{
                 borderColor: "var(--color-border)",
                 background: isTop3 ? "rgba(16,185,129,0.05)" : "transparent",
