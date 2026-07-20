@@ -3,176 +3,147 @@
 import React, { useMemo, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 
-const EVENT_STYLE: Record<string, { color: string; label: string }> = {
-  ENTRY:   { color: "#f59e0b", label: "ENTRY" },
-  CONFIRM: { color: "#10b981", label: "CONFIRM" },
-  TIER_Q:  { color: "#fbbf24", label: "TIER-Q ★" },
-  SCRATCH: { color: "#ef4444", label: "SCRATCH" },
-  DEMOTE:  { color: "#9ca3af", label: "DEMOTE" },
-};
+const ACCENT = "#f59e0b";
 
-const TIER_STYLE: Record<string, string> = {
-  "CAR-A":  "#f59e0b",
-  "CAR-B":  "#8b5cf6",
-  "CAR-Qc": "#38bdf8",
-  "CAR-Q":  "#fbbf24",
-  "CAR-Qx": "#6b7280",
-  "OOS":    "#10b981",
-  "CAR-V2": "#ec4899",
-};
+function num(v: any): number | null {
+  const n = typeof v === "number" ? v : parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+}
+function fmt(v: any, d = 2): string {
+  const n = num(v);
+  return n === null ? "—" : n.toFixed(d);
+}
 
 export default function CaracalClient({ signals }: { signals: any[] }) {
+  const [sideFilter, setSideFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
+  const [tierOnly, setTierOnly] = useState(false);
   const [sortKey, setSortKey] = useState<string>("time");
-  const [ascending, setAscending] = useState(false);
-  const [filter, setFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
-  const [tierFilter, setTierFilter] = useState<"ALL" | "A" | "Q" | "B" | "OOS" | "V2">("ALL");
+  const [ascending, setAscending] = useState(true);
 
-  const filtered = useMemo(() => {
+  const rows = useMemo(() => {
     let f = signals;
-    if (filter !== "ALL") f = f.filter((s) => s.side === filter);
-    if (tierFilter !== "ALL") {
-      f = f.filter((s) => {
-        const cap = String(s.cap || "");
-        if (tierFilter === "A") return cap === "CAR-A";
-        if (tierFilter === "B") return cap === "CAR-B";
-        if (tierFilter === "OOS") return cap === "OOS";
-        if (tierFilter === "V2") return cap === "CAR-V2";
-        return cap === "CAR-Q" || cap === "CAR-Qc" || cap === "CAR-Qx";
-      });
-    }
-
+    if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
+    if (tierOnly) f = f.filter((s) => s.tier === true || s.cap === "CAR-V2-T");
     return [...f].sort((a, b) => {
       const cmp = (() => {
         switch (sortKey) {
           case "time":
-            return (a.time || "").localeCompare(b.time || "");
+            return String(a.time || "").localeCompare(String(b.time || ""));
           case "name":
-            return (a.name || "").localeCompare(b.name || "");
-          case "event":
-            return (a.event || "").localeCompare(b.event || "");
-          case "cap":
-            return String(a.cap || "").localeCompare(String(b.cap || ""));
-          case "surge":
-            return (a.surge || 0) - (b.surge || 0);
-          case "entry":
-            return (a.entry || 0) - (b.entry || 0);
-          case "roughtgt_pct":
-            return (a.roughtgt_pct || 0) - (b.roughtgt_pct || 0);
-          case "st_aligned":
-            return Number(!!a.st_aligned) - Number(!!b.st_aligned);
-          default:
-            return 0;
+            return String(a.name || "").localeCompare(String(b.name || ""));
+          default: {
+            const av = num(a[sortKey]) ?? -Infinity;
+            const bv = num(b[sortKey]) ?? -Infinity;
+            return av - bv;
+          }
         }
       })();
       return ascending ? cmp : -cmp;
     });
-  }, [signals, filter, tierFilter, sortKey, ascending]);
+  }, [signals, sideFilter, tierOnly, sortKey, ascending]);
 
-  const headers: [string, string][] = [
+  const headers: Array<[string, string]> = [
     ["time", "TIME"],
-    ["event", "EVENT"],
+    ["name", "STOCK"],
     ["side", "SIDE"],
-    ["name", "NAME"],
-    ["cap", "TIER"],
-    ["surge", "RVOL"],
     ["entry", "ENTRY"],
-    ["roughtgt_pct", "TGT%"],
-    ["st_aligned", "TREND"],
-    ["detail", "DETAIL"],
+    ["dpoc", "DPOC%"],
+    ["vol_ahead", "AHEAD"],
+    ["rt5", "RT5%"],
   ];
 
-  if (!signals.length) {
-    return (
-      <div className="flex h-full items-center justify-center p-8">
-        <div
-          className="rounded-2xl border px-8 py-10 text-center"
-          style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
-        >
-          <div className="font-mono text-[10px] tracking-[0.24em]" style={{ color: "var(--color-muted)" }}>
-            CARACAL
-          </div>
-          <p className="mt-3 text-lg font-semibold" style={{ color: "var(--color-text2)" }}>
-            No signals for the selected date.
-          </p>
-          <p className="mt-1 font-mono text-[11px]" style={{ color: "var(--color-muted)" }}>
-            The caracal waits for the prey to commit.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const nTier = signals.filter((s) => s.tier === true || s.cap === "CAR-V2-T").length;
+  const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px] gap-3 min-w-[820px]";
 
   return (
-    <div className="flex h-full flex-col">
-      {/* ── Filter bar ─────────────────────────────────────────────── */}
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      {/* info bar, same language as SERVAL/RFAC/AFAC */}
       <div
-        className="flex flex-wrap items-center gap-2 border-b px-3 py-2.5 md:px-4"
-        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+        className="flex flex-wrap items-center gap-4 border-b border-[#ffffff10] px-3 py-3 md:px-6 shrink-0"
+        style={{ background: `linear-gradient(180deg, ${ACCENT}0d, transparent), #0A0A0B` }}
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className="font-mono text-[10px] tracking-[0.2em] font-semibold px-2 py-1 rounded-sm border"
+            style={{ color: ACCENT, background: `${ACCENT}15`, borderColor: `${ACCENT}30` }}
+          >
+            NSE FNO UNIVERSE
+          </span>
+          <span className="font-mono text-sm font-bold tracking-[0.18em]" style={{ color: ACCENT }}>
+            SPLIT-POOL FUNNEL
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}80` }} />
+          <span className="font-mono text-[11px] font-medium" style={{ color: ACCENT }}>
+            {nTier} TIER SIGNALS TODAY
+          </span>
+        </div>
+        <div className="ml-auto flex items-center gap-2 px-3 py-1 bg-[#ffffff05] rounded-md border border-[#ffffff10]">
+          <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}cc` }} />
+          <span className="font-mono text-[11px] text-gray-400">{signals.length} FUNNEL ENTRIES</span>
+        </div>
+      </div>
+
+      {/* filter bar */}
+      <div
+        className="flex flex-wrap items-center gap-2 border-b border-[#ffffff10] px-3 py-2.5 md:px-6 shrink-0"
+        style={{ background: "var(--color-surface)" }}
       >
         {(["ALL", "LONG", "SHORT"] as const).map((v) => {
-          const active = filter === v;
-          const c =
-            v === "LONG" ? "var(--color-bull)" : v === "SHORT" ? "var(--color-bear)" : "#f59e0b";
+          const active = sideFilter === v;
+          const c = v === "LONG" ? "var(--color-bull, #10b981)" : v === "SHORT" ? "#ef4444" : "#9ca3af";
           return (
             <button
               key={v}
               type="button"
-              onClick={() => setFilter(v)}
+              onClick={() => setSideFilter(v)}
               className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
               style={{
-                color: active ? c : "var(--color-muted)",
-                borderColor: active ? `${c}55` : "var(--color-border)",
+                color: active ? c : "var(--color-muted, #6b7280)",
+                borderColor: active ? `${c}55` : "#ffffff18",
                 background: active ? `${c}12` : "transparent",
-                boxShadow: active ? `0 0 10px ${c}20` : "none",
               }}
             >
               {v}
             </button>
           );
         })}
-
-        <span className="mx-1 h-4 w-px" style={{ background: "var(--color-border)" }} />
-
-        {(["ALL", "A", "Q", "B", "OOS", "V2"] as const).map((v) => {
-          const active = tierFilter === v;
-          const c = v === "A" ? "#f59e0b" : v === "Q" ? "#fbbf24" : v === "B" ? "#8b5cf6" : v === "OOS" ? "#10b981" : v === "V2" ? "#ec4899" : "#9ca3af";
-          return (
-            <button
-              key={`tier-${v}`}
-              type="button"
-              onClick={() => setTierFilter(v)}
-              className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
-              style={{
-                color: active ? c : "var(--color-muted)",
-                borderColor: active ? `${c}55` : "var(--color-border)",
-                background: active ? `${c}12` : "transparent",
-                boxShadow: active ? `0 0 10px ${c}20` : "none",
-              }}
-            >
-              {v === "ALL" ? "ALL TIERS" : v === "OOS" ? "OOS" : v === "V2" ? "CARACAL V2" : `TIER ${v}`}
-            </button>
-          );
-        })}
-
-        <span className="ml-auto font-mono text-[10px] tracking-[0.22em]" style={{ color: "var(--color-muted)" }}>
-          {filtered.length} EVENTS
+        <span className="mx-1 h-4 w-px bg-[#ffffff18]" />
+        <button
+          type="button"
+          onClick={() => setTierOnly(!tierOnly)}
+          className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
+          style={{
+            color: tierOnly ? ACCENT : "var(--color-muted, #6b7280)",
+            borderColor: tierOnly ? `${ACCENT}66` : "#ffffff18",
+            background: tierOnly ? `${ACCENT}14` : "transparent",
+            boxShadow: tierOnly ? `0 0 10px ${ACCENT}25` : "none",
+          }}
+        >
+          TIER ONLY ({nTier})
+        </button>
+        <span className="ml-auto font-mono text-[10px] tracking-[0.22em] text-[#6b7280]">
+          {rows.length} ROWS
         </span>
       </div>
 
-      {/* ── Table ───────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto custom-scrollbar">
-        {/* Header */}
+      {/* grid table, same pattern as SERVAL/RFAC/AFAC */}
+      <div className="min-h-0 flex-1 overflow-auto custom-scrollbar-caracal">
         <div
-          className="sticky top-0 z-10 grid items-center gap-2 border-b px-3 py-2 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_74px_60px_1.2fr] min-w-[1040px]"
+          className={`sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 ${GRID}`}
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
             backdropFilter: "blur(6px)",
           }}
         >
+          <span className="font-mono text-[9px] tracking-[0.14em] text-left" style={{ color: "var(--color-muted)" }}>
+            #
+          </span>
           {headers.map(([key, label], idx) => {
             const active = sortKey === key;
-            const isRightAligned = idx === 5 || idx === 6 || idx === 7;
+            const isRightAligned = idx >= 2;
             return (
               <button
                 key={key}
@@ -181,11 +152,11 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                   if (sortKey === key) setAscending((c) => !c);
                   else {
                     setSortKey(key);
-                    setAscending(false);
+                    setAscending(key === "time" || key === "name");
                   }
                 }}
-                className={`whitespace-nowrap font-mono text-[9px] tracking-[0.14em] ${isRightAligned ? "text-right" : "text-left"}`}
-                style={{ color: active ? "#f59e0b" : "var(--color-muted)" }}
+                className={`font-mono text-[9px] tracking-[0.14em] ${isRightAligned ? "text-right" : "text-left"}`}
+                style={{ color: active ? ACCENT : "var(--color-muted)" }}
               >
                 {label}
                 {active ? (ascending ? " ↑" : " ↓") : ""}
@@ -194,108 +165,66 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
           })}
         </div>
 
-        {/* Rows */}
-        {filtered.map((signal, idx) => {
-          const rowId = `${signal.name}-${signal.time}-${signal.event}-${idx}`;
-          const isLong = signal.side === "LONG";
-          const time = (signal.time || "--:--").substring(0, 5);
-          const ev = EVENT_STYLE[signal.event] || { color: "#9ca3af", label: signal.event || "--" };
-          const cap = String(signal.cap || "--");
-          const tierColor = TIER_STYLE[cap] || "#9ca3af";
-          const rvol = typeof signal.surge === "number" && signal.surge > 0 ? signal.surge.toFixed(1) : "--";
-          const entry = typeof signal.entry === "number" && signal.entry > 0 ? signal.entry.toFixed(2) : "--";
-          const isTierQ = signal.event === "TIER_Q";
-          const roughtgt = typeof signal.roughtgt_pct === "number" ? `${signal.roughtgt_pct.toFixed(1)}%` : "--";
-          const stKnown = signal.st_trend === "UP" || signal.st_trend === "DN";
-          const stColor = !stKnown ? "#6b7280" : signal.st_aligned ? "var(--color-bull)" : "#9ca3af";
+        {rows.length === 0 && (
+          <div className="px-3 py-10 text-center font-mono text-xs" style={{ color: "var(--color-muted)" }}>
+            No CARACAL v2 signals for this date. Funnel entries appear from ~09:40 IST.
+          </div>
+        )}
 
+        {rows.map((s, i) => {
+          const isTier = s.tier === true || s.cap === "CAR-V2-T";
+          const long = s.side === "LONG";
+          const sideColor = long ? "var(--color-bull, #10b981)" : "#ef4444";
+          const rank = i + 1;
+          const isTop3 = rank <= 3;
           return (
             <div
-              key={rowId}
-              className="grid items-center gap-2 border-b px-3 py-2.5 md:px-4 grid-cols-[52px_78px_50px_1fr_66px_52px_62px_74px_60px_1.2fr] min-w-[1040px] hover:bg-[#ffffff04] transition-colors"
+              key={`${s.name}-${s.side}-${s.time}-${i}`}
+              className={`grid items-center border-b px-3 py-3 md:px-4 ${GRID} hover:bg-[#ffffff04] transition-colors`}
               style={{
                 borderColor: "var(--color-border)",
-                background: isTierQ ? "rgba(251,191,36,0.05)" : "transparent",
+                background: isTier ? `${ACCENT}0e` : isTop3 ? `${ACCENT}06` : "transparent",
               }}
             >
-              {/* TIME */}
+              <span className="font-mono text-[11px] font-bold" style={{ color: isTop3 ? ACCENT : "var(--color-muted2)" }}>
+                #{rank}
+              </span>
               <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
-                {time}
+                {String(s.time || "").slice(0, 5)}
               </span>
-
-              {/* EVENT */}
-              <span
-                className="inline-flex justify-center rounded-md border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
-                style={{
-                  color: ev.color,
-                  borderColor: `${ev.color}40`,
-                  background: `${ev.color}12`,
-                }}
-              >
-                {ev.label}
+              <div className="min-w-0 flex items-center gap-1.5">
+                <a
+                  href={buildTradingViewUrl(s.name, s.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 truncate text-[13px] font-semibold hover:underline"
+                  style={{ color: "var(--color-text2)" }}
+                >
+                  {s.name}
+                </a>
+                {isTier && (
+                  <span
+                    className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                    style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
+                  >
+                    TIER
+                  </span>
+                )}
+              </div>
+              <span className="text-right font-mono text-[11px] font-semibold" style={{ color: sideColor }}>
+                {long ? "▲" : "▼"}
               </span>
-
-              {/* SIDE */}
-              <span
-                className="inline-flex justify-center rounded-md border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.14em]"
-                style={{
-                  color: isLong ? "var(--color-bull)" : "var(--color-bear)",
-                  borderColor: isLong ? "var(--color-bullborder)" : "var(--color-bearborder)",
-                  background: isLong ? "var(--color-bullbg)" : "var(--color-bearbg)",
-                }}
-              >
-                {isLong ? "BUY" : "SELL"}
-              </span>
-
-              {/* NAME */}
-              <a
-                href={buildTradingViewUrl(signal.name, signal.name)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="min-w-0 truncate text-[13px] font-semibold hover:underline"
-                style={{ color: "var(--color-text2)" }}
-              >
-                {signal.name}
-              </a>
-
-              {/* TIER */}
-              <span
-                className="inline-flex justify-center rounded-md border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.12em]"
-                style={{
-                  color: tierColor,
-                  borderColor: `${tierColor}40`,
-                  background: `${tierColor}10`,
-                }}
-              >
-                {cap.replace("CAR-", "")}
-              </span>
-
-              {/* RVOL */}
-              <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
-                {rvol}
-              </span>
-
-              {/* ENTRY */}
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
-                {entry}
+                {fmt(s.entry)}
               </span>
-
-              {/* TARGET% (rough measured-move target, informational) */}
-              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text2)" }}>
-                {roughtgt}
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
+                {fmt(s.dpoc, 1)}
               </span>
-
-              {/* TREND (Supertrend alignment, informational) */}
-              <span
-                className="inline-flex justify-center rounded-md border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
-                style={{ color: stColor, borderColor: `${stColor}40`, background: `${stColor}12` }}
-              >
-                {stKnown ? `${signal.st_trend}${signal.st_aligned ? "*" : ""}` : "--"}
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {fmt(s.vol_ahead, 3)}
               </span>
-
-              {/* DETAIL */}
-              <span className="min-w-0 truncate font-mono text-[10px]" style={{ color: "var(--color-muted)" }} title={signal.detail || ""}>
-                {signal.detail || "--"}
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {fmt(s.rt5, 1)}
               </span>
             </div>
           );
@@ -303,20 +232,10 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
+        .custom-scrollbar-caracal::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar-caracal::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar-caracal::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        .custom-scrollbar-caracal::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       ` }} />
     </div>
   );
