@@ -71,7 +71,7 @@ export default function ServalClient({ signals }: { signals: any[] }) {
             className="font-mono text-[10px] tracking-[0.2em] font-semibold px-2 py-1 rounded-sm border"
             style={{ color: ACCENT, background: `${ACCENT}15`, borderColor: `${ACCENT}30` }}
           >
-            FUTURES UNIVERSE
+            NSE FNO UNIVERSE
           </span>
           <span className="font-mono text-sm font-bold tracking-[0.18em]" style={{ color: ACCENT }}>
             SPLIT-POOL FUNNEL

@@ -58,8 +58,8 @@ const NAV_ITEMS: any[] = [
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/afac", icon: Target, label: "AFAC", color: "#fce205", rgb: "252,226,5" },
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
-  { href: "/rfac", icon: Zap, label: "RFAC", color: "#10b981", rgb: "16,185,129" },
   { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
+  { href: "/rfac", icon: Zap, label: "RFAC", color: "#10b981", rgb: "16,185,129" },
   { href: "/fable", icon: Bot, label: "Fable", color: "#22d3ee", rgb: "34,211,238" },
 ];
 

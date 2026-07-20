@@ -93,7 +93,7 @@ export default async function AfacPage({ searchParams }: { searchParams: DateSea
       >
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] tracking-[0.2em] text-[#fce205] font-semibold bg-[#fce20515] px-2 py-1 rounded-sm border border-[#fce20530]">
-            NSE UNIVERSE
+            NSE FNO UNIVERSE
           </span>
           <span className="font-mono text-sm font-bold tracking-[0.18em] text-[#fce205]">
             TOP {TOP_N} BY AFAC.2

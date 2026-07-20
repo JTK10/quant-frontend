@@ -99,7 +99,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
 
           {/* glass sector cards, 2-col like tradefinder detail view -- ALWAYS all shown;
               clicking a bar above scrolls to + briefly highlights its card. */}
-          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {cards.map((card) => {
               const upFrac = card.n > 0 ? card.long_n / card.n : 0.5;
               const glass = upFrac >= 0.6 ? GLASS_POS : upFrac <= 0.4 ? GLASS_NEG : GLASS_NEU;
@@ -129,12 +129,12 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                   }}
                 >
                   {/* header: sector name (16px, regular weight, matches tradefinder) */}
-                  <div className="flex items-center justify-between px-4 pt-3">
-                    <span style={{ fontSize: 16, fontWeight: 400, color: "#fff" }}>
+                  <div className="flex items-center justify-between px-4 pt-2.5">
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "#fff" }}>
                       {String(card.sec).replace(/^NIFTY_/, "").replace(/_/g, " ")}
                     </span>
                     <span
-                      className="rounded-full px-2.5 py-0.5 font-mono text-xs font-bold"
+                      className="rounded-full px-2 py-0.5 font-mono text-[10px] font-bold"
                       style={{ color: "#0A0A0B", background: ACCENT }}
                     >
                       {card.net >= 0 ? "+" : ""}
@@ -143,12 +143,12 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                   </div>
 
                   {/* gainer/loser proportion bar, mirrors tradefinder's slider gauge */}
-                  <div className="px-4 pt-2">
+                  <div className="px-4 pt-1.5">
                     <div className="flex h-1.5 w-full overflow-hidden rounded-full" style={{ background: "#ffffff14" }}>
                       <div style={{ width: `${dnPct}%`, background: PILL_RED_FG }} />
                       <div style={{ width: `${upPct}%`, background: PILL_GREEN_FG }} />
                     </div>
-                    <div className="mt-1 flex justify-between" style={{ fontSize: 10, fontWeight: 400, color: "#fff" }}>
+                    <div className="mt-1 flex justify-between" style={{ fontSize: 9, fontWeight: 400, color: "#d1d5db" }}>
                       <span>{dnN} stocks ({fmt(dnPct, 2)}% Down)</span>
                       <span>{upN} stocks ({fmt(upPct, 2)}% Up)</span>
                     </div>
@@ -164,11 +164,11 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                               key={h}
                               className="sticky top-0 z-10 text-left"
                               style={{
-                                fontSize: 12.5,
+                                fontSize: 9.5,
                                 fontWeight: 600,
                                 color: HEAD_FG,
                                 background: HEAD_BG,
-                                padding: "8px 10px",
+                                padding: "5px 8px",
                               }}
                             >
                               {h}
@@ -183,29 +183,29 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                           const delta = prevScores.has(r.n) ? (num(r.score) ?? 0) - (prevScores.get(r.n) ?? 0) : null;
                           return (
                             <tr key={r.n} className="transition-colors hover:bg-white/5">
-                              <td style={{ padding: "7px 0 7px 10px" }}>
+                              <td style={{ padding: "5px 0 5px 8px" }}>
                                 <a
                                   href={buildTradingViewUrl(r.n, r.n)}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}
+                                  style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}
                                   className="hover:underline"
                                 >
                                   {r.n}
                                 </a>
                               </td>
                               <td />
-                              <td style={{ fontSize: 15, fontWeight: 700, color: "#fff", padding: "7px 10px" }}>
+                              <td style={{ fontSize: 12, fontWeight: 600, color: "#fff", padding: "5px 8px" }}>
                                 {fmt(r.px, 2)}
                               </td>
-                              <td style={{ padding: "7px 10px 7px 24px" }}>
+                              <td style={{ padding: "5px 8px 5px 16px" }}>
                                 <span
                                   className="inline-block rounded-full"
                                   style={{
-                                    fontSize: 15,
-                                    fontWeight: 700,
-                                    padding: "7px 10px",
-                                    borderRadius: 25,
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    padding: "3px 8px",
+                                    borderRadius: 20,
                                     background: chg >= 0 ? PILL_GREEN_BG : PILL_RED_BG,
                                     color: chg >= 0 ? PILL_GREEN_FG : PILL_RED_FG,
                                   }}
@@ -214,7 +214,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                                   {fmt(chg, 2)}
                                 </span>
                               </td>
-                              <td style={{ fontSize: 15, fontWeight: 700, color: "#fff", padding: "7px 10px" }}>
+                              <td style={{ fontSize: 12, fontWeight: 600, color: "#fff", padding: "5px 8px" }}>
                                 {fmt(r.score, 0)}
                                 {delta !== null && delta > 0 && (
                                   <span className="ml-1 font-mono" style={{ fontSize: 10, fontWeight: 400, color: PILL_GREEN_FG }}>
@@ -222,8 +222,8 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                                   </span>
                                 )}
                               </td>
-                              <td style={{ padding: "7px 10px" }}>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: long ? PILL_GREEN_FG : PILL_RED_FG }}>
+                              <td style={{ padding: "5px 8px" }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: long ? PILL_GREEN_FG : PILL_RED_FG }}>
                                   {long ? "▲" : "▼"}
                                 </span>
                               </td>
