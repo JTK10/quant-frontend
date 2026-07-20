@@ -55,33 +55,33 @@ const CaracalIcon = (props: any) => (
 );
 
 const NAV_ITEMS: any[] = [
-  { href: "/caracal", icon: CaracalIcon, label: "Caracal", sub: "Precision Strike", color: "#f59e0b", rgb: "245,158,11" },
-  { href: "/rfac", icon: Zap, label: "RFAC", sub: "RVOL Velocity", color: "#10b981", rgb: "16,185,129" },
-  { href: "/serval", icon: Cat, label: "Serval", sub: "Dynamic Breakout", color: "#ec4899", rgb: "236,72,153" },
-  { href: "/fable", icon: Bot, label: "Fable", sub: "Paper Options Bot", color: "#22d3ee", rgb: "34,211,238" },
-  { href: "/sector", icon: BarChart2, label: "Sector Scope", sub: "Sector Leader Board", color: "#fce205", rgb: "252,226,5" },
-  { href: "/afac", icon: Target, label: "AFAC", sub: "SMC Scanner", color: "#fce205", rgb: "252,226,5" },
+  { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
+  { href: "/rfac", icon: Zap, label: "RFAC", color: "#10b981", rgb: "16,185,129" },
+  { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
+  { href: "/fable", icon: Bot, label: "Fable", color: "#22d3ee", rgb: "34,211,238" },
+  { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
+  { href: "/afac", icon: Target, label: "AFAC", color: "#fce205", rgb: "252,226,5" },
 ];
 
 // -- Hidden 2026-07: Panther-live and Elephant (panther-rank) engines retired on
 // the VM; OOS shakeout signals now publish into the Caracal page instead. Restore
 // these if either engine is ever brought back --
-// { href: "/caps", icon: ElephantIcon, label: "Elephant Scan", sub: "Mass Scanner", color: "#8b5cf6", rgb: "139,92,246" },
-// { href: "/panther-signals", icon: PantherIcon, label: "Panther Signals", sub: "Live K-Engine", color: "#ff0055", rgb: "255,0,85" },
+// { href: "/caps", icon: ElephantIcon, label: "Elephant Scan", color: "#8b5cf6", rgb: "139,92,246" },
+// { href: "/panther-signals", icon: PantherIcon, label: "Panther Signals", color: "#ff0055", rgb: "255,0,85" },
 
 // -- Hidden 2026-07: AWS Lambda backend retired; restore when rebuilt on Oracle --
-// { href: "/flow-radar", icon: Layers, label: "Flow Radar", sub: "OI Scanner", color: "#bd00ff", rgb: "189,0,255" },
-// { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", sub: "Upstox Buckets", color: "#eab308", rgb: "234,179,8" },
-// { href: "/smart-radar", icon: Activity, label: "Smart Radar", sub: "Final Signals", color: "#00f0ff", rgb: "0,240,255" },
-// { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", sub: "Precision Setup", color: "#ff00e6", rgb: "255,0,230" },
-// { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", sub: "Momentum Movers", color: "#14b8a6", rgb: "20,184,166" },
-// { href: "/sector", icon: BarChart2, label: "Sector Flow", sub: "Market Rotation", color: "#fce205", rgb: "252,226,5" },
+// { href: "/flow-radar", icon: Layers, label: "Flow Radar", color: "#bd00ff", rgb: "189,0,255" },
+// { href: "/flow-smartlist", icon: Target, label: "Flow Smartlist", color: "#eab308", rgb: "234,179,8" },
+// { href: "/smart-radar", icon: Activity, label: "Smart Radar", color: "#00f0ff", rgb: "0,240,255" },
+// { href: "/sniper-signal", icon: Crosshair, label: "Sniper Signal", color: "#ff00e6", rgb: "255,0,230" },
+// { href: "/rvol-pulse", icon: TrendingUp, label: "Intraday Pulse", color: "#14b8a6", rgb: "20,184,166" },
+// { href: "/sector", icon: BarChart2, label: "Sector Flow", color: "#fce205", rgb: "252,226,5" },
   
   // -- Temporarily Hidden Pages --
-  // { href: "/ai", icon: Brain, label: "AI Analysis", sub: "ML Top Picks", color: "#a855f7" },
-  // { href: "/pulse", icon: Zap, label: "Signal Pulse", sub: "Flow Watchlist", color: "#00e89a" },
-  // { href: "/master-list", icon: Target, label: "Master List", sub: "Top Sector Picks", color: "#eab308" },
-  // { href: "/ob-signal", icon: Target, label: "OB Radar", sub: "Order Block Sniper", color: "#eab308" },
+  // { href: "/ai", icon: Brain, label: "AI Analysis", color: "#a855f7" },
+  // { href: "/pulse", icon: Zap, label: "Signal Pulse", color: "#00e89a" },
+  // { href: "/master-list", icon: Target, label: "Master List", color: "#eab308" },
+  // { href: "/ob-signal", icon: Target, label: "OB Radar", color: "#eab308" },
 
 function LiveClock() {
   const [time, setTime] = useState("--:--:--");
@@ -196,7 +196,7 @@ export default function NavSidebar() {
       </div>
 
       <nav className="flex gap-1.5 overflow-x-auto lg:flex-col lg:overflow-visible">
-        {NAV_ITEMS.map(({ href, icon: Icon, customIcon, label, sub, color, rgb }) => {
+        {NAV_ITEMS.map(({ href, icon: Icon, customIcon, label, color, rgb }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
             <Link
@@ -230,15 +230,6 @@ export default function NavSidebar() {
                     textShadow: active ? "0 0 8px rgba(255,255,255,0.5)" : "none"
                   }}>
                     {label}
-                  </div>
-                  <div
-                    className="truncate font-mono text-[8px] tracking-[0.16em] transition-all duration-300"
-                    style={{ 
-                      color: active ? color : "var(--color-muted)",
-                      textShadow: active ? `0 0 8px ${color}` : "none"
-                    }}
-                  >
-                    {sub}
                   </div>
                 </div>
                 {active ? <ChevronRight size={12} className="animate-pulse" style={{ color: "#fff", filter: "drop-shadow(0 0 5px #fff)" }} /> : null}
