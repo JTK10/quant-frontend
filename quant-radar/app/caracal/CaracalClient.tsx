@@ -16,6 +16,7 @@ function fmt(v: any, d = 2): string {
 
 export default function CaracalClient({ signals }: { signals: any[] }) {
   const [sideFilter, setSideFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
+  const [sourceFilter, setSourceFilter] = useState<"ALL" | "CARACAL" | "OOS">("ALL");
   const [tierOnly, setTierOnly] = useState(false);
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(true);
@@ -23,6 +24,8 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
   const rows = useMemo(() => {
     let f = signals;
     if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
+    if (sourceFilter === "CARACAL") f = f.filter((s) => s.cap !== "OOS");
+    if (sourceFilter === "OOS") f = f.filter((s) => s.cap === "OOS");
     if (tierOnly) f = f.filter((s) => s.tier === true || s.cap === "CAR-V2-T");
     return [...f].sort((a, b) => {
       const cmp = (() => {
@@ -40,7 +43,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       })();
       return ascending ? cmp : -cmp;
     });
-  }, [signals, sideFilter, tierOnly, sortKey, ascending]);
+  }, [signals, sideFilter, sourceFilter, tierOnly, sortKey, ascending]);
 
   const headers: Array<[string, string]> = [
     ["time", "TIME"],
@@ -105,6 +108,26 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
               key={v}
               type="button"
               onClick={() => setSideFilter(v)}
+              className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
+              style={{
+                color: active ? c : "var(--color-muted, #6b7280)",
+                borderColor: active ? `${c}55` : "#ffffff18",
+                background: active ? `${c}12` : "transparent",
+              }}
+            >
+              {v}
+            </button>
+          );
+        })}
+        <span className="mx-1 h-4 w-px bg-[#ffffff18]" />
+        {(["ALL", "CARACAL", "OOS"] as const).map((v) => {
+          const active = sourceFilter === v;
+          const c = v === "CARACAL" ? ACCENT : v === "OOS" ? "#10b981" : "#9ca3af";
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setSourceFilter(v)}
               className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
               style={{
                 color: active ? c : "var(--color-muted, #6b7280)",
