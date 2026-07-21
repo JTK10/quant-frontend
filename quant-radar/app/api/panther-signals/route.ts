@@ -114,10 +114,13 @@ export async function GET(request: NextRequest) {
     // end, and (until a backend fix) got re-inserted as a new document each
     // time -- so the same signal can show up 10-15x. Collapse to one per
     // name+side+time regardless of source, since a genuine repeat would have
-    // identical values anyway.
+    // identical values anyway. kind/event is included in the key because FABLE
+    // publishes ENTRY then an MTM heartbeat ~30-60s later for the SAME option,
+    // which can land on the same minute-resolution `time` -- without kind in
+    // the key that collision silently dropped the ENTRY row (2026-07-22 bug).
     const seen = new Set<string>();
     const dedupedSignals = filteredSignals.filter((s: any) => {
-      const key = `${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}`;
+      const key = `${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}|${s.kind ?? s.event ?? ""}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
