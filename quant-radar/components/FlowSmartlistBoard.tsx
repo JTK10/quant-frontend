@@ -137,6 +137,12 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                     const priceChg = row.price_chg_pct ?? row.Price_Chg_Pct ?? row.PriceChgPct ?? 0;
                     const count = row.count || 1;
 
+                  const buildup: string = String(row.buildup || "");
+                  const buildupColor = buildup.includes("LONG BUILDUP") ? "#10b981"
+                    : buildup.includes("SHORT BUILDUP") ? "#ef4444"
+                    : buildup.includes("SHORT COVERING") ? "#22d3ee"
+                    : buildup.includes("LONG UNWINDING") ? "#f59e0b" : "#9ca3af";
+
                   return (
                     <div key={symbol + idx} className="flex items-center justify-between py-1 border-b last:border-0 border-white/5">
                       <div className="flex items-center gap-2 min-w-[80px]">
@@ -154,8 +160,16 @@ export default function FlowSmartlistBoard({ data }: { data: Record<string, Flow
                             {count}
                           </span>
                         )}
+                        {buildup && (
+                          <span
+                            className="text-[8px] font-mono tracking-wide px-1 py-0.5 rounded"
+                            style={{ color: buildupColor, background: `${buildupColor}1a`, border: `1px solid ${buildupColor}44` }}
+                          >
+                            {buildup.split(" ").map((w) => w[0]).join("")}
+                          </span>
+                        )}
                       </div>
-                      
+
                       <div className="flex gap-4 w-[110px] justify-end text-[11px] font-mono">
                         {oiChg !== 0 && (
                           <span className={oiChg > 0 ? "text-green-400 w-[45px] text-right" : "text-red-400 w-[45px] text-right"}>
