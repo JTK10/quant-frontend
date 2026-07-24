@@ -840,6 +840,9 @@ export type PantherRow = {
   // AFAC.2 snapshot fields
   rows?: any;
   sectors?: any;
+  // Smart List snapshot fields
+  category?: any;
+  count?: any;
 };
 
 export function normalizePantherSignals(payload: unknown): PantherRow[] {
@@ -897,6 +900,9 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       // Preserve AFAC.2 snapshot fields
       rows: row.rows,
       sectors: row.sectors,
+      // Preserve Smart List snapshot fields (Upstox smartlist buckets)
+      category: row.category,
+      count: row.count,
     };
   });
 }
