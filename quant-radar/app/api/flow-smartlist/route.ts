@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
 
   try {
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}`);
+    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=smartlist&latestCycle=1`);
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`panther-signals failed: ${response.status}`);
     const data = (await response.json()) as any[];

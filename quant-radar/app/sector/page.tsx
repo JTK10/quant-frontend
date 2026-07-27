@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 async function getAfac2Snaps(dateStr: string) {
   try {
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}`);
+    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2`);
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`AFAC2 route failed: ${response.status}`);
     const data = await response.json();

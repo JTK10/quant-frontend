@@ -49,7 +49,20 @@ export async function GET(request: NextRequest) {
   const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
   const targetDate = dateStr.replace(/-/g, "");
 
-  const hit = respCache.get(targetDate);
+  // Server-side source filter: pages fetch only the rows they render instead of
+  // the whole ~5MB all-source blob. e.g. ?sources=caracal2,shakeout. Absent =
+  // every source (back-compat). latestCycle=1 collapses snapshot sources
+  // (afac2/smartlist publish one full doc per 5-min cycle, but pages show only
+  // the newest) to just the latest time per source+category -- the single
+  // biggest size win for those two.
+  const sourcesParam = request.nextUrl.searchParams.get("sources");
+  const wantSources = sourcesParam
+    ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
+    : null;
+  const latestCycle = request.nextUrl.searchParams.get("latestCycle") === "1";
+  const cacheKey = `${targetDate}|${sourcesParam ?? "*"}|${latestCycle ? "L" : ""}`;
+
+  const hit = respCache.get(cacheKey);
   if (hit && Date.now() < hit.exp) {
     return NextResponse.json(hit.body);
   }
@@ -119,15 +132,38 @@ export async function GET(request: NextRequest) {
     // which can land on the same minute-resolution `time` -- without kind in
     // the key that collision silently dropped the ENTRY row (2026-07-22 bug).
     const seen = new Set<string>();
-    const dedupedSignals = filteredSignals.filter((s: any) => {
+    let dedupedSignals = filteredSignals.filter((s: any) => {
       const key = `${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}|${s.kind ?? s.event ?? ""}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
+    // Server-side source filter (drops the ~5MB all-source blob to just the
+    // rows the requesting page renders).
+    if (wantSources) {
+      dedupedSignals = dedupedSignals.filter((s: any) => wantSources.has(String(s.source)));
+    }
+
+    // Collapse snapshot sources to their latest cycle: for each
+    // source+category, keep only rows at the newest `time`. afac2/smartlist
+    // publish a full doc every 5 min but the page shows only the latest.
+    if (latestCycle) {
+      const latestTimeByKey = new Map<string, string>();
+      for (const s of dedupedSignals) {
+        const k = `${s.source}|${s.category ?? ""}`;
+        const t = String(s.time ?? "");
+        if (!latestTimeByKey.has(k) || t > (latestTimeByKey.get(k) as string)) {
+          latestTimeByKey.set(k, t);
+        }
+      }
+      dedupedSignals = dedupedSignals.filter(
+        (s: any) => String(s.time ?? "") === latestTimeByKey.get(`${s.source}|${s.category ?? ""}`),
+      );
+    }
+
     const body = normalizePantherSignals(dedupedSignals);
-    respCache.set(targetDate, { exp: Date.now() + RESP_TTL_MS, body });
+    respCache.set(cacheKey, { exp: Date.now() + RESP_TTL_MS, body });
     return NextResponse.json(body);
   } catch (error) {
     console.error("Panther API Error:", error);

@@ -10,7 +10,7 @@ const ACCENT = "#f59e0b";
 
 async function getCaracalSignals(dateStr: string) {
   try {
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}`);
+    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=caracal2,shakeout`);
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
       const errText = await response.text();

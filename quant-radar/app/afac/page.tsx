@@ -10,7 +10,7 @@ const TOP_N = 30;
 
 async function getAfacRows(dateStr: string) {
   try {
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}`);
+    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2`);
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
       const errText = await response.text();
