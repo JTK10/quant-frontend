@@ -38,133 +38,117 @@ async function getToken() {
   return cache.token;
 }
 
-// Short-lived in-memory response cache. The ORDS GET returns all 7 days of
-// rows (~9k docs, ~6s) on every call; signals only change every 5 min, so a
-// 30s TTL makes page-to-page navigation instant on a warm instance without
-// meaningfully staling the data.
-const RESP_TTL_MS = 30_000;
-const respCache = new Map<string, { exp: number; body: any }>();
+// Short-lived RAW cache keyed by DATE ONLY. The ORDS GET returns all 7 days of
+// rows (~9k docs, ~6-15s) on every call; signals only change every 5 min. The
+// key insight for perf: this upstream fetch is cached once per date and SHARED
+// across every page's source-filtered request, so the slow fetch happens once
+// per 30s window, not once per page. Filtering happens in-memory on the cached
+// raw array -- cheap.
+const RAW_TTL_MS = 30_000;
+const rawCache = new Map<string, { exp: number; rows: any[] }>();
+const rawInflight = new Map<string, Promise<any[]>>();
 
-export async function GET(request: NextRequest) {
-  const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
-  const targetDate = dateStr.replace(/-/g, "");
+async function getRawByDate(targetDate: string): Promise<any[]> {
+  const hit = rawCache.get(targetDate);
+  if (hit && Date.now() < hit.exp) return hit.rows;
+  // De-dupe concurrent misses so N pages loading at once trigger ONE fetch.
+  const inflight = rawInflight.get(targetDate);
+  if (inflight) return inflight;
 
-  // Server-side source filter: pages fetch only the rows they render instead of
-  // the whole ~5MB all-source blob. e.g. ?sources=caracal2,shakeout. Absent =
-  // every source (back-compat). latestCycle=1 collapses snapshot sources
-  // (afac2/smartlist publish one full doc per 5-min cycle, but pages show only
-  // the newest) to just the latest time per source+category -- the single
-  // biggest size win for those two.
-  const sourcesParam = request.nextUrl.searchParams.get("sources");
-  const wantSources = sourcesParam
-    ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
-    : null;
-  const latestCycle = request.nextUrl.searchParams.get("latestCycle") === "1";
-  const cacheKey = `${targetDate}|${sourcesParam ?? "*"}|${latestCycle ? "L" : ""}`;
-
-  const hit = respCache.get(cacheKey);
-  if (hit && Date.now() < hit.exp) {
-    return NextResponse.json(hit.body);
-  }
-
-  try {
+  const p = (async () => {
     const t = await getToken();
     const signalsUrl = process.env.PANTHER_SIGNALS_URL;
-    
-    if (!signalsUrl) {
-      throw new Error("Missing PANTHER_SIGNALS_URL");
-    }
+    if (!signalsUrl) throw new Error("Missing PANTHER_SIGNALS_URL");
 
     const r: Response = await fetch(signalsUrl, {
       headers: { Authorization: `Bearer ${t}` },
       cache: "no-store",
     });
-    
-    if (!r.ok) {
-      throw new Error(`Failed to fetch Panther signals: ${r.status}`);
-    }
+    if (!r.ok) throw new Error(`Failed to fetch Panther signals: ${r.status}`);
 
     const data: any = await r.json();
     const allItems = data.items || [];
-    
+
     const parsedSignals = allItems.map((it: any) => {
       let doc = {};
       if (it.doc && typeof it.doc === "string") {
         try { doc = JSON.parse(it.doc); } catch (e) {}
       }
-      return {
-        source: "panther",
-        ...doc,
-        ...it, 
-      };
+      return { source: "panther", ...doc, ...it };
     });
 
     const filteredSignals = parsedSignals.filter((s: any) => {
-      // Ensure we only return signals for the selected date.
       if (s.sig_date) return String(s.sig_date) === targetDate;
       if (s.SIG_DATE) return String(s.SIG_DATE) === targetDate;
-      
-      // Since ORDS is returning the .doc JSON which only has `ts` (timestamp),
-      // we must convert `ts` to IST and check if it matches targetDate.
       if (s.ts) {
-        const d = new Date(s.ts * 1000); // ts is in seconds
+        const d = new Date(s.ts * 1000);
         const istDateStr = new Intl.DateTimeFormat("en-CA", {
-          timeZone: "Asia/Kolkata",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit"
-        }).format(d).replace(/-/g, ""); // Returns "YYYYMMDD"
-        
+          timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+        }).format(d).replace(/-/g, "");
         return istDateStr === targetDate;
       }
-
-      // Fallback if no date info is present
       return true;
     });
 
-    // The rank engine's snapshot-so-far design means a signal that fired at,
-    // say, 10:15 legitimately reappears in every cycle's output through session
-    // end, and (until a backend fix) got re-inserted as a new document each
-    // time -- so the same signal can show up 10-15x. Collapse to one per
-    // name+side+time regardless of source, since a genuine repeat would have
-    // identical values anyway. kind/event is included in the key because FABLE
-    // publishes ENTRY then an MTM heartbeat ~30-60s later for the SAME option,
-    // which can land on the same minute-resolution `time` -- without kind in
-    // the key that collision silently dropped the ENTRY row (2026-07-22 bug).
+    // Collapse the rank engine's snapshot-so-far duplicates (same signal
+    // re-emitted every cycle). kind/event in the key so FABLE ENTRY isn't
+    // dropped by its own MTM heartbeat landing on the same minute (2026-07-22).
     const seen = new Set<string>();
-    let dedupedSignals = filteredSignals.filter((s: any) => {
+    const dedupedSignals = filteredSignals.filter((s: any) => {
       const key = `${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}|${s.kind ?? s.event ?? ""}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
-    // Server-side source filter (drops the ~5MB all-source blob to just the
-    // rows the requesting page renders).
+    rawCache.set(targetDate, { exp: Date.now() + RAW_TTL_MS, rows: dedupedSignals });
+    return dedupedSignals;
+  })();
+
+  rawInflight.set(targetDate, p);
+  try {
+    return await p;
+  } finally {
+    rawInflight.delete(targetDate);
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
+  const targetDate = dateStr.replace(/-/g, "");
+
+  // Per-page source filter (?sources=caracal2,shakeout). Absent = all sources.
+  // latestCycle=1 collapses snapshot sources (afac2/smartlist publish a full
+  // doc every 5 min but pages show only the newest) to the latest time per
+  // source+category. Both applied in-memory on the shared raw cache.
+  const sourcesParam = request.nextUrl.searchParams.get("sources");
+  const wantSources = sourcesParam
+    ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
+    : null;
+  const latestCycle = request.nextUrl.searchParams.get("latestCycle") === "1";
+
+  try {
+    let rows = await getRawByDate(targetDate);
+
     if (wantSources) {
-      dedupedSignals = dedupedSignals.filter((s: any) => wantSources.has(String(s.source)));
+      rows = rows.filter((s: any) => wantSources.has(String(s.source)));
     }
 
-    // Collapse snapshot sources to their latest cycle: for each
-    // source+category, keep only rows at the newest `time`. afac2/smartlist
-    // publish a full doc every 5 min but the page shows only the latest.
     if (latestCycle) {
       const latestTimeByKey = new Map<string, string>();
-      for (const s of dedupedSignals) {
+      for (const s of rows) {
         const k = `${s.source}|${s.category ?? ""}`;
         const t = String(s.time ?? "");
         if (!latestTimeByKey.has(k) || t > (latestTimeByKey.get(k) as string)) {
           latestTimeByKey.set(k, t);
         }
       }
-      dedupedSignals = dedupedSignals.filter(
+      rows = rows.filter(
         (s: any) => String(s.time ?? "") === latestTimeByKey.get(`${s.source}|${s.category ?? ""}`),
       );
     }
 
-    const body = normalizePantherSignals(dedupedSignals);
-    respCache.set(cacheKey, { exp: Date.now() + RESP_TTL_MS, body });
-    return NextResponse.json(body);
+    return NextResponse.json(normalizePantherSignals(rows));
   } catch (error) {
     console.error("Panther API Error:", error);
     return NextResponse.json(
