@@ -6,39 +6,78 @@ import { getInternalApiUrl } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
-async function getRfacSignals(dateStr: string) {
+const TOP_N = 40;
+
+async function getV2DynRows(dateStr: string) {
   try {
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=rfac`);
+    const url = await getInternalApiUrl(
+      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=v2dyn`,
+    );
     const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error(`RFAC Signal route failed: ${response.status} - ${errText}`);
-      throw new Error(`RFAC Signal route failed: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`V2DYN route failed: ${response.status}`);
     const data = await response.json();
-    // RFAC rows: source:"rfac", cap:"RFAC" -- published every 5min during market hours by
-    // rfac-scanner.service on the VM. Not wired into CARACAL; standalone RVOL-velocity
-    // scanner across ~215 NSE futures contracts. Each row is one ranked stock within a
-    // 5-min cycle (imb = rank 1-20, surge = growth_pct, mass_cr = rvol_now, delta = rvol_velocity).
-    return data.filter((s: any) => s.source === "rfac" || s.cap === "RFAC");
+
+    // V2DYN snapshots: one doc per cycle from v2dyn_scanner.py on the VM, each
+    // carrying a `rows` array already sorted by dyn_ratio desc.
+    //   dyn_ratio = dpoc / day-median-rt5, on a single CASH basis -- levels,
+    //   rt5 and the 20-session volume profile are all cash-derived, with the
+    //   profile weighted by combined cash+futures participation.
+    // dyn_ratio is UNSIGNED w.r.t. direction: dpoc is already multiplied by
+    // side, so it measures escape from the volume magnet in the stock's OWN
+    // direction. A short escaping down ranks the same as a long escaping up;
+    // negative just means "still behind the POC", not "short".
+    const snaps = (data as any[])
+      .filter((s) => s.source === "v2dyn" || s.cap === "V2DYN")
+      .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")));
+
+    const prevDynByStock = new Map<string, number>();
+    const flat: any[] = [];
+    for (const snap of snaps) {
+      const rows: any[] = Array.isArray(snap.rows) ? snap.rows : [];
+      const top = [...rows]
+        .sort((a, b) => (b.dyn_ratio ?? -Infinity) - (a.dyn_ratio ?? -Infinity))
+        .slice(0, TOP_N);
+      top.forEach((r, i) => {
+        const prev = prevDynByStock.get(r.n);
+        flat.push({
+          time: snap.time,
+          imb: i + 1, // rank within this cycle
+          name: r.n,
+          side: r.side,
+          dyn_ratio: r.dyn_ratio,
+          dynDelta: prev !== undefined ? (r.dyn_ratio ?? 0) - prev : null,
+          dpoc: r.dpoc,
+          rt5: r.rt5,
+          chg: r.chg,
+          entry: r.px,
+        });
+      });
+      // baseline from the FULL row set, so a stock newly entering the top-N
+      // still gets a correct delta
+      for (const r of rows) prevDynByStock.set(r.n, r.dyn_ratio ?? 0);
+    }
+    return flat;
   } catch (err) {
-    console.error("Error fetching RFAC Signals:", err);
+    console.error("Error fetching V2DYN rows:", err);
     return [];
   }
 }
 
 export default async function RfacPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
-  const signals = await getRfacSignals(dateStr);
+  const signals = await getV2DynRows(dateStr);
 
   const cycleTimes = Array.from(new Set(signals.map((s: any) => s.time))).sort();
   const latestTime = cycleTimes.length ? cycleTimes[cycleTimes.length - 1] : null;
+  const nTier = signals.filter(
+    (s: any) => s.time === latestTime && (s.dyn_ratio ?? 0) >= 1.5,
+  ).length;
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
       <PageHeader
         title="RFAC"
-        subtitle="RVOL VELOCITY SCANNER"
+        subtitle="V2 DYNAMIC RATIO — ESCAPE FROM VOLUME POC"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="#10b981"
@@ -58,7 +97,7 @@ export default async function RfacPage({ searchParams }: { searchParams: DateSea
             NSE FNO UNIVERSE
           </span>
           <span className="font-mono text-sm font-bold tracking-[0.18em] text-[#10b981]">
-            ~215 CONTRACTS
+            TOP {TOP_N} BY DYN RATIO
           </span>
         </div>
         <div className="flex gap-4 ml-8">
@@ -68,10 +107,16 @@ export default async function RfacPage({ searchParams }: { searchParams: DateSea
               {cycleTimes.length} CYCLES TODAY
             </span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#fbbf24] shadow-[0_0_8px_rgba(251,191,36,0.7)]"></div>
+            <span className="font-mono text-[11px] text-[#fbbf24] font-medium">
+              {nTier} AT ≥1.5
+            </span>
+          </div>
           {latestTime ? (
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-[#fbbf24] shadow-[0_0_8px_rgba(251,191,36,0.7)]"></div>
-              <span className="font-mono text-[11px] text-[#fbbf24] font-medium">
+              <div className="w-2 h-2 rounded-full bg-[#22d3ee] shadow-[0_0_8px_rgba(34,211,238,0.7)]"></div>
+              <span className="font-mono text-[11px] text-[#22d3ee] font-medium">
                 LATEST {String(latestTime).substring(0, 5)}
               </span>
             </div>

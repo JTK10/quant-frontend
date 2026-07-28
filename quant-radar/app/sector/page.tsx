@@ -8,20 +8,36 @@ export const dynamic = "force-dynamic";
 
 async function getAfac2Snaps(dateStr: string) {
   try {
-    // lastN=4: this page renders only the newest snapshot (rows + sectors) and
-    // one ~15min back for the score delta -- afac2 publishes ~69 cycles/day, so
-    // fetching them all downloaded ~1.7MB to use two of them.
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2&lastN=4`);
+    // Sector Scope now runs on V2 DYN RATIO instead of the AFAC.2 score.
+    // lastN=4: this page renders only the newest snapshot (rows + sectors) plus
+    // one ~15min back for the delta, so there is no reason to ship every cycle.
+    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=v2dyn&lastN=4`);
     const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error(`AFAC2 route failed: ${response.status}`);
+    if (!response.ok) throw new Error(`V2DYN route failed: ${response.status}`);
     const data = await response.json();
-    // AFAC.2 snapshots: one doc per 5-min cycle, source:"afac2", with embedded
-    // rows (every gated stock, multi-sector tagged) and sectors (signed net
-    // score for the bar chart + breadth). Monotonic "safest mover" quality
-    // score -- descriptive leaderboard, not an entry signal.
-    return data.filter((s: any) => s.source === "afac2" || s.cap === "AFAC2");
+
+    // V2DYN snapshots: one doc per cycle from v2dyn_scanner.py, carrying
+    //   rows    -- every gated stock with dyn_ratio (UNSIGNED: dpoc is already
+    //              multiplied by side, so it measures escape from the volume
+    //              POC in the stock's OWN direction -- a short escaping down
+    //              scores like a long escaping up)
+    //   sectors -- net = mean(dyn_ratio * side), i.e. direction re-injected so
+    //              a sector escaping up is positive, escaping down negative,
+    //              and a conflicted sector nets toward zero. Same unsigned-
+    //              stock / signed-sector split AFAC.2 and R.Fac already use.
+    // Shaped to what Afac2Client expects: it reads `.rows[].score` and
+    // `.sectors[].net`, so dyn_ratio is surfaced as `score` per row.
+    const snaps = (data as any[]).filter((s) => s.source === "v2dyn" || s.cap === "V2DYN");
+    return snaps.map((s) => ({
+      ...s,
+      rows: (Array.isArray(s.rows) ? s.rows : []).map((r: any) => ({
+        ...r,
+        score: r.dyn_ratio,
+        secs: r.secs,
+      })),
+    }));
   } catch (err) {
-    console.error("Error fetching AFAC2 snapshots:", err);
+    console.error("Error fetching V2DYN snapshots:", err);
     return [];
   }
 }

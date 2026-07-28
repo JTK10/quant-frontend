@@ -27,12 +27,14 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
             return (a.time || "").localeCompare(b.time || "");
           case "name":
             return (a.name || "").localeCompare(b.name || "");
-          case "mass_cr": // rvol now
-            return (a.mass_cr || 0) - (b.mass_cr || 0);
-          case "surge": // growth_pct
-            return (a.surge || 0) - (b.surge || 0);
-          case "delta": // velocity
-            return (a.delta || 0) - (b.delta || 0);
+          case "dyn_ratio":
+            return (a.dyn_ratio || 0) - (b.dyn_ratio || 0);
+          case "dynDelta":
+            return (a.dynDelta || 0) - (b.dynDelta || 0);
+          case "dpoc":
+            return (a.dpoc || 0) - (b.dpoc || 0);
+          case "chg":
+            return (a.chg || 0) - (b.chg || 0);
           case "entry":
             return (a.entry || 0) - (b.entry || 0);
           default:
@@ -47,9 +49,11 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
     ["imb", "RANK"],
     ["time", "TIME"],
     ["name", "STOCK"],
-    ["mass_cr", "RVOL NOW"],
-    ["delta", "VELOCITY"],
-    ["surge", "GROWTH%"],
+    ["side", "SIDE"],
+    ["dyn_ratio", "DYN RATIO"],
+    ["dynDelta", "Δ CYCLE"],
+    ["dpoc", "DPOC%"],
+    ["chg", "CHG%"],
     ["entry", "PRICE"],
   ];
 
@@ -125,7 +129,7 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         <div
-          className="sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 grid-cols-[44px_60px_minmax(140px,1.2fr)_82px_82px_76px_84px] gap-3 min-w-[820px]"
+          className="sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 grid-cols-[44px_56px_minmax(130px,1.2fr)_50px_82px_72px_70px_66px_78px] gap-3 min-w-[900px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -160,19 +164,23 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
           const rowId = `${signal.name}-${signal.time}-${idx}`;
           const rank = signal.imb || idx + 1;
           const time = (signal.time || "--:--").substring(0, 5);
-          const rvol = typeof signal.mass_cr === "number" ? signal.mass_cr.toFixed(2) : "--";
-          const velocity = typeof signal.delta === "number" ? signal.delta.toFixed(2) : "--";
-          const growth = typeof signal.surge === "number" ? signal.surge.toFixed(1) : "--";
+          const dyn = typeof signal.dyn_ratio === "number" ? signal.dyn_ratio.toFixed(2) : "--";
+          const dynDelta = typeof signal.dynDelta === "number" ? signal.dynDelta : null;
+          const dpoc = typeof signal.dpoc === "number" ? signal.dpoc.toFixed(2) : "--";
+          const chg = typeof signal.chg === "number" ? signal.chg.toFixed(2) : "--";
           const price = typeof signal.entry === "number" && signal.entry > 0 ? signal.entry.toFixed(2) : "--";
           const isTop3 = rank <= 3;
+          const long = signal.side === "LONG";
+          // dyn_ratio >= 1.5 is SERVAL's tier threshold -- flag it visually
+          const isTier = (signal.dyn_ratio ?? 0) >= 1.5;
 
           return (
             <div
               key={rowId}
-              className="grid items-center border-b px-3 py-3 md:px-4 grid-cols-[44px_60px_minmax(140px,1.2fr)_82px_82px_76px_84px] gap-3 min-w-[820px] hover:bg-[#ffffff04] transition-colors"
+              className="grid items-center border-b px-3 py-3 md:px-4 grid-cols-[44px_56px_minmax(130px,1.2fr)_50px_82px_72px_70px_66px_78px] gap-3 min-w-[900px] hover:bg-[#ffffff04] transition-colors"
               style={{
                 borderColor: "var(--color-border)",
-                background: isTop3 ? "rgba(16,185,129,0.05)" : "transparent",
+                background: isTier ? "rgba(251,191,36,0.07)" : isTop3 ? "rgba(16,185,129,0.05)" : "transparent",
               }}
             >
               <span
@@ -193,20 +201,41 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
               >
                 {signal.name}
               </a>
-              <span className="text-right font-mono text-[11px] font-semibold" style={{ color: "var(--color-text)" }}>
-                {rvol}x
+              {/* side is context only -- dyn_ratio itself is direction-agnostic
+                  (a short escaping down scores the same as a long escaping up) */}
+              <span
+                className="text-right font-mono text-[11px] font-semibold"
+                style={{ color: long ? "var(--color-bull)" : "var(--color-bear)" }}
+              >
+                {long ? "▲" : "▼"}
+              </span>
+              <span
+                className="text-right font-mono text-[11px] font-bold"
+                style={{ color: isTier ? "#fbbf24" : "var(--color-text)" }}
+              >
+                {dyn}
               </span>
               <span
                 className="text-right font-mono text-[11px] font-semibold"
-                style={{ color: (signal.delta || 0) > 0 ? "var(--color-bull)" : "var(--color-bear)" }}
+                style={{
+                  color:
+                    dynDelta === null
+                      ? "var(--color-muted2)"
+                      : dynDelta > 0
+                      ? "var(--color-bull)"
+                      : "var(--color-muted2)",
+                }}
               >
-                {(signal.delta || 0) > 0 ? "+" : ""}{velocity}x
+                {dynDelta === null ? "—" : `${dynDelta > 0 ? "+" : ""}${dynDelta.toFixed(2)}`}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
+                {dpoc}
               </span>
               <span
                 className="text-right font-mono text-[11px]"
-                style={{ color: (signal.surge || 0) > 0 ? "var(--color-bull)" : "var(--color-bear)" }}
+                style={{ color: (signal.chg || 0) > 0 ? "var(--color-bull)" : "var(--color-bear)" }}
               >
-                {(signal.surge || 0) > 0 ? "+" : ""}{growth}%
+                {(signal.chg || 0) > 0 ? "+" : ""}{chg}%
               </span>
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
                 {price}
