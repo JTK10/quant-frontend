@@ -23,13 +23,20 @@ export default function SectorBarChart({
 
   const W = 1180, H = 360, PAD_L = 40, PAD_R = 16, PAD_T = 16, PAD_B = 90;
   const plotW = W - PAD_L - PAD_R, plotH = H - PAD_T - PAD_B;
-  const maxAbs = Math.max(6, ...data.map((d) => Math.abs(d.net)));
-  // pick a "nice" tick step (1/2/5 x10^n) so we get ~6-8 gridlines regardless of scale
+  // Auto-scale to the data. The old floor of 6 came from AFAC.2, whose signed
+  // sector score ran to roughly +/-6; the V2 dyn_ratio net is a MEAN of
+  // dyn_ratio*side across a sector's members, so opposing members partly
+  // cancel and it naturally lands near +/-1. Hard-coding 6 squashed every bar
+  // to a sliver. Small floor + headroom so a flat day still renders sanely.
+  const dataMax = Math.max(...data.map((d) => Math.abs(d.net)), 0);
+  const maxAbs = Math.max(0.5, dataMax * 1.15);
+  // "nice" tick step (1/2/5 x10^n) for ~6-8 gridlines at any scale. No integer
+  // floor -- fractional steps (0.1/0.2/0.5) are required at this range.
   const rawStep = maxAbs / 3.5;
   const mag = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1e-9))));
   const norm = rawStep / mag;
   const niceNorm = norm >= 5 ? 10 : norm >= 2 ? 5 : norm >= 1 ? 2 : 1;
-  const step = Math.max(1, Math.round(niceNorm * mag));
+  const step = niceNorm * mag;
   const yMax = Math.ceil(maxAbs / step) * step;
   const yMin = -yMax;
   const yToPx = (v: number) => PAD_T + ((yMax - v) / (yMax - yMin)) * plotH;
@@ -51,7 +58,9 @@ export default function SectorBarChart({
               strokeDasharray={v === 0 ? undefined : "3,4"}
             />
             <text x={PAD_L - 8} y={yToPx(v) + 3} textAnchor="end" fontSize="10" fill="#6b7280" fontFamily="monospace">
-              {v}
+              {/* fractional steps need a fixed decimal or the axis reads
+                  "-1, -0.8, -0.6, 0, 0.2" with inconsistent precision */}
+              {step < 1 ? v.toFixed(1) : v}
             </text>
           </g>
         ))}
@@ -106,7 +115,9 @@ export default function SectorBarChart({
                 fontWeight={isActive ? 700 : 400}
                 fill={isActive ? "#ffffff" : "#9ca3af"}
               >
-                {d.net.toFixed(1)}
+                {/* 1dp collapses the V2 dyn_ratio range: 0.003 and -0.016 both
+                    render as "0.0"/"-0.0". Use 2dp whenever the axis is sub-1. */}
+                {step < 1 ? d.net.toFixed(2) : d.net.toFixed(1)}
               </text>
               <text
                 transform={`translate(${cx}, ${H - PAD_B + 12}) rotate(60)`}
