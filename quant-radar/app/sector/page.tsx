@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 
 async function getAfac2Snaps(dateStr: string) {
   try {
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2`);
+    // lastN=4: this page renders only the newest snapshot (rows + sectors) and
+    // one ~15min back for the score delta -- afac2 publishes ~69 cycles/day, so
+    // fetching them all downloaded ~1.7MB to use two of them.
+    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2&lastN=4`);
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`AFAC2 route failed: ${response.status}`);
     const data = await response.json();

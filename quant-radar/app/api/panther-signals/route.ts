@@ -115,7 +115,12 @@ async function getRawByDate(targetDate: string): Promise<any[]> {
 }
 
 // Build the per-page payload: fetch (shared, in-memory) then filter.
-async function buildPayload(targetDate: string, sourcesParam: string | null, latestCycle: boolean) {
+async function buildPayload(
+  targetDate: string,
+  sourcesParam: string | null,
+  latestCycle: boolean,
+  lastN: number,
+) {
   const wantSources = sourcesParam
     ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
     : null;
@@ -124,6 +129,15 @@ async function buildPayload(targetDate: string, sourcesParam: string | null, lat
 
   if (wantSources) {
     rows = rows.filter((s: any) => wantSources.has(String(s.source)));
+  }
+
+  // lastN: keep only the newest N cycles. Sector Scope renders just the latest
+  // snapshot plus one ~15min back, but afac2 publishes ~69 cycles/day, so
+  // without this it downloads ~1.7MB to use two of them.
+  if (lastN > 0) {
+    const times = Array.from(new Set(rows.map((s: any) => String(s.time ?? "")))).sort();
+    const keep = new Set(times.slice(-lastN));
+    rows = rows.filter((s: any) => keep.has(String(s.time ?? "")));
   }
 
   if (latestCycle) {
@@ -152,8 +166,8 @@ async function buildPayload(targetDate: string, sourcesParam: string | null, lat
 // than once per cold instance. We cache the FILTERED payload (KBs, well under
 // the per-entry cache limit) -- caching the 29MB raw would exceed it.
 const getPayload = unstable_cache(
-  async (targetDate: string, sourcesParam: string | null, latestCycle: boolean) =>
-    buildPayload(targetDate, sourcesParam, latestCycle),
+  async (targetDate: string, sourcesParam: string | null, latestCycle: boolean, lastN: number) =>
+    buildPayload(targetDate, sourcesParam, latestCycle, lastN),
   ["panther-signals"],
   { revalidate: 30 },
 );
@@ -168,9 +182,10 @@ export async function GET(request: NextRequest) {
   // source+category.
   const sourcesParam = request.nextUrl.searchParams.get("sources");
   const latestCycle = request.nextUrl.searchParams.get("latestCycle") === "1";
+  const lastN = Number(request.nextUrl.searchParams.get("lastN") ?? 0) || 0;
 
   try {
-    const body = await getPayload(targetDate, sourcesParam, latestCycle);
+    const body = await getPayload(targetDate, sourcesParam, latestCycle, lastN);
     return NextResponse.json(body);
   } catch (error) {
     console.error("Panther API Error:", error);
