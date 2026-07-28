@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { normalizePantherSignals, getTodayIstDate } from "@/utils/backend";
 
 export const dynamic = "force-dynamic";
@@ -113,6 +114,50 @@ async function getRawByDate(targetDate: string): Promise<any[]> {
   }
 }
 
+// Build the per-page payload: fetch (shared, in-memory) then filter.
+async function buildPayload(targetDate: string, sourcesParam: string | null, latestCycle: boolean) {
+  const wantSources = sourcesParam
+    ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
+    : null;
+
+  let rows = await getRawByDate(targetDate);
+
+  if (wantSources) {
+    rows = rows.filter((s: any) => wantSources.has(String(s.source)));
+  }
+
+  if (latestCycle) {
+    const latestTimeByKey = new Map<string, string>();
+    for (const s of rows) {
+      const k = `${s.source}|${s.category ?? ""}`;
+      const t = String(s.time ?? "");
+      if (!latestTimeByKey.has(k) || t > (latestTimeByKey.get(k) as string)) {
+        latestTimeByKey.set(k, t);
+      }
+    }
+    rows = rows.filter(
+      (s: any) => String(s.time ?? "") === latestTimeByKey.get(`${s.source}|${s.category ?? ""}`),
+    );
+  }
+
+  return normalizePantherSignals(rows);
+}
+
+// The upstream ORDS GET is ~29MB / ~10s and cannot be filtered server-side
+// (the table exposes a single CLOB `doc` column -- no indexed date to query
+// on), so the only lever is caching. The in-memory map above dies with each
+// ephemeral serverless instance, which is why cold hits still felt slow.
+// unstable_cache persists in Vercel's Data Cache, SHARED across instances, so
+// the 29MB fetch happens once per revalidate window for the whole site rather
+// than once per cold instance. We cache the FILTERED payload (KBs, well under
+// the per-entry cache limit) -- caching the 29MB raw would exceed it.
+const getPayload = unstable_cache(
+  async (targetDate: string, sourcesParam: string | null, latestCycle: boolean) =>
+    buildPayload(targetDate, sourcesParam, latestCycle),
+  ["panther-signals"],
+  { revalidate: 30 },
+);
+
 export async function GET(request: NextRequest) {
   const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
   const targetDate = dateStr.replace(/-/g, "");
@@ -120,35 +165,13 @@ export async function GET(request: NextRequest) {
   // Per-page source filter (?sources=caracal2,shakeout). Absent = all sources.
   // latestCycle=1 collapses snapshot sources (afac2/smartlist publish a full
   // doc every 5 min but pages show only the newest) to the latest time per
-  // source+category. Both applied in-memory on the shared raw cache.
+  // source+category.
   const sourcesParam = request.nextUrl.searchParams.get("sources");
-  const wantSources = sourcesParam
-    ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
-    : null;
   const latestCycle = request.nextUrl.searchParams.get("latestCycle") === "1";
 
   try {
-    let rows = await getRawByDate(targetDate);
-
-    if (wantSources) {
-      rows = rows.filter((s: any) => wantSources.has(String(s.source)));
-    }
-
-    if (latestCycle) {
-      const latestTimeByKey = new Map<string, string>();
-      for (const s of rows) {
-        const k = `${s.source}|${s.category ?? ""}`;
-        const t = String(s.time ?? "");
-        if (!latestTimeByKey.has(k) || t > (latestTimeByKey.get(k) as string)) {
-          latestTimeByKey.set(k, t);
-        }
-      }
-      rows = rows.filter(
-        (s: any) => String(s.time ?? "") === latestTimeByKey.get(`${s.source}|${s.category ?? ""}`),
-      );
-    }
-
-    return NextResponse.json(normalizePantherSignals(rows));
+    const body = await getPayload(targetDate, sourcesParam, latestCycle);
+    return NextResponse.json(body);
   } catch (error) {
     console.error("Panther API Error:", error);
     return NextResponse.json(
