@@ -21,7 +21,21 @@ export default function ServalClient({ signals }: { signals: any[] }) {
   const [ascending, setAscending] = useState(true);
 
   const rows = useMemo(() => {
-    let f = signals;
+    // Collapse the FLAG -> ENTRY lifecycle into ONE row per name+side. The
+    // scanner announces a name the moment it enters the funnel (event:"FLAG",
+    // provisional) and again when the pullback-resumption entry confirms, so
+    // without this the same setup would be listed twice.
+    const byKey = new Map<string, any>();
+    for (const s of signals) {
+      const k = `${s.name}|${s.side}`;
+      const prev = byKey.get(k);
+      if (!prev) { byKey.set(k, s); continue; }
+      const rank = (x: any) => (x.event === "ENTRY" ? 2 : 1);
+      if (rank(s) > rank(prev)) byKey.set(k, { ...s, flagged_at: prev.time });
+      else if (rank(s) === rank(prev) && (s.ts ?? 0) > (prev.ts ?? 0)) byKey.set(k, s);
+      else if (rank(s) < rank(prev) && !prev.flagged_at) byKey.set(k, { ...prev, flagged_at: s.time });
+    }
+    let f = Array.from(byKey.values());
     if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
     if (tierOnly) f = f.filter((s) => s.tier === true || s.cap === "SERVAL-T");
     return [...f].sort((a, b) => {
@@ -85,7 +99,7 @@ export default function ServalClient({ signals }: { signals: any[] }) {
         </div>
         <div className="ml-auto flex items-center gap-2 px-3 py-1 bg-[#ffffff05] rounded-md border border-[#ffffff10]">
           <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}cc` }} />
-          <span className="font-mono text-[11px] text-gray-400">{signals.length} FUNNEL ENTRIES</span>
+          <span className="font-mono text-[11px] text-gray-400">{rows.length} IN FUNNEL</span>
         </div>
       </div>
 
@@ -212,6 +226,17 @@ export default function ServalClient({ signals }: { signals: any[] }) {
                     style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
                   >
                     TIER
+                  </span>
+                )}
+                {/* funnel lifecycle: FLAG = in the funnel, still waiting on the
+                    pullback-resumption entry */}
+                {s.event === "FLAG" && (
+                  <span
+                    className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                    style={{ color: "#38bdf8", background: "#38bdf81a", border: "1px solid #38bdf844" }}
+                    title="Flagged into the funnel — awaiting pullback-resumption entry"
+                  >
+                    WAITING
                   </span>
                 )}
               </div>

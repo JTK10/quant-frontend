@@ -22,7 +22,23 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
   const [ascending, setAscending] = useState(true);
 
   const rows = useMemo(() => {
-    let f = signals;
+    // Collapse the FLAG -> ENTRY lifecycle into ONE row per name+side. The
+    // scanner announces a name the moment it enters the funnel (event:"FLAG",
+    // provisional) and again when the pullback-resumption entry confirms
+    // (event:"ENTRY"). Showing both would double-list the same setup, so keep
+    // the ENTRY once it exists and fall back to the FLAG while still waiting.
+    const byKey = new Map<string, any>();
+    for (const s of signals) {
+      if (s.cap === "OOS") { byKey.set(`OOS|${s.name}|${s.time}`, s); continue; }
+      const k = `${s.name}|${s.side}`;
+      const prev = byKey.get(k);
+      if (!prev) { byKey.set(k, s); continue; }
+      const rank = (x: any) => (x.event === "ENTRY" ? 2 : 1);
+      if (rank(s) > rank(prev)) byKey.set(k, { ...s, flagged_at: prev.time });
+      else if (rank(s) === rank(prev) && (s.ts ?? 0) > (prev.ts ?? 0)) byKey.set(k, s);
+      else if (rank(s) < rank(prev) && !prev.flagged_at) byKey.set(k, { ...prev, flagged_at: s.time });
+    }
+    let f = Array.from(byKey.values());
     if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
     if (sourceFilter === "CARACAL") f = f.filter((s) => s.cap !== "OOS");
     if (sourceFilter === "OOS") f = f.filter((s) => s.cap === "OOS");
@@ -44,6 +60,11 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       return ascending ? cmp : -cmp;
     });
   }, [signals, sideFilter, sourceFilter, tierOnly, sortKey, ascending]);
+
+  const nWaiting = useMemo(
+    () => rows.filter((s) => s.event === "FLAG").length,
+    [rows],
+  );
 
   const headers: Array<[string, string]> = [
     ["time", "TIME"],
@@ -89,9 +110,17 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
             {nOos} OOS SHAKEOUT
           </span>
         </div>
+        {nWaiting > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ background: "#38bdf8", boxShadow: "0 0 8px #38bdf880" }} />
+            <span className="font-mono text-[11px] font-medium" style={{ color: "#38bdf8" }}>
+              {nWaiting} WAITING ENTRY
+            </span>
+          </div>
+        )}
         <div className="ml-auto flex items-center gap-2 px-3 py-1 bg-[#ffffff05] rounded-md border border-[#ffffff10]">
           <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}cc` }} />
-          <span className="font-mono text-[11px] text-gray-400">{signals.length - nOos} FUNNEL ENTRIES</span>
+          <span className="font-mono text-[11px] text-gray-400">{rows.length - nOos} IN FUNNEL</span>
         </div>
       </div>
 
@@ -246,6 +275,17 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                     style={{ color: "#10b981", background: "#10b9811a", border: "1px solid #10b98144" }}
                   >
                     OOS
+                  </span>
+                )}
+                {/* funnel lifecycle: FLAG = in the funnel, waiting on the
+                    pullback-resumption entry; no badge once ENTRY confirms */}
+                {s.event === "FLAG" && (
+                  <span
+                    className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                    style={{ color: "#38bdf8", background: "#38bdf81a", border: "1px solid #38bdf844" }}
+                    title="Flagged into the funnel — awaiting pullback-resumption entry"
+                  >
+                    WAITING
                   </span>
                 )}
               </div>
