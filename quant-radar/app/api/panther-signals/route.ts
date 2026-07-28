@@ -94,13 +94,18 @@ async function getRawByDate(targetDate: string): Promise<any[]> {
     // Collapse the rank engine's snapshot-so-far duplicates (same signal
     // re-emitted every cycle). kind/event in the key so FABLE ENTRY isn't
     // dropped by its own MTM heartbeat landing on the same minute (2026-07-22).
-    const seen = new Set<string>();
-    const dedupedSignals = filteredSignals.filter((s: any) => {
+    //
+    // Keep the doc with the HIGHEST ts, not the first one encountered: when a
+    // snapshot is re-published for the same cycle (a corrected replay, or a
+    // scanner restart re-emitting), the newer doc is the right one. Keeping
+    // "first seen" silently pinned stale content (2026-07-29).
+    const bestByKey = new Map<string, any>();
+    for (const s of filteredSignals) {
       const key = `${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}|${s.kind ?? s.event ?? ""}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+      const prev = bestByKey.get(key);
+      if (!prev || (s.ts ?? 0) > (prev.ts ?? 0)) bestByKey.set(key, s);
+    }
+    const dedupedSignals = Array.from(bestByKey.values());
 
     rawCache.set(targetDate, { exp: Date.now() + RAW_TTL_MS, rows: dedupedSignals });
     return dedupedSignals;
