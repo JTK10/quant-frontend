@@ -10,8 +10,12 @@ const TOP_N = 40;
 
 async function getV2DynRows(dateStr: string) {
   try {
+    // topN/rankBy: trim to the rendered top-40 and resolve `_d` server-side.
+    // The untrimmed payload was 2.05MB -- inside Vercel's 2MiB cache-entry limit
+    // by only ~45KB, i.e. a few more cycles or names from silently returning []
+    // the way AFAC did.
     const url = await getInternalApiUrl(
-      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=v2dyn`,
+      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=v2dyn&topN=${TOP_N}&rankBy=dyn_ratio`,
     );
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`V2DYN route failed: ${response.status}`);
@@ -30,31 +34,24 @@ async function getV2DynRows(dateStr: string) {
       .filter((s) => s.source === "v2dyn" || s.cap === "V2DYN")
       .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")));
 
-    const prevDynByStock = new Map<string, number>();
     const flat: any[] = [];
     for (const snap of snaps) {
-      const rows: any[] = Array.isArray(snap.rows) ? snap.rows : [];
-      const top = [...rows]
-        .sort((a, b) => (b.dyn_ratio ?? -Infinity) - (a.dyn_ratio ?? -Infinity))
-        .slice(0, TOP_N);
+      // already trimmed to TOP_N and sorted by dyn_ratio desc, with `_d` resolved
+      const top: any[] = Array.isArray(snap.rows) ? snap.rows : [];
       top.forEach((r, i) => {
-        const prev = prevDynByStock.get(r.n);
         flat.push({
           time: snap.time,
           imb: i + 1, // rank within this cycle
           name: r.n,
           side: r.side,
           dyn_ratio: r.dyn_ratio,
-          dynDelta: prev !== undefined ? (r.dyn_ratio ?? 0) - prev : null,
+          dynDelta: r._d ?? null,
           dpoc: r.dpoc,
           rt5: r.rt5,
           chg: r.chg,
           entry: r.px,
         });
       });
-      // baseline from the FULL row set, so a stock newly entering the top-N
-      // still gets a correct delta
-      for (const r of rows) prevDynByStock.set(r.n, r.dyn_ratio ?? 0);
     }
     return flat;
   } catch (err) {

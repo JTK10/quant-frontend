@@ -10,7 +10,13 @@ const TOP_N = 30;
 
 async function getAfacRows(dateStr: string) {
   try {
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2`);
+    // topN/rankBy: the route trims each cycle to the top-30 by score and resolves
+    // `_d` (delta vs the previous cycle) server-side. Without it the full ~204
+    // rows/cycle came over the wire at 2.70MB, past Vercel's 2MiB cache-entry
+    // limit, and the route returned [] -- this page rendered blank.
+    const url = await getInternalApiUrl(
+      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2&topN=${TOP_N}&rankBy=score`,
+    );
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
       const errText = await response.text();
@@ -28,14 +34,11 @@ async function getAfacRows(dateStr: string) {
       .filter((s) => s.source === "afac2" || s.cap === "AFAC2")
       .sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")));
 
-    const prevScoreByStock = new Map<string, number>();
     const flat: any[] = [];
     for (const snap of snaps) {
-      const rows: any[] = Array.isArray(snap.rows) ? snap.rows : [];
-      const top = [...rows].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, TOP_N);
-      const seenThisCycle = new Set<string>();
+      // already trimmed to TOP_N and sorted by score desc, with `_d` resolved
+      const top: any[] = Array.isArray(snap.rows) ? snap.rows : [];
       top.forEach((r, i) => {
-        const prev = prevScoreByStock.get(r.n);
         const secs: string[] = Array.isArray(r.secs) ? r.secs : typeof r.secs === "string" && r.secs ? [r.secs] : [];
         flat.push({
           time: snap.time,
@@ -43,7 +46,7 @@ async function getAfacRows(dateStr: string) {
           name: r.n,
           side: r.side,
           score: r.score,
-          scoreDelta: prev !== undefined ? (r.score ?? 0) - prev : null,
+          scoreDelta: r._d ?? null,
           chg: r.chg,
           entry: r.px,
           sector: secs.map((s) => s.replace(/^NIFTY_/, "").replace(/_/g, " ")).join(" / "),
@@ -51,12 +54,7 @@ async function getAfacRows(dateStr: string) {
           ahead: r.vol_ahead,
           dyn: r.dyn_ratio,
         });
-        seenThisCycle.add(r.n);
       });
-      // update "previous score" baseline from this cycle's full row set (not just top-30)
-      // so a stock's delta is correct even if it just entered the top-30
-      for (const r of rows) prevScoreByStock.set(r.n, r.score ?? 0);
-      void seenThisCycle;
     }
     return flat;
   } catch (err) {

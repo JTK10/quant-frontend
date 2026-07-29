@@ -130,6 +130,8 @@ async function buildPayload(
   sourcesParam: string | null,
   latestCycle: boolean,
   lastN: number,
+  topN: number,
+  rankBy: string | null,
 ) {
   const wantSources = sourcesParam
     ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
@@ -148,6 +150,44 @@ async function buildPayload(
     const times = Array.from(new Set(rows.map((s: any) => String(s.time ?? "")))).sort();
     const keep = new Set(times.slice(-lastN));
     rows = rows.filter((s: any) => keep.has(String(s.time ?? "")));
+  }
+
+  // topN/rankBy: trim each snapshot's embedded `rows` array server-side.
+  //
+  // AFAC.2 and V2DYN publish ~70 cycles/day, each carrying every gated stock
+  // (~204 rows), but the pages render only the top 30/40. The pages needed the
+  // FULL set purely to compute each row's delta vs the previous cycle, so the
+  // other ~174 rows/cycle were shipped just to be thrown away -- 2.70MB for
+  // afac2, over Vercel's 2MiB Data Cache entry limit, so the entry silently
+  // failed to store and the route returned [] (blank AFAC page, 2026-07-29).
+  // v2dyn was at 2.05MB, inside the limit only by ~45KB.
+  //
+  // Computing the delta here means the baseline never has to cross the wire:
+  // we keep the full row set in scope to seed `prev`, but emit only the top N,
+  // each with `_d` already resolved. Same numbers, ~8x smaller.
+  if (topN > 0 && rankBy) {
+    const val = (r: any) => (typeof r?.[rankBy] === "number" ? r[rankBy] : null);
+    const snaps = rows
+      .filter((s: any) => Array.isArray(s.rows))
+      .sort((a: any, b: any) => String(a.time ?? "").localeCompare(String(b.time ?? "")));
+    const passthrough = rows.filter((s: any) => !Array.isArray(s.rows));
+
+    const prev = new Map<string, number>();
+    const trimmed = snaps.map((snap: any) => {
+      const all: any[] = snap.rows;
+      const top = [...all]
+        .sort((a, b) => (val(b) ?? -Infinity) - (val(a) ?? -Infinity))
+        .slice(0, topN)
+        .map((r) => {
+          const p = prev.get(r.n);
+          return { ...r, _d: p !== undefined ? (val(r) ?? 0) - p : null };
+        });
+      // Seed from the FULL set, not the trimmed one, so a stock entering the
+      // top N from outside still gets a correct delta rather than a null.
+      for (const r of all) prev.set(r.n, val(r) ?? 0);
+      return { ...snap, rows: top };
+    });
+    rows = [...passthrough, ...trimmed];
   }
 
   if (latestCycle) {
@@ -176,8 +216,14 @@ async function buildPayload(
 // than once per cold instance. We cache the FILTERED payload (KBs, well under
 // the per-entry cache limit) -- caching the 29MB raw would exceed it.
 const getPayload = unstable_cache(
-  async (targetDate: string, sourcesParam: string | null, latestCycle: boolean, lastN: number) =>
-    buildPayload(targetDate, sourcesParam, latestCycle, lastN),
+  async (
+    targetDate: string,
+    sourcesParam: string | null,
+    latestCycle: boolean,
+    lastN: number,
+    topN: number,
+    rankBy: string | null,
+  ) => buildPayload(targetDate, sourcesParam, latestCycle, lastN, topN, rankBy),
   ["panther-signals"],
   { revalidate: 30 },
 );
@@ -193,9 +239,13 @@ export async function GET(request: NextRequest) {
   const sourcesParam = request.nextUrl.searchParams.get("sources");
   const latestCycle = request.nextUrl.searchParams.get("latestCycle") === "1";
   const lastN = Number(request.nextUrl.searchParams.get("lastN") ?? 0) || 0;
+  // topN+rankBy trim each snapshot's embedded rows to the N the page renders,
+  // with the cross-cycle delta resolved server-side (see buildPayload).
+  const topN = Number(request.nextUrl.searchParams.get("topN") ?? 0) || 0;
+  const rankBy = request.nextUrl.searchParams.get("rankBy");
 
   try {
-    const body = await getPayload(targetDate, sourcesParam, latestCycle, lastN);
+    const body = await getPayload(targetDate, sourcesParam, latestCycle, lastN, topN, rankBy);
     return NextResponse.json(body);
   } catch (error) {
     console.error("Panther API Error:", error);
