@@ -99,9 +99,14 @@ async function getRawByDate(targetDate: string): Promise<any[]> {
     // snapshot is re-published for the same cycle (a corrected replay, or a
     // scanner restart re-emitting), the newer doc is the right one. Keeping
     // "first seen" silently pinned stale content (2026-07-29).
+    // SOURCE must be in the key. CARACAL2 and SERVAL share a funnel, so they
+    // routinely flag the same stock at the same minute (KAYNES and KPITTECH
+    // both did on 2026-07-29). Without source in the key those collide and one
+    // engine's row is silently dropped -- the Caracal page was losing exactly
+    // its highest-conviction signals, the ones both engines agreed on.
     const bestByKey = new Map<string, any>();
     for (const s of filteredSignals) {
-      const key = `${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}|${s.kind ?? s.event ?? ""}`;
+      const key = `${s.source ?? ""}|${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}|${s.kind ?? s.event ?? ""}`;
       const prev = bestByKey.get(key);
       if (!prev || (s.ts ?? 0) > (prev.ts ?? 0)) bestByKey.set(key, s);
     }
