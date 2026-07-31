@@ -14,8 +14,14 @@ async function getV2DynRows(dateStr: string) {
     // The untrimmed payload was 2.05MB -- inside Vercel's 2MiB cache-entry limit
     // by only ~45KB, i.e. a few more cycles or names from silently returning []
     // the way AFAC did.
+    // Ranked by RVOL, not dyn_ratio. dyn_ratio measures POSITION -- how far
+    // price sits from a 20-session volume POC -- which is ~80% inherited from
+    // the prior close and, measured over 301 sessions, does not predict
+    // (~47% hit rate, safety ~1.0). RVOL measures PARTICIPATION right now.
+    // dyn_ratio is kept as a column: it still earns its place as a FILTER
+    // (SERVAL's TIER gate is dyn_ratio >= 1.5), just not as the ranking.
     const url = await getInternalApiUrl(
-      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=v2dyn&topN=${TOP_N}&rankBy=dyn_ratio`,
+      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=v2dyn&topN=${TOP_N}&rankBy=rvol`,
     );
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`V2DYN route failed: ${response.status}`);
@@ -36,7 +42,7 @@ async function getV2DynRows(dateStr: string) {
 
     const flat: any[] = [];
     for (const snap of snaps) {
-      // already trimmed to TOP_N and sorted by dyn_ratio desc, with `_d` resolved
+      // already trimmed to TOP_N and sorted by rvol desc, with `_d` resolved
       const top: any[] = Array.isArray(snap.rows) ? snap.rows : [];
       top.forEach((r, i) => {
         flat.push({
@@ -44,6 +50,9 @@ async function getV2DynRows(dateStr: string) {
           imb: i + 1, // rank within this cycle
           name: r.n,
           side: r.side,
+          rvol: r.rvol ?? null,
+          rvolCash: r.rvol_cash ?? null,
+          rvolFut: r.rvol_fut ?? null,
           dyn_ratio: r.dyn_ratio,
           dynDelta: r._d ?? null,
           dpoc: r.dpoc,
@@ -74,7 +83,7 @@ export default async function RfacPage({ searchParams }: { searchParams: DateSea
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
       <PageHeader
         title="RFAC"
-        subtitle="V2 DYNAMIC RATIO — ESCAPE FROM VOLUME POC"
+        subtitle="RVOL — CASH + FUTURES PARTICIPATION"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="#10b981"
@@ -94,7 +103,7 @@ export default async function RfacPage({ searchParams }: { searchParams: DateSea
             NSE FNO UNIVERSE
           </span>
           <span className="font-mono text-sm font-bold tracking-[0.18em] text-[#10b981]">
-            TOP {TOP_N} BY DYN RATIO
+            TOP {TOP_N} BY RVOL
           </span>
         </div>
         <div className="flex gap-4 ml-8">

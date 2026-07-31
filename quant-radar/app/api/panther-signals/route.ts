@@ -173,14 +173,33 @@ async function buildPayload(
     const passthrough = rows.filter((s: any) => !Array.isArray(s.rows));
 
     const prev = new Map<string, number>();
+    // `first` is each symbol's value when it FIRST appeared this session, which
+    // for a sticky-gate source is the cycle it gated. `_od` (value - first) is
+    // the since-open move, and it must be computed here for the same reason
+    // `_d` is: the baseline is routinely outside the top N. KAYNES on
+    // 2026-07-29 sat at rank 118 of 121 at 09:20 and finished rank 31 -- a page
+    // working from trimmed rows could never recover that starting point.
+    const first = new Map<string, number>();
     const trimmed = snaps.map((snap: any) => {
       const all: any[] = snap.rows;
+      // Baseline is established by the CURRENT cycle when a symbol debuts, so
+      // seed `first` before mapping -- otherwise its debut row reports null
+      // instead of a 0 starting point. `prev` is the opposite: it must stay on
+      // the previous cycle's value, so it is updated after.
+      for (const r of all) if (!first.has(r.n)) first.set(r.n, val(r) ?? 0);
       const top = [...all]
         .sort((a, b) => (val(b) ?? -Infinity) - (val(a) ?? -Infinity))
         .slice(0, topN)
         .map((r) => {
           const p = prev.get(r.n);
-          return { ...r, _d: p !== undefined ? (val(r) ?? 0) - p : null };
+          const f = first.get(r.n);
+          const v = val(r);
+          return {
+            ...r,
+            _d: p !== undefined ? (v ?? 0) - p : null,
+            _o: f ?? null,
+            _od: f !== undefined ? (v ?? 0) - f : null,
+          };
         });
       // Seed from the FULL set, not the trimmed one, so a stock entering the
       // top N from outside still gets a correct delta rather than a null.

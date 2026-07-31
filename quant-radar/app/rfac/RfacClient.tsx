@@ -29,6 +29,12 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
             return (a.name || "").localeCompare(b.name || "");
           case "dyn_ratio":
             return (a.dyn_ratio || 0) - (b.dyn_ratio || 0);
+          case "rvol":
+            return (a.rvol || 0) - (b.rvol || 0);
+          case "rvolCash":
+            return (a.rvolCash || 0) - (b.rvolCash || 0);
+          case "rvolFut":
+            return (a.rvolFut || 0) - (b.rvolFut || 0);
           case "dynDelta":
             return (a.dynDelta || 0) - (b.dynDelta || 0);
           case "dpoc":
@@ -50,8 +56,10 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
     ["time", "TIME"],
     ["name", "STOCK"],
     ["side", "SIDE"],
+    ["rvol", "RVOL"],
+    ["rvolCash", "RVOL-C"],
+    ["rvolFut", "RVOL-F"],
     ["dyn_ratio", "DYN RATIO"],
-    ["dynDelta", "Δ CYCLE"],
     ["dpoc", "DPOC%"],
     ["chg", "CHG%"],
     ["entry", "PRICE"],
@@ -129,7 +137,7 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
       {/* Table */}
       <div className="flex-1 overflow-auto custom-scrollbar">
         <div
-          className="sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 grid-cols-[44px_56px_minmax(130px,1.2fr)_50px_82px_72px_70px_66px_78px] gap-3 min-w-[900px]"
+          className="sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 grid-cols-[44px_56px_minmax(130px,1.2fr)_50px_70px_70px_70px_82px_70px_66px_78px] gap-3 min-w-[1010px]"
           style={{
             borderColor: "var(--color-border)",
             background: "rgba(10, 14, 23, 0.95)",
@@ -165,7 +173,11 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
           const rank = signal.imb || idx + 1;
           const time = (signal.time || "--:--").substring(0, 5);
           const dyn = typeof signal.dyn_ratio === "number" ? signal.dyn_ratio.toFixed(2) : "--";
-          const dynDelta = typeof signal.dynDelta === "number" ? signal.dynDelta : null;
+          const rvol = typeof signal.rvol === "number" ? signal.rvol.toFixed(2) : "--";
+          const rvolC = typeof signal.rvolCash === "number" ? signal.rvolCash.toFixed(2) : "--";
+          const rvolF = typeof signal.rvolFut === "number" ? signal.rvolFut.toFixed(2) : "--";
+          // RVOL >= 1.5 = clearly elevated participation vs this bucket's own history
+          const hot = (signal.rvol ?? 0) >= 1.5;
           const dpoc = typeof signal.dpoc === "number" ? signal.dpoc.toFixed(2) : "--";
           const chg = typeof signal.chg === "number" ? signal.chg.toFixed(2) : "--";
           const price = typeof signal.entry === "number" && signal.entry > 0 ? signal.entry.toFixed(2) : "--";
@@ -177,7 +189,7 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
           return (
             <div
               key={rowId}
-              className="grid items-center border-b px-3 py-3 md:px-4 grid-cols-[44px_56px_minmax(130px,1.2fr)_50px_82px_72px_70px_66px_78px] gap-3 min-w-[900px] hover:bg-[#ffffff04] transition-colors"
+              className="grid items-center border-b px-3 py-3 md:px-4 grid-cols-[44px_56px_minmax(130px,1.2fr)_50px_70px_70px_70px_82px_70px_66px_78px] gap-3 min-w-[1010px] hover:bg-[#ffffff04] transition-colors"
               style={{
                 borderColor: "var(--color-border)",
                 background: isTier ? "rgba(251,191,36,0.07)" : isTop3 ? "rgba(16,185,129,0.05)" : "transparent",
@@ -209,24 +221,27 @@ export default function RfacClient({ signals, latestTime }: { signals: any[]; la
               >
                 {long ? "▲" : "▼"}
               </span>
+              {/* RVOL is the ranking now: participation vs this bucket's own
+                  20-session history. Cash and futures are shown separately
+                  because they disagree -- 0.74 correlation, and M&M printed
+                  2.2x cash against 5.0x futures on the same bar. */}
+              <span
+                className="text-right font-mono text-[11px] font-bold"
+                style={{ color: hot ? "#22d3ee" : "var(--color-text)" }}
+              >
+                {rvol}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {rvolC}
+              </span>
+              <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                {rvolF}
+              </span>
               <span
                 className="text-right font-mono text-[11px] font-bold"
                 style={{ color: isTier ? "#fbbf24" : "var(--color-text)" }}
               >
                 {dyn}
-              </span>
-              <span
-                className="text-right font-mono text-[11px] font-semibold"
-                style={{
-                  color:
-                    dynDelta === null
-                      ? "var(--color-muted2)"
-                      : dynDelta > 0
-                      ? "var(--color-bull)"
-                      : "var(--color-muted2)",
-                }}
-              >
-                {dynDelta === null ? "—" : `${dynDelta > 0 ? "+" : ""}${dynDelta.toFixed(2)}`}
               </span>
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
                 {dpoc}

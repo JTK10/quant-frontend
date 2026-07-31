@@ -25,15 +25,27 @@ async function getAfac2Snaps(dateStr: string) {
     //              a sector escaping up is positive, escaping down negative,
     //              and a conflicted sector nets toward zero. Same unsigned-
     //              stock / signed-sector split AFAC.2 and R.Fac already use.
+    // Now driven by RVOL rather than dyn_ratio. dyn_ratio is a POSITION measure
+    // -- distance from a 20-session volume POC, ~80% inherited from the prior
+    // close -- and over 301 sessions it did not predict (~47% hit rate). RVOL
+    // measures participation happening right now, on combined cash+futures
+    // volume. Falls back to dyn_ratio wherever rvol is unavailable (missing
+    // baseline, or before 09:15 when the baseline has no bucket), so the page
+    // degrades instead of blanking.
+    //
     // Shaped to what Afac2Client expects: it reads `.rows[].score` and
-    // `.sectors[].net`, so dyn_ratio is surfaced as `score` per row.
+    // `.sectors[].net`.
     const snaps = (data as any[]).filter((s) => s.source === "v2dyn" || s.cap === "V2DYN");
     return snaps.map((s) => ({
       ...s,
       rows: (Array.isArray(s.rows) ? s.rows : []).map((r: any) => ({
         ...r,
-        score: r.dyn_ratio,
+        score: r.rvol ?? r.dyn_ratio,
         secs: r.secs,
+      })),
+      sectors: (Array.isArray(s.sectors) ? s.sectors : []).map((x: any) => ({
+        ...x,
+        net: x.net_rvol ?? x.net,
       })),
     }));
   } catch (err) {
