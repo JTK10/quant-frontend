@@ -21,12 +21,16 @@ export default function ServalClient({ signals }: { signals: any[] }) {
   const [ascending, setAscending] = useState(true);
 
   const rows = useMemo(() => {
-    // Collapse the FLAG -> ENTRY lifecycle into ONE row per name+side. The
-    // scanner announces a name the moment it enters the funnel (event:"FLAG",
-    // provisional) and again when the pullback-resumption entry confirms, so
-    // without this the same setup would be listed twice.
+    // FLAG (funnel) events are NOT shown. A flag only means the name entered
+    // the funnel -- it is not a signal, and surfacing it put provisional rows
+    // next to real entries where they read as tradeable. Only confirmed
+    // pullback-resumption ENTRIES appear here now.
+    //
+    // The collapse below is kept: it still de-duplicates repeated ENTRY
+    // publishes for the same name+side (a scanner restart re-emits), keeping
+    // the newest ts.
     const byKey = new Map<string, any>();
-    for (const s of signals) {
+    for (const s of signals.filter((x) => x.event !== "FLAG")) {
       const k = `${s.name}|${s.side}`;
       const prev = byKey.get(k);
       if (!prev) { byKey.set(k, s); continue; }
@@ -226,17 +230,6 @@ export default function ServalClient({ signals }: { signals: any[] }) {
                     style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
                   >
                     TIER
-                  </span>
-                )}
-                {/* funnel lifecycle: FLAG = in the funnel, still waiting on the
-                    pullback-resumption entry */}
-                {s.event === "FLAG" && (
-                  <span
-                    className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
-                    style={{ color: "#38bdf8", background: "#38bdf81a", border: "1px solid #38bdf844" }}
-                    title="Flagged into the funnel — awaiting pullback-resumption entry"
-                  >
-                    WAITING
                   </span>
                 )}
               </div>
