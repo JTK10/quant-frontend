@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
 import { normalizePantherSignals, getTodayIstDate } from "@/utils/backend";
 
 export const dynamic = "force-dynamic";
@@ -39,20 +38,16 @@ async function getToken() {
   return cache.token;
 }
 
-// Short-lived RAW cache keyed by DATE ONLY. The ORDS GET returns all 7 days of
-// rows (~9k docs, ~6-15s) on every call; signals only change every 5 min. The
-// key insight for perf: this upstream fetch is cached once per date and SHARED
-// across every page's source-filtered request, so the slow fetch happens once
-// per 30s window, not once per page. Filtering happens in-memory on the cached
-// raw array -- cheap.
-const RAW_TTL_MS = 30_000;
-const rawCache = new Map<string, { exp: number; rows: any[] }>();
+// NO result caching. Every request re-fetches upstream, because a cached page
+// that silently serves a stale cycle is worse than a slow one on a live desk --
+// during the session a 30s window can hide a whole 5-min cycle.
+//
+// The one thing kept is in-flight de-duplication: if several pages request the
+// same date in the same instant they share ONE upstream fetch rather than
+// firing N. That is not caching -- nothing is retained after it resolves.
 const rawInflight = new Map<string, Promise<any[]>>();
 
 async function getRawByDate(targetDate: string): Promise<any[]> {
-  const hit = rawCache.get(targetDate);
-  if (hit && Date.now() < hit.exp) return hit.rows;
-  // De-dupe concurrent misses so N pages loading at once trigger ONE fetch.
   const inflight = rawInflight.get(targetDate);
   if (inflight) return inflight;
 
@@ -112,7 +107,6 @@ async function getRawByDate(targetDate: string): Promise<any[]> {
     }
     const dedupedSignals = Array.from(bestByKey.values());
 
-    rawCache.set(targetDate, { exp: Date.now() + RAW_TTL_MS, rows: dedupedSignals });
     return dedupedSignals;
   })();
 
@@ -124,7 +118,7 @@ async function getRawByDate(targetDate: string): Promise<any[]> {
   }
 }
 
-// Build the per-page payload: fetch (shared, in-memory) then filter.
+// Build the per-page payload: fetch fresh, then filter.
 async function buildPayload(
   targetDate: string,
   sourcesParam: string | null,
@@ -226,26 +220,9 @@ async function buildPayload(
   return normalizePantherSignals(rows);
 }
 
-// The upstream ORDS GET is ~29MB / ~10s and cannot be filtered server-side
-// (the table exposes a single CLOB `doc` column -- no indexed date to query
-// on), so the only lever is caching. The in-memory map above dies with each
-// ephemeral serverless instance, which is why cold hits still felt slow.
-// unstable_cache persists in Vercel's Data Cache, SHARED across instances, so
-// the 29MB fetch happens once per revalidate window for the whole site rather
-// than once per cold instance. We cache the FILTERED payload (KBs, well under
-// the per-entry cache limit) -- caching the 29MB raw would exceed it.
-const getPayload = unstable_cache(
-  async (
-    targetDate: string,
-    sourcesParam: string | null,
-    latestCycle: boolean,
-    lastN: number,
-    topN: number,
-    rankBy: string | null,
-  ) => buildPayload(targetDate, sourcesParam, latestCycle, lastN, topN, rankBy),
-  ["panther-signals"],
-  { revalidate: 30 },
-);
+// buildPayload is called directly -- it was wrapped in unstable_cache with
+// revalidate:30, which persisted in Vercel's Data Cache and meant a reload
+// could return the previous cycle. Removed: correctness over latency here.
 
 export async function GET(request: NextRequest) {
   const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
@@ -264,7 +241,7 @@ export async function GET(request: NextRequest) {
   const rankBy = request.nextUrl.searchParams.get("rankBy");
 
   try {
-    const body = await getPayload(targetDate, sourcesParam, latestCycle, lastN, topN, rankBy);
+    const body = await buildPayload(targetDate, sourcesParam, latestCycle, lastN, topN, rankBy);
     return NextResponse.json(body);
   } catch (error) {
     console.error("Panther API Error:", error);

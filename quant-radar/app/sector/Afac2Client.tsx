@@ -60,7 +60,17 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
   // group leaderboard rows into EVERY sector they belong to (multi-membership)
   const cards = useMemo(() => {
     const bySec = new Map<string, any[]>();
-    for (const r of rows) {
+    // OTHER is not a sector. What lands there is the index contracts -- NIFTY,
+    // BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTYNXT50 -- which are not stocks and
+    // do not belong on a sector leaderboard. Giving them a tag would be worse:
+    // NIFTY inside NIFTY_50 would fold the index into the average of its own
+    // constituents. Any genuinely unmapped STOCK is fixed in master_mapping,
+    // not hidden here, so anything still reaching OTHER is an index or a new
+    // F&O listing that needs a mapping row.
+    for (const r of rows.filter((x: any) => {
+      const t: string[] = Array.isArray(x.secs) ? x.secs : x.secs ? [x.secs] : [];
+      return t.length > 0 && !(t.length === 1 && t[0] === "OTHER");
+    })) {
       const tags: string[] = Array.isArray(r.secs)
         ? r.secs.length
           ? r.secs
@@ -74,7 +84,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
       }
     }
     return sectors
-      .filter((s) => bySec.has(s.sec))
+      .filter((s) => s.sec !== "OTHER" && bySec.has(s.sec))
       .map((s) => ({
         ...s,
         stocks: bySec.get(s.sec)!.sort((a, b) => (num(b.score) ?? 0) - (num(a.score) ?? 0)),
@@ -91,7 +101,9 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
         <>
           <div className="mt-3">
             <SectorBarChart
-              sectors={sectors.map((s) => ({ sec: s.sec, net: num(s.net) ?? 0, n: s.n }))}
+              sectors={sectors
+                .filter((s) => s.sec !== "OTHER")
+                .map((s) => ({ sec: s.sec, net: num(s.net) ?? 0, n: s.n }))}
               onSelect={handleSelect}
               selected={selected}
             />
