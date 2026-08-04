@@ -9,6 +9,12 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
   const [sortKey, setSortKey] = useState<string>("imb");
   const [ascending, setAscending] = useState(true);
   const [scope, setScope] = useState<"LATEST" | "ALL">("LATEST");
+  const [sideFilter, setSideFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
+  // vol_ahead <= 0.02 keeps only names with almost NOTHING traded ahead of
+  // price in the break direction -- little overhead supply between price and
+  // open air. It is the same condition SERVAL's TIER gate uses (vol_ahead <=
+  // 0.072), just tighter.
+  const [aheadFilter, setAheadFilter] = useState(false);
 
   const cycleTimes = useMemo(
     () => Array.from(new Set(signals.map((s) => s.time))).sort(),
@@ -19,6 +25,8 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
 
   const filtered = useMemo(() => {
     let f = scope === "LATEST" ? signals.filter((s) => s.time === activeTime) : signals;
+    if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
+    if (aheadFilter) f = f.filter((s) => typeof s.ahead === "number" && s.ahead <= 0.02);
 
     return [...f].sort((a, b) => {
       const cmp = (() => {
@@ -51,7 +59,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
       })();
       return ascending ? cmp : -cmp;
     });
-  }, [signals, scope, activeTime, sortKey, ascending]);
+  }, [signals, scope, activeTime, sortKey, ascending, sideFilter, aheadFilter]);
 
   const headers: [string, string][] = [
     ["imb", "RANK"],
@@ -114,6 +122,44 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
             </button>
           );
         })}
+
+        <span className="mx-1 h-4 w-px" style={{ background: "var(--color-border)" }} />
+
+        {(["ALL", "LONG", "SHORT"] as const).map((v) => {
+          const active = sideFilter === v;
+          const c = v === "LONG" ? "var(--color-bull, #10b981)" : v === "SHORT" ? "#ef4444" : "#9ca3af";
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setSideFilter(v)}
+              className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
+              style={{
+                color: active ? c : "var(--color-muted)",
+                borderColor: active ? `${c}55` : "var(--color-border)",
+                background: active ? `${c}12` : "transparent",
+              }}
+            >
+              {v}
+            </button>
+          );
+        })}
+
+        <span className="mx-1 h-4 w-px" style={{ background: "var(--color-border)" }} />
+
+        <button
+          type="button"
+          onClick={() => setAheadFilter((v) => !v)}
+          title="Keep only vol_ahead <= 0.02 -- almost no traded volume ahead of price in the break direction"
+          className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
+          style={{
+            color: aheadFilter ? "#22d3ee" : "var(--color-muted)",
+            borderColor: aheadFilter ? "#22d3ee55" : "var(--color-border)",
+            background: aheadFilter ? "#22d3ee12" : "transparent",
+          }}
+        >
+          AHEAD &le; 0.02
+        </button>
 
         <span className="mx-1 h-4 w-px" style={{ background: "var(--color-border)" }} />
 
