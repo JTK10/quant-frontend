@@ -20,11 +20,6 @@ function num(v: any): number | null {
   const n = typeof v === "number" ? v : parseFloat(v);
   return Number.isFinite(n) ? n : null;
 }
-// NOTE ON PRECISION: this page's `score` / `net` used to be the AFAC.2 composite,
-// an integer on a ~0-200 scale where 0 decimals read fine. Sector Scope now runs
-// on V2 dyn_ratio (see sector/page.tsx), which lives in a ~0-2 band -- at 0
-// decimals every stock rendered as "1" and two very different setups were
-// indistinguishable. Ratios here need 2 decimals.
 function fmt(v: any, d = 1): string {
   const n = num(v);
   return n === null ? "—" : n.toFixed(d);
@@ -143,7 +138,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                       style={{ color: "#0A0A0B", background: ACCENT }}
                     >
                       {card.net >= 0 ? "+" : ""}
-                      {fmt(card.net, 2)}
+                      {fmt(card.net, 1)}
                     </span>
                   </div>
 
@@ -220,10 +215,10 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                                 </span>
                               </td>
                               <td style={{ fontSize: 12, fontWeight: 600, color: "#fff", padding: "5px 8px" }}>
-                                {fmt(r.score, 2)}
-                                {delta !== null && delta >= 0.01 && (
+                                {fmt(r.score, 0)}
+                                {delta !== null && delta > 0 && (
                                   <span className="ml-1 font-mono" style={{ fontSize: 10, fontWeight: 400, color: PILL_GREEN_FG }}>
-                                    +{fmt(delta, 2)}
+                                    +{fmt(delta, 0)}
                                   </span>
                                 )}
                               </td>
