@@ -47,8 +47,20 @@ async function getToken() {
 // firing N. That is not caching -- nothing is retained after it resolves.
 const rawInflight = new Map<string, Promise<any[]>>();
 
-async function getRawByDate(targetDate: string): Promise<any[]> {
-  const inflight = rawInflight.get(targetDate);
+async function getRawByDate(targetDate: string, sourcesParam: string | null): Promise<any[]> {
+  // Push sig_date and sources UPSTREAM instead of downloading the world and
+  // filtering here. ORDS returns every doc it is given no reason to exclude,
+  // and the Node-side filters below ran only after the whole payload had
+  // already crossed the wire -- /serval needed 17KB and was downloading 8.2MB
+  // to get it, which is what made every page 17-19s (2026-08-05).
+  //
+  // Both params are SAFE TO SEND BEFORE the handler understands them: an ORDS
+  // handler ignores bind variables it does not declare, so this behaves exactly
+  // as before until the source filter is deployed, then starts paying off with
+  // no further frontend change. The Node-side filters are deliberately KEPT as
+  // a backstop -- correctness must not depend on the upstream honouring them.
+  const cacheKey = `${targetDate}|${sourcesParam ?? ""}`;
+  const inflight = rawInflight.get(cacheKey);
   if (inflight) return inflight;
 
   const p = (async () => {
@@ -56,7 +68,11 @@ async function getRawByDate(targetDate: string): Promise<any[]> {
     const signalsUrl = process.env.PANTHER_SIGNALS_URL;
     if (!signalsUrl) throw new Error("Missing PANTHER_SIGNALS_URL");
 
-    const r: Response = await fetch(signalsUrl, {
+    const u = new URL(signalsUrl);
+    u.searchParams.set("sig_date", targetDate);
+    if (sourcesParam) u.searchParams.set("sources", sourcesParam);
+
+    const r: Response = await fetch(u.toString(), {
       headers: { Authorization: `Bearer ${t}` },
       cache: "no-store",
     });
@@ -110,11 +126,11 @@ async function getRawByDate(targetDate: string): Promise<any[]> {
     return dedupedSignals;
   })();
 
-  rawInflight.set(targetDate, p);
+  rawInflight.set(cacheKey, p);
   try {
     return await p;
   } finally {
-    rawInflight.delete(targetDate);
+    rawInflight.delete(cacheKey);
   }
 }
 
@@ -131,7 +147,7 @@ async function buildPayload(
     ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
     : null;
 
-  let rows = await getRawByDate(targetDate);
+  let rows = await getRawByDate(targetDate, sourcesParam);
 
   if (wantSources) {
     rows = rows.filter((s: any) => wantSources.has(String(s.source)));
