@@ -48,17 +48,22 @@ async function getToken() {
 const rawInflight = new Map<string, Promise<any[]>>();
 
 async function getRawByDate(targetDate: string, sourcesParam: string | null): Promise<any[]> {
-  // Push sig_date and sources UPSTREAM instead of downloading the world and
-  // filtering here. ORDS returns every doc it is given no reason to exclude,
-  // and the Node-side filters below ran only after the whole payload had
-  // already crossed the wire -- /serval needed 17KB and was downloading 8.2MB
-  // to get it, which is what made every page 17-19s (2026-08-05).
+  // Push sig_date and src UPSTREAM instead of downloading the world and
+  // filtering here. This route used to fetch PANTHER_SIGNALS_URL with NO query
+  // params, pull every doc for every publisher, and filter in Node -- /serval
+  // needed 17KB and downloaded 2.7MB (8.2MB before the v2dyn/smartlist purge)
+  // to get it. That is what made every page 17-19s on 2026-08-05.
   //
-  // Both params are SAFE TO SEND BEFORE the handler understands them: an ORDS
-  // handler ignores bind variables it does not declare, so this behaves exactly
-  // as before until the source filter is deployed, then starts paying off with
-  // no further frontend change. The Node-side filters are deliberately KEPT as
-  // a backstop -- correctness must not depend on the upstream honouring them.
+  // The ORDS handler has supported both filters all along; the parameter is
+  // :src, not :source or :sources, which is why probing the latter two made it
+  // look like no filter existed. Measured 2026-08-05:
+  //     sig_date only              1104 rows  2,725,105 bytes  1.1s
+  //     &src=serval                  46 rows     20,453 bytes  0.1s
+  //     &src=caracal2,shakeout       64 rows     27,730 bytes  0.1s
+  // It takes a comma-separated list, matching what pages already pass.
+  //
+  // The Node-side filters below are deliberately KEPT as a backstop --
+  // correctness must not depend on the upstream honouring a hint.
   const cacheKey = `${targetDate}|${sourcesParam ?? ""}`;
   const inflight = rawInflight.get(cacheKey);
   if (inflight) return inflight;
@@ -70,7 +75,8 @@ async function getRawByDate(targetDate: string, sourcesParam: string | null): Pr
 
     const u = new URL(signalsUrl);
     u.searchParams.set("sig_date", targetDate);
-    if (sourcesParam) u.searchParams.set("sources", sourcesParam);
+    // The handler binds :src (NOT :source or :sources) and accepts a comma list.
+    if (sourcesParam) u.searchParams.set("src", sourcesParam);
 
     const r: Response = await fetch(u.toString(), {
       headers: { Authorization: `Bearer ${t}` },
