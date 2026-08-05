@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat, Bot } from "lucide-react";
+import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat, Bot, Crown } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const PantherIcon = (props: any) => (
@@ -61,6 +61,7 @@ const NAV_ITEMS: any[] = [
   { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
   { href: "/rfac", icon: Zap, label: "RFAC", color: "#10b981", rgb: "16,185,129" },
   { href: "/fable", icon: Bot, label: "Fable", color: "#22d3ee", rgb: "34,211,238" },
+  { href: "/strike", icon: Crown, label: "Strike", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/flow-smartlist", icon: Target, label: "Smart List", color: "#eab308", rgb: "234,179,8" },
 ];
 
