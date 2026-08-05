@@ -54,15 +54,18 @@ const CaracalIcon = (props: any) => (
   </svg>
 );
 
+// -- Retired 2026-08-05: RFAC and Smart List. Between them the v2dyn and
+// smartlist snapshot sources were 67% of the PANTHER payload every page had to
+// download (ORDS ignores ?source, so every page pays for every source). The
+// 'rfac' source was already orphaned -- the /rfac page read v2dyn, not rfac.
+// Publishers rfac-scanner / smartlist / v2dyn disabled on the VM the same day. --
 const NAV_ITEMS: any[] = [
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/afac", icon: Target, label: "AFAC", color: "#fce205", rgb: "252,226,5" },
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
   { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
-  { href: "/rfac", icon: Zap, label: "RFAC", color: "#10b981", rgb: "16,185,129" },
   { href: "/fable", icon: Bot, label: "Fable", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/strike", icon: Crown, label: "Strike", color: "#f59e0b", rgb: "245,158,11" },
-  { href: "/flow-smartlist", icon: Target, label: "Smart List", color: "#eab308", rgb: "234,179,8" },
 ];
 
 // -- Hidden 2026-07: Panther-live and Elephant (panther-rank) engines retired on
