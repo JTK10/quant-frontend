@@ -843,6 +843,28 @@ export type PantherRow = {
   // Smart List snapshot fields
   category?: any;
   count?: any;
+  // STRIKE picker + paper-bot fields. normalizePantherSignals rebuilds every
+  // row from an explicit key list, so a field absent from BOTH this type and
+  // that list is dropped in transit -- which is how /strike shipped rendering
+  // em-dashes for every number on 2026-08-06.
+  spot?: any;
+  day_open?: any;
+  moved_pct?: any;
+  strike?: any;
+  otm_pct?: any;
+  prem?: any;
+  bid?: any;
+  ask?: any;
+  cost_lot?: any;
+  expiry?: any;
+  opt_key?: any;
+  opt_symbol?: any;
+  tier_note?: any;
+  why?: any;
+  u_symbol?: any;
+  slip_pct?: any;
+  ref_prem?: any;
+  held_min?: any;
 };
 
 export function normalizePantherSignals(payload: unknown): PantherRow[] {
@@ -903,6 +925,33 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       // Preserve Smart List snapshot fields (Upstox smartlist buckets)
       category: row.category,
       count: row.count,
+      // Preserve STRIKE picker + paper-bot fields.
+      //
+      // This normalizer REBUILDS each row from an explicit key list, so any
+      // field not named here is silently dropped. On 2026-08-06 the /strike
+      // page went live rendering em-dashes for every number: strike_scan.py
+      // was publishing spot/strike/otm_pct/prem/cost_lot correctly and they
+      // were reaching PANTHER, but none of them survived this function. Only
+      // side/name/tier/lot rendered because those happened to already be
+      // listed. Any NEW publisher must add its fields here.
+      spot: row.spot,
+      day_open: row.day_open,
+      moved_pct: row.moved_pct,
+      strike: row.strike,
+      otm_pct: row.otm_pct,
+      prem: row.prem,
+      bid: row.bid,
+      ask: row.ask,
+      cost_lot: row.cost_lot,
+      expiry: row.expiry,
+      opt_key: row.opt_key,
+      opt_symbol: row.opt_symbol,
+      tier_note: row.tier_note,
+      why: row.why,
+      u_symbol: row.u_symbol,
+      slip_pct: row.slip_pct,
+      ref_prem: row.ref_prem,
+      held_min: row.held_min,
     };
   });
 }
