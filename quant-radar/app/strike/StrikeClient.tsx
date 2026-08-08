@@ -124,6 +124,42 @@ export default function StrikeClient({
     }
   }
 
+  // Manual close. The bot owns the fill -- this only queues the intent, the
+  // same way TAKE PAPER TRADE does, so entry and exit prices come from the
+  // same place. exiting[] tracks which rows are mid-request so the button
+  // cannot be double-clicked into two EXIT docs for one position.
+  const [exiting, setExiting] = useState<string[]>([]);
+
+  async function exitTrade(p: any) {
+    const sid = p.sid;
+    if (!sid || exiting.includes(sid)) return;
+    setExiting((x) => [...x, sid]);
+    setMsg("");
+    try {
+      const r = await fetch("/api/strike-exit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          signal_id: sid,
+          side: p.entry?.side,
+          underlying: p.entry?.underlying,
+          opt_key: p.entry?.opt_key,
+          opt_symbol: p.entry?.name,
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      setMsg(
+        r.ok
+          ? `Exit queued for ${p.entry?.name ?? sid}. The bot closes at the live bid on its next 30s pass.`
+          : `Exit failed: ${j.error || r.status}`
+      );
+    } catch (e: any) {
+      setMsg(`Exit failed: ${String(e?.message || e)}`);
+    } finally {
+      setExiting((x) => x.filter((s) => s !== sid));
+    }
+  }
+
   const total = realized + unrealized;
   const th =
     "border-b border-[#ffffff14] px-3 py-2 text-left font-mono text-[10px] tracking-[0.18em] text-[#6b7280]";
@@ -300,11 +336,11 @@ export default function StrikeClient({
         </div>
         <table className="w-full border-collapse">
           <thead>
-            <tr>{["TIME", "OPTION", "FILL", "MARK", "P&L", "LOT"].map((h) => <th key={h} className={th}>{h}</th>)}</tr>
+            <tr>{["TIME", "OPTION", "FILL", "MARK", "P&L", "LOT", ""].map((h, i) => <th key={h || i} className={th}>{h}</th>)}</tr>
           </thead>
           <tbody>
             {open.length === 0 && (
-              <tr><td className={td} colSpan={6}>No open paper positions.</td></tr>
+              <tr><td className={td} colSpan={7}>No open paper positions.</td></tr>
             )}
             {open.map((p) => (
               <tr key={p.sid}>
@@ -316,6 +352,16 @@ export default function StrikeClient({
                   {p.mtm ? `${(num(p.mtm.pnl) ?? 0) >= 0 ? "+" : ""}${inr(p.mtm.pnl)}` : "…"}
                 </td>
                 <td className={td}>{inr(p.entry?.lot)}</td>
+                <td className={td}>
+                  <button
+                    onClick={() => exitTrade(p)}
+                    disabled={exiting.includes(p.sid)}
+                    className="rounded px-2.5 py-1 font-mono text-[10px] font-semibold tracking-wider text-white disabled:opacity-40"
+                    style={{ background: "#ef4444" }}
+                  >
+                    {exiting.includes(p.sid) ? "…" : "EXIT"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
