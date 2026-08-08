@@ -826,6 +826,14 @@ export type PantherRow = {
   tier?: any;
   target?: any;
   stop?: any;
+  // CARACAL v3 ("skeleton") fields -- published by caracal3_live_scanner.py.
+  // WATCH/FLAG rows carry `level` (the broken prev-day body level); ENTRY rows
+  // carry pullback_hm / pre_pullback_ext (+ dpoc / vol_ahead, already above).
+  level?: any;
+  watch_time?: any;
+  pullback_hm?: any;
+  pre_pullback_ext?: any;
+  first3_level?: any;
   // FABLE paper-bot fields
   kind?: any;
   signal_id?: any;
@@ -908,6 +916,12 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       tier: row.tier,
       target: row.target,
       stop: row.stop,
+      // Preserve CARACAL v3 skeleton fields
+      level: row.level,
+      watch_time: row.watch_time,
+      pullback_hm: row.pullback_hm,
+      pre_pullback_ext: row.pre_pullback_ext,
+      first3_level: row.first3_level,
       // Preserve FABLE paper-bot fields
       kind: row.kind,
       signal_id: row.signal_id,

@@ -14,37 +14,65 @@ function fmt(v: any, d = 2): string {
   return n === null ? "—" : n.toFixed(d);
 }
 
+/**
+ * CARACAL v3 ("skeleton").
+ *
+ * The engine publishes two kinds of row and this page shows BOTH, in their own
+ * sections, because in v3 the watchlist is genuinely informative: it is settled
+ * at 09:15 (the first candle's close breaking the prev-day body) and every
+ * later entry must come from it. It is still provisional -- a watchlist name is
+ * NOT tradeable until its ENTRY row appears -- so the two sections never share
+ * a table.
+ *
+ *   FLAG  (provisional:true , cap CAR-V3) -> WATCHLIST
+ *   ENTRY (provisional:false, cap CAR-V3) -> ENTRIES (>= 09:50, vol_ahead < 0.3)
+ *
+ * Legacy CARACAL v2 rows (cap CAR-V2 / CAR-V2-T) and OOS shakeout rows are
+ * still rendered in the ENTRIES section so historical dates keep working.
+ */
 export default function CaracalClient({ signals }: { signals: any[] }) {
   const [sideFilter, setSideFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
   const [sourceFilter, setSourceFilter] = useState<"ALL" | "CARACAL" | "OOS">("ALL");
-  const [tierOnly, setTierOnly] = useState(false);
+  const [showWatch, setShowWatch] = useState(true);
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(true);
 
-  const rows = useMemo(() => {
-    // FLAG (funnel) events are NOT shown. A flag only means the name entered
-    // the funnel -- it is not a signal, and putting provisional rows beside
-    // confirmed entries made them read as tradeable. Only confirmed
-    // pullback-resumption ENTRIES appear here now.
-    //
-    // The collapse below stays: it still de-duplicates repeated ENTRY publishes
-    // for the same name+side (a scanner restart re-emits), keeping the newest.
+  const isWatch = (s: any) => s.event === "FLAG" && s.source === "caracal3";
+
+  // ---- WATCHLIST (09:15 body breaks, de-duplicated per name+side) ----
+  const watchRows = useMemo(() => {
     const byKey = new Map<string, any>();
-    for (const s of signals.filter((x: any) => x.event !== "FLAG")) {
+    for (const s of signals.filter(isWatch)) {
+      const k = `${s.name}|${s.side}`;
+      const prev = byKey.get(k);
+      if (!prev || (s.ts ?? 0) > (prev.ts ?? 0)) byKey.set(k, s);
+    }
+    let f = Array.from(byKey.values());
+    if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
+    if (sourceFilter === "OOS") f = [];
+    return f.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+  }, [signals, sideFilter, sourceFilter]);
+
+  // names that already converted -- shown as CONFIRMED chips on the watchlist
+  const enteredKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of signals) if (r.event === "ENTRY") s.add(`${r.name}|${r.side}`);
+    return s;
+  }, [signals]);
+
+  // ---- ENTRIES ----
+  const rows = useMemo(() => {
+    const byKey = new Map<string, any>();
+    for (const s of signals.filter((x: any) => !isWatch(x) && x.event !== "FLAG")) {
       if (s.cap === "OOS") { byKey.set(`OOS|${s.name}|${s.time}`, s); continue; }
       const k = `${s.name}|${s.side}`;
       const prev = byKey.get(k);
-      if (!prev) { byKey.set(k, s); continue; }
-      const rank = (x: any) => (x.event === "ENTRY" ? 2 : 1);
-      if (rank(s) > rank(prev)) byKey.set(k, { ...s, flagged_at: prev.time });
-      else if (rank(s) === rank(prev) && (s.ts ?? 0) > (prev.ts ?? 0)) byKey.set(k, s);
-      else if (rank(s) < rank(prev) && !prev.flagged_at) byKey.set(k, { ...prev, flagged_at: s.time });
+      if (!prev || (s.ts ?? 0) > (prev.ts ?? 0)) byKey.set(k, s);
     }
     let f = Array.from(byKey.values());
     if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
     if (sourceFilter === "CARACAL") f = f.filter((s) => s.cap !== "OOS");
     if (sourceFilter === "OOS") f = f.filter((s) => s.cap === "OOS");
-    if (tierOnly) f = f.filter((s) => s.tier === true || s.cap === "CAR-V2-T");
     return [...f].sort((a, b) => {
       const cmp = (() => {
         switch (sortKey) {
@@ -61,7 +89,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       })();
       return ascending ? cmp : -cmp;
     });
-  }, [signals, sideFilter, sourceFilter, tierOnly, sortKey, ascending]);
+  }, [signals, sideFilter, sourceFilter, sortKey, ascending]);
 
   const headers: Array<[string, string]> = [
     ["time", "TIME"],
@@ -70,12 +98,14 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     ["entry", "ENTRY"],
     ["dpoc", "DPOC%"],
     ["vol_ahead", "AHEAD"],
-    ["rt5", "RT5%"],
+    ["pullback_hm", "PB"],
   ];
 
-  const nTier = signals.filter((s) => s.tier === true || s.cap === "CAR-V2-T").length;
+  const nWatchAll = signals.filter(isWatch).length;
+  const nEntry = rows.filter((s) => s.cap !== "OOS").length;
   const nOos = signals.filter((s) => s.cap === "OOS").length;
   const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px] gap-3 min-w-[820px]";
+  const WGRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_90px] gap-3 min-w-[620px]";
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -92,13 +122,19 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
             NSE FNO UNIVERSE
           </span>
           <span className="font-mono text-sm font-bold tracking-[0.18em]" style={{ color: ACCENT }}>
-            SPLIT-POOL FUNNEL
+            SKELETON
           </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}80` }} />
           <span className="font-mono text-[11px] font-medium" style={{ color: ACCENT }}>
-            {nTier} TIER SIGNALS TODAY
+            {nEntry} ENTRIES TODAY
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: "#60a5fa", boxShadow: "0 0 8px #60a5fa80" }} />
+          <span className="font-mono text-[11px] font-medium" style={{ color: "#60a5fa" }}>
+            {nWatchAll} ON WATCHLIST
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -109,7 +145,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
         </div>
         <div className="ml-auto flex items-center gap-2 px-3 py-1 bg-[#ffffff05] rounded-md border border-[#ffffff10]">
           <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}cc` }} />
-          <span className="font-mono text-[11px] text-gray-400">{rows.length - nOos} IN FUNNEL</span>
+          <span className="font-mono text-[11px] text-gray-400">ENTRY ≥ 09:50 · AHEAD &lt; 0.3</span>
         </div>
       </div>
 
@@ -160,24 +196,118 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
         <span className="mx-1 h-4 w-px bg-[#ffffff18]" />
         <button
           type="button"
-          onClick={() => setTierOnly(!tierOnly)}
+          onClick={() => setShowWatch(!showWatch)}
           className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
           style={{
-            color: tierOnly ? ACCENT : "var(--color-muted, #6b7280)",
-            borderColor: tierOnly ? `${ACCENT}66` : "#ffffff18",
-            background: tierOnly ? `${ACCENT}14` : "transparent",
-            boxShadow: tierOnly ? `0 0 10px ${ACCENT}25` : "none",
+            color: showWatch ? "#60a5fa" : "var(--color-muted, #6b7280)",
+            borderColor: showWatch ? "#60a5fa66" : "#ffffff18",
+            background: showWatch ? "#60a5fa14" : "transparent",
+            boxShadow: showWatch ? "0 0 10px #60a5fa25" : "none",
           }}
         >
-          TIER ONLY ({nTier})
+          WATCHLIST ({watchRows.length})
         </button>
         <span className="ml-auto font-mono text-[10px] tracking-[0.22em] text-[#6b7280]">
           {rows.length} ROWS
         </span>
       </div>
 
-      {/* grid table, same pattern as SERVAL/RFAC/AFAC */}
       <div className="min-h-0 flex-1 overflow-auto custom-scrollbar-caracal">
+        {/* ---------------- WATCHLIST ---------------- */}
+        {showWatch && (
+          <>
+            <div
+              className="flex items-center gap-2 px-3 py-2 md:px-4 border-b"
+              style={{ borderColor: "var(--color-border)", background: "#60a5fa0c" }}
+            >
+              <span className="font-mono text-[10px] tracking-[0.2em] font-semibold" style={{ color: "#60a5fa" }}>
+                WATCHLIST · 09:15 CLOSE BROKE PREV-DAY BODY
+              </span>
+              <span className="font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>
+                provisional — not tradeable until an ENTRY row appears
+              </span>
+            </div>
+            <div
+              className={`grid items-center border-b px-3 py-2 md:px-4 ${WGRID}`}
+              style={{ borderColor: "var(--color-border)", background: "rgba(10, 14, 23, 0.75)" }}
+            >
+              {["#", "TIME", "STOCK", "SIDE", "09:15 CLOSE", "PD BODY"].map((h, i) => (
+                <span
+                  key={h}
+                  className={`font-mono text-[9px] tracking-[0.14em] ${i >= 3 ? "text-right" : "text-left"}`}
+                  style={{ color: "var(--color-muted)" }}
+                >
+                  {h}
+                </span>
+              ))}
+            </div>
+            {watchRows.length === 0 && (
+              <div className="px-3 py-6 text-center font-mono text-xs" style={{ color: "var(--color-muted)" }}>
+                No watchlist rows for this date. The 09:15 break publishes from ~09:20 IST.
+              </div>
+            )}
+            {watchRows.map((s, i) => {
+              const long = s.side === "LONG";
+              const sideColor = long ? "var(--color-bull, #10b981)" : "#ef4444";
+              const confirmed = enteredKeys.has(`${s.name}|${s.side}`);
+              return (
+                <div
+                  key={`w-${s.name}-${s.side}-${i}`}
+                  className={`grid items-center border-b px-3 py-2.5 md:px-4 ${WGRID} hover:bg-[#ffffff04] transition-colors`}
+                  style={{
+                    borderColor: "var(--color-border)",
+                    background: confirmed ? `${ACCENT}0a` : "transparent",
+                  }}
+                >
+                  <span className="font-mono text-[11px] font-bold" style={{ color: "var(--color-muted2)" }}>
+                    #{i + 1}
+                  </span>
+                  <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                    {String(s.time || "09:15").slice(0, 5)}
+                  </span>
+                  <div className="min-w-0 flex items-center gap-1.5">
+                    <a
+                      href={buildTradingViewUrl(s.name, s.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-w-0 truncate text-[13px] font-semibold hover:underline"
+                      style={{ color: "var(--color-text2)" }}
+                    >
+                      {s.name}
+                    </a>
+                    {confirmed && (
+                      <span
+                        className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                        style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
+                      >
+                        ENTERED
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-right font-mono text-[11px] font-semibold" style={{ color: sideColor }}>
+                    {long ? "▲" : "▼"}
+                  </span>
+                  <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
+                    {fmt(s.entry)}
+                  </span>
+                  <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
+                    {fmt(s.level)}
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {/* ---------------- ENTRIES ---------------- */}
+        <div
+          className="flex items-center gap-2 px-3 py-2 md:px-4 border-b"
+          style={{ borderColor: "var(--color-border)", background: `${ACCENT}0c` }}
+        >
+          <span className="font-mono text-[10px] tracking-[0.2em] font-semibold" style={{ color: ACCENT }}>
+            ENTRIES · RESUMPTION BEYOND THE PRE-PULLBACK EXTREME
+          </span>
+        </div>
         <div
           className={`sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 ${GRID}`}
           style={{
@@ -215,12 +345,12 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
 
         {rows.length === 0 && (
           <div className="px-3 py-10 text-center font-mono text-xs" style={{ color: "var(--color-muted)" }}>
-            No CARACAL v2 signals for this date. Funnel entries appear from ~09:40 IST.
+            No CARACAL v3 entries for this date. Entries appear from 09:50 IST.
           </div>
         )}
 
         {rows.map((s, i) => {
-          const isTier = s.tier === true || s.cap === "CAR-V2-T";
+          const isV3 = s.cap === "CAR-V3";
           const long = s.side === "LONG";
           const sideColor = long ? "var(--color-bull, #10b981)" : "#ef4444";
           const rank = i + 1;
@@ -231,7 +361,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
               className={`grid items-center border-b px-3 py-3 md:px-4 ${GRID} hover:bg-[#ffffff04] transition-colors`}
               style={{
                 borderColor: "var(--color-border)",
-                background: isTier ? `${ACCENT}0e` : isTop3 ? `${ACCENT}06` : "transparent",
+                background: isV3 ? `${ACCENT}0e` : isTop3 ? `${ACCENT}06` : "transparent",
               }}
             >
               <span className="font-mono text-[11px] font-bold" style={{ color: isTop3 ? ACCENT : "var(--color-muted2)" }}>
@@ -250,12 +380,20 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                 >
                   {s.name}
                 </a>
-                {isTier && (
+                {isV3 && (
                   <span
                     className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
                     style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
                   >
-                    TIER
+                    V3
+                  </span>
+                )}
+                {(s.cap === "CAR-V2" || s.cap === "CAR-V2-T") && (
+                  <span
+                    className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
+                    style={{ color: "#9ca3af", background: "#9ca3af1a", border: "1px solid #9ca3af44" }}
+                  >
+                    V2
                   </span>
                 )}
                 {s.cap === "OOS" && (
@@ -280,7 +418,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                 {fmt(s.vol_ahead, 3)}
               </span>
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
-                {fmt(s.rt5, 1)}
+                {s.pullback_hm ? String(s.pullback_hm).slice(0, 5) : "—"}
               </span>
             </div>
           );
