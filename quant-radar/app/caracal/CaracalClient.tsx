@@ -92,7 +92,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(true);
 
-  const isWatch = (s: any) => s.event === "FLAG" && s.source === "caracal3";
 
   /**
    * A CARACAL v3 row. NOTE -- this is the scope guard for BOTH new filters
@@ -118,23 +117,12 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     return sectorsOf(s).includes(sectorFilter);
   };
 
-  // names that already converted to an ENTRY. They used to render on the
-  // watchlist with an "ENTERED" chip; RK: "V3 ENTERED LOOKS LIKE FUNNEL
-  // ENTRIES SO NO NEED TO SHOW" -- the watchlist is now strictly the names
-  // that have NOT converted, so this set is an exclusion, not a badge.
-  // OOS rows publish no `event` at all, so they can never land in here.
-  const enteredKeys = useMemo(() => {
-    const s = new Set<string>();
-    for (const r of signals) if (r.event === "ENTRY") s.add(`${r.name}|${r.side}`);
-    return s;
-  }, [signals]);
-
   // ---- ENTRIES ----
   // Deduped + side/source filtered, but BEFORE the two new filters, so each of
   // them can be counted against what the other one leaves.
   const baseRows = useMemo(() => {
     const byKey = new Map<string, any>();
-    for (const s of signals.filter((x: any) => !isWatch(x) && x.event !== "FLAG")) {
+    for (const s of signals.filter((x: any) => x.event !== "FLAG")) {
       if (s.cap === "OOS") { byKey.set(`OOS|${s.name}|${s.time}`, s); continue; }
       const k = `${s.name}|${s.side}`;
       const prev = byKey.get(k);
