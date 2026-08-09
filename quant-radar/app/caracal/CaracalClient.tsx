@@ -213,9 +213,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
           >
             NSE FNO UNIVERSE
           </span>
-          <span className="font-mono text-sm font-bold tracking-[0.18em]" style={{ color: ACCENT }}>
-            SKELETON
-          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}80` }} />
@@ -357,14 +354,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
 
       <div className="min-h-0 flex-1 overflow-auto custom-scrollbar-caracal">
         {/* ---------------- ENTRIES ---------------- */}
-        <div
-          className="flex items-center gap-2 px-3 py-2 md:px-4 border-b"
-          style={{ borderColor: "var(--color-border)", background: `${ACCENT}0c` }}
-        >
-          <span className="font-mono text-[10px] tracking-[0.2em] font-semibold" style={{ color: ACCENT }}>
-            ENTRIES · RESUMPTION BEYOND THE PRE-PULLBACK EXTREME
-          </span>
-        </div>
         <div
           className={`sticky top-0 z-10 grid items-center border-b px-3 py-2.5 md:px-4 ${GRID}`}
           style={{
