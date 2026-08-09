@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
+import sectorMapData from "@/utils/sectorMap.json";
 
 const ACCENT = "#f59e0b";
 
@@ -12,6 +13,59 @@ function num(v: any): number | null {
 function fmt(v: any, d = 2): string {
   const n = num(v);
   return n === null ? "—" : n.toFixed(d);
+}
+
+/**
+ * Sector membership -- the SAME source Sector Scope (/sector, AFAC.2) uses.
+ *
+ * afac2_score.py tags every leaderboard row with `secs`, and that map is built
+ * on the VM (serval_live_scanner.py `afac_sectors`, vm_sim_afac2.py `sectors`)
+ * straight out of master_mapping.csv:
+ *
+ *     sectors[str(r["Options  Name"]).strip()] = [SECTOR 1, SECTOR 2, SECTOR 3]
+ *
+ * utils/sectorMap.json is that exact dict, generated from the same CSV, so the
+ * labels here are identical to the ones on the Sector Scope bar chart/cards.
+ * It is NOT fetched from afac2 at runtime for two reasons: afac2 is the single
+ * heaviest publisher (~2MB/day -- see memory panther-payload-bottleneck; it is
+ * what kept /sector at 7s) and its rows only cover stocks that GATED that day,
+ * so a caracal name that afac2 never scored would silently lose its sector.
+ *
+ * JOIN KEY: caracal3 publishes `name = r.Underlying` (the futures-master
+ * underlying, i.e. the OPTIONS symbol -- "RELIANCE"), which is exactly the
+ * "Options  Name" column keyed above. Shakeout/OOS instead publishes the long
+ * MASTER name ("RELIANCE INDUSTRIES LTD") off futures_instrument_keys, so OOS
+ * rows would NOT join here -- another reason the sector filter never touches
+ * them (see NOTE on the filters below).
+ */
+const SECTOR_MAP: Record<string, string[]> = sectorMapData as Record<string, string[]>;
+
+// same de-prefixing Sector Scope / AFAC use for display
+const sectorLabel = (s: string) => s.replace(/^NIFTY_/, "").replace(/_/g, " ");
+
+const sectorsOf = (s: any): string[] =>
+  SECTOR_MAP[String(s?.name ?? "").trim().toUpperCase()] ?? [];
+
+/**
+ * Entry-time buckets, exactly as specified: the FIRST is 20 minutes, the rest
+ * are 15. Inclusive start, exclusive end. An entry outside 09:55-11:30 matches
+ * no bucket -- it is visible under "ALL" and nowhere else.
+ */
+const TIME_BUCKETS: Array<{ key: string; from: number; to: number }> = [
+  { key: "09:55-10:15", from: 9 * 60 + 55, to: 10 * 60 + 15 },
+  { key: "10:15-10:30", from: 10 * 60 + 15, to: 10 * 60 + 30 },
+  { key: "10:30-10:45", from: 10 * 60 + 30, to: 10 * 60 + 45 },
+  { key: "10:45-11:00", from: 10 * 60 + 45, to: 11 * 60 + 0 },
+  { key: "11:00-11:15", from: 11 * 60 + 0, to: 11 * 60 + 15 },
+  { key: "11:15-11:30", from: 11 * 60 + 15, to: 11 * 60 + 30 },
+];
+
+// "10:05:00" / "10:05" -> minutes past midnight
+function minsOfDay(t: any): number | null {
+  const m = /^\s*(\d{1,2}):(\d{2})/.exec(String(t ?? ""));
+  if (!m) return null;
+  const v = Number(m[1]) * 60 + Number(m[2]);
+  return Number.isFinite(v) ? v : null;
 }
 
 /**
@@ -33,35 +87,79 @@ function fmt(v: any, d = 2): string {
 export default function CaracalClient({ signals }: { signals: any[] }) {
   const [sideFilter, setSideFilter] = useState<"ALL" | "LONG" | "SHORT">("ALL");
   const [sourceFilter, setSourceFilter] = useState<"ALL" | "CARACAL" | "OOS">("ALL");
+  const [timeBucket, setTimeBucket] = useState<string>("ALL");
+  const [sectorFilter, setSectorFilter] = useState<string>("ALL");
   const [showWatch, setShowWatch] = useState(true);
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(true);
 
   const isWatch = (s: any) => s.event === "FLAG" && s.source === "caracal3";
 
-  // ---- WATCHLIST (09:15 body breaks, de-duplicated per name+side) ----
-  const watchRows = useMemo(() => {
-    const byKey = new Map<string, any>();
-    for (const s of signals.filter(isWatch)) {
-      const k = `${s.name}|${s.side}`;
-      const prev = byKey.get(k);
-      if (!prev || (s.ts ?? 0) > (prev.ts ?? 0)) byKey.set(k, s);
-    }
-    let f = Array.from(byKey.values());
-    if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
-    if (sourceFilter === "OOS") f = [];
-    return f.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-  }, [signals, sideFilter, sourceFilter]);
+  /**
+   * A CARACAL v3 row. NOTE -- this is the scope guard for BOTH new filters
+   * (entry-time bucket, sector). Legacy CARACAL v2 rows and, critically, OOS
+   * shakeout rows (source "shakeout", cap "OOS") are never v3, so they always
+   * pass both filters untouched: nothing added here can hide or alter an OOS
+   * row. The pre-existing side/source filters are unchanged.
+   */
+  const isV3 = (s: any) => s.source === "caracal3" || s.cap === "CAR-V3";
 
-  // names that already converted -- shown as CONFIRMED chips on the watchlist
+  // v3 ENTRY rows only -- inclusive start, exclusive end; non-v3 always passes
+  const passesTime = (s: any) => {
+    if (timeBucket === "ALL" || !isV3(s)) return true;
+    const b = TIME_BUCKETS.find((x) => x.key === timeBucket);
+    if (!b) return true;
+    const m = minsOfDay(s.time);
+    return m !== null && m >= b.from && m < b.to;
+  };
+
+  // v3 rows only; a name with several SECTOR 1/2/3 tags matches on ANY of them
+  const passesSector = (s: any) => {
+    if (sectorFilter === "ALL" || !isV3(s)) return true;
+    return sectorsOf(s).includes(sectorFilter);
+  };
+
+  // names that already converted to an ENTRY. They used to render on the
+  // watchlist with an "ENTERED" chip; RK: "V3 ENTERED LOOKS LIKE FUNNEL
+  // ENTRIES SO NO NEED TO SHOW" -- the watchlist is now strictly the names
+  // that have NOT converted, so this set is an exclusion, not a badge.
+  // OOS rows publish no `event` at all, so they can never land in here.
   const enteredKeys = useMemo(() => {
     const s = new Set<string>();
     for (const r of signals) if (r.event === "ENTRY") s.add(`${r.name}|${r.side}`);
     return s;
   }, [signals]);
 
+  // ---- WATCHLIST (09:15 body breaks, de-duplicated per name+side) ----
+  // CHANGE: names that already produced an ENTRY are dropped from the section
+  // entirely (they are already in ENTRIES below) rather than shown with a chip.
+  // `watchPool` is that set BEFORE the sector filter, so the sector dropdown
+  // can still list a sector whose only v3 names are still pending.
+  const watchPool = useMemo(() => {
+    const byKey = new Map<string, any>();
+    for (const s of signals.filter(isWatch)) {
+      const k = `${s.name}|${s.side}`;
+      const prev = byKey.get(k);
+      if (!prev || (s.ts ?? 0) > (prev.ts ?? 0)) byKey.set(k, s);
+    }
+    return Array.from(byKey.values()).filter((s) => !enteredKeys.has(`${s.name}|${s.side}`));
+  }, [signals, enteredKeys]);
+
+  // The entry-time bucket filter deliberately does NOT apply here: every flag
+  // is stamped 09:15, so any bucket would empty the section.
+  const watchRows = useMemo(() => {
+    let f = watchPool;
+    if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
+    if (sourceFilter === "OOS") f = [];
+    f = f.filter(passesSector);
+    return [...f].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchPool, sideFilter, sourceFilter, sectorFilter]);
+
   // ---- ENTRIES ----
-  const rows = useMemo(() => {
+  // Deduped + side/source filtered, but BEFORE the two new filters, so each of
+  // them can be counted against what the other one leaves.
+  const baseRows = useMemo(() => {
     const byKey = new Map<string, any>();
     for (const s of signals.filter((x: any) => !isWatch(x) && x.event !== "FLAG")) {
       if (s.cap === "OOS") { byKey.set(`OOS|${s.name}|${s.time}`, s); continue; }
@@ -73,6 +171,43 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
     if (sourceFilter === "CARACAL") f = f.filter((s) => s.cap !== "OOS");
     if (sourceFilter === "OOS") f = f.filter((s) => s.cap === "OOS");
+    return f;
+  }, [signals, sideFilter, sourceFilter]);
+
+  // per-bucket counts, composed with the sector filter (v3 entries only)
+  const bucketCounts = useMemo(() => {
+    const v3 = baseRows.filter((s) => isV3(s) && passesSector(s));
+    const counts: Record<string, number> = { ALL: v3.length };
+    for (const b of TIME_BUCKETS) {
+      counts[b.key] = v3.filter((s) => {
+        const m = minsOfDay(s.time);
+        return m !== null && m >= b.from && m < b.to;
+      }).length;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseRows, sectorFilter]);
+
+  // sector options, composed with the time-bucket filter (v3 rows only).
+  // Watchlist flags are included so a sector that only has pending names is
+  // still selectable; the count shown is v3 ENTRIES in that sector.
+  const sectorOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of baseRows) {
+      if (!isV3(s) || !passesTime(s)) continue;
+      for (const sec of sectorsOf(s)) counts.set(sec, (counts.get(sec) ?? 0) + 1);
+    }
+    for (const s of watchPool) {
+      for (const sec of sectorsOf(s)) if (!counts.has(sec)) counts.set(sec, 0);
+    }
+    return Array.from(counts.entries()).sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseRows, timeBucket, watchPool]);
+
+  const rows = useMemo(() => {
+    const f = baseRows.filter((s) => passesTime(s) && passesSector(s));
     return [...f].sort((a, b) => {
       const cmp = (() => {
         switch (sortKey) {
@@ -89,7 +224,8 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       })();
       return ascending ? cmp : -cmp;
     });
-  }, [signals, sideFilter, sourceFilter, sortKey, ascending]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [baseRows, timeBucket, sectorFilter, sortKey, ascending]);
 
   const headers: Array<[string, string]> = [
     ["time", "TIME"],
@@ -101,7 +237,10 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     ["pullback_hm", "PB"],
   ];
 
-  const nWatchAll = signals.filter(isWatch).length;
+  // "ON WATCHLIST" now counts names STILL PENDING -- the section no longer
+  // renders names that converted, so counting every flag published today would
+  // report rows that are not there.
+  const nWatchAll = watchPool.length;
   const nEntry = rows.filter((s) => s.cap !== "OOS").length;
   const nOos = signals.filter((s) => s.cap === "OOS").length;
   const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px] gap-3 min-w-[820px]";
@@ -212,6 +351,77 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
         </span>
       </div>
 
+      {/* v3-only filter bar: entry-time bucket + sector.
+          Both scope themselves to CARACAL v3 rows -- V2 and OOS shakeout rows
+          are never hidden by either, which is why the bar says so. */}
+      <div
+        className="flex flex-wrap items-center gap-2 border-b border-[#ffffff10] px-3 py-2.5 md:px-6 shrink-0"
+        style={{ background: "var(--color-surface)" }}
+      >
+        <span
+          className="rounded-sm border px-1.5 py-0.5 font-mono text-[9px] tracking-[0.18em]"
+          style={{ color: ACCENT, background: `${ACCENT}12`, borderColor: `${ACCENT}30` }}
+          title="These two filters apply to CARACAL v3 rows only — V2 and OOS shakeout rows always stay visible."
+        >
+          V3 ONLY
+        </span>
+        <span className="font-mono text-[9px] tracking-[0.18em] text-[#6b7280]">ENTRY</span>
+        {(["ALL", ...TIME_BUCKETS.map((b) => b.key)] as string[]).map((v) => {
+          const active = timeBucket === v;
+          const n = bucketCounts[v] ?? 0;
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setTimeBucket(v)}
+              className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.12em] transition-all duration-300"
+              style={{
+                color: active ? ACCENT : "var(--color-muted, #6b7280)",
+                borderColor: active ? `${ACCENT}55` : "#ffffff18",
+                background: active ? `${ACCENT}12` : "transparent",
+              }}
+            >
+              {v}
+              <span style={{ opacity: 0.65 }}> {n}</span>
+            </button>
+          );
+        })}
+        <span className="mx-1 h-4 w-px bg-[#ffffff18]" />
+        <span className="font-mono text-[9px] tracking-[0.18em] text-[#6b7280]">SECTOR</span>
+        <select
+          value={sectorFilter}
+          onChange={(e) => setSectorFilter(e.target.value)}
+          className="rounded-lg border px-2 py-1 font-mono text-[10px] tracking-[0.12em] outline-none transition-all duration-300"
+          style={{
+            color: sectorFilter === "ALL" ? "var(--color-muted, #6b7280)" : ACCENT,
+            borderColor: sectorFilter === "ALL" ? "#ffffff18" : `${ACCENT}55`,
+            background: sectorFilter === "ALL" ? "transparent" : `${ACCENT}12`,
+          }}
+        >
+          <option value="ALL" style={{ background: "#0A0A0B", color: "#e5e7eb" }}>
+            ALL SECTORS
+          </option>
+          {sectorOptions.map(([sec, n]) => (
+            <option key={sec} value={sec} style={{ background: "#0A0A0B", color: "#e5e7eb" }}>
+              {sectorLabel(sec)} ({n})
+            </option>
+          ))}
+        </select>
+        {(timeBucket !== "ALL" || sectorFilter !== "ALL") && (
+          <button
+            type="button"
+            onClick={() => {
+              setTimeBucket("ALL");
+              setSectorFilter("ALL");
+            }}
+            className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
+            style={{ color: "var(--color-muted, #6b7280)", borderColor: "#ffffff18" }}
+          >
+            CLEAR
+          </button>
+        )}
+      </div>
+
       <div className="min-h-0 flex-1 overflow-auto custom-scrollbar-caracal">
         {/* ---------------- WATCHLIST ---------------- */}
         {showWatch && (
@@ -221,10 +431,11 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
               style={{ borderColor: "var(--color-border)", background: "#60a5fa0c" }}
             >
               <span className="font-mono text-[10px] tracking-[0.2em] font-semibold" style={{ color: "#60a5fa" }}>
-                WATCHLIST · 09:15 CLOSE BROKE PREV-DAY BODY
+                WATCHLIST · 09:15 CLOSE BROKE PREV-DAY BODY · STILL PENDING
               </span>
               <span className="font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>
-                provisional — not tradeable until an ENTRY row appears
+                provisional — not tradeable until an ENTRY row appears; names that
+                converted drop off here and show in ENTRIES below
               </span>
             </div>
             <div
@@ -243,21 +454,18 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
             </div>
             {watchRows.length === 0 && (
               <div className="px-3 py-6 text-center font-mono text-xs" style={{ color: "var(--color-muted)" }}>
-                No watchlist rows for this date. The 09:15 break publishes from ~09:20 IST.
+                No pending watchlist rows. The 09:15 break publishes from ~09:20 IST;
+                names that already converted are listed under ENTRIES.
               </div>
             )}
             {watchRows.map((s, i) => {
               const long = s.side === "LONG";
               const sideColor = long ? "var(--color-bull, #10b981)" : "#ef4444";
-              const confirmed = enteredKeys.has(`${s.name}|${s.side}`);
               return (
                 <div
                   key={`w-${s.name}-${s.side}-${i}`}
                   className={`grid items-center border-b px-3 py-2.5 md:px-4 ${WGRID} hover:bg-[#ffffff04] transition-colors`}
-                  style={{
-                    borderColor: "var(--color-border)",
-                    background: confirmed ? `${ACCENT}0a` : "transparent",
-                  }}
+                  style={{ borderColor: "var(--color-border)", background: "transparent" }}
                 >
                   <span className="font-mono text-[11px] font-bold" style={{ color: "var(--color-muted2)" }}>
                     #{i + 1}
@@ -275,14 +483,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
                     >
                       {s.name}
                     </a>
-                    {confirmed && (
-                      <span
-                        className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] tracking-[0.1em]"
-                        style={{ color: ACCENT, background: `${ACCENT}1a`, border: `1px solid ${ACCENT}44` }}
-                      >
-                        ENTERED
-                      </span>
-                    )}
                   </div>
                   <span className="text-right font-mono text-[11px] font-semibold" style={{ color: sideColor }}>
                     {long ? "▲" : "▼"}
