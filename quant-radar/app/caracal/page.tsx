@@ -45,6 +45,7 @@ export default async function CaracalPage({ searchParams }: { searchParams: Date
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
       <PageHeader
         title="CARACAL v3"
+        subtitle=""
         badge="LIVE"
         dateStr={dateStr}
         accentColor={ACCENT}
