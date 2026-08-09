@@ -192,12 +192,13 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     ["entry", "ENTRY"],
     ["dpoc", "DPOC%"],
     ["vol_ahead", "AHEAD"],
+    ["rvol", "RVOL"],
     ["pullback_hm", "PB"],
   ];
 
   const nEntry = rows.filter((s) => s.cap !== "OOS").length;
   const nOos = signals.filter((s) => s.cap === "OOS").length;
-  const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px] gap-3 min-w-[820px]";
+  const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px_70px] gap-3 min-w-[890px]";
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -462,6 +463,12 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
               </span>
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
                 {fmt(s.vol_ahead, 3)}
+              </span>
+              <span
+                className="text-right font-mono text-[11px]"
+                style={{ color: num(s.rvol) !== null && num(s.rvol)! >= 2 ? ACCENT : "var(--color-muted2)" }}
+              >
+                {fmt(s.rvol, 2)}
               </span>
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
                 {s.pullback_hm ? String(s.pullback_hm).slice(0, 5) : "—"}

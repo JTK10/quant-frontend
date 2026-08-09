@@ -820,6 +820,7 @@ export type PantherRow = {
   flag_time?: any;
   dpoc?: any;
   vol_ahead?: any;
+  rvol?: any;
   rt5?: any;
   atr?: any;
   dyn_ratio?: any;
@@ -910,6 +911,7 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       flag_time: row.flag_time,
       dpoc: row.dpoc,
       vol_ahead: row.vol_ahead,
+      rvol: row.rvol,
       rt5: row.rt5,
       atr: row.atr,
       dyn_ratio: row.dyn_ratio,
