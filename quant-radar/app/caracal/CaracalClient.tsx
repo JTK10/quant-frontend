@@ -89,7 +89,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
   const [sourceFilter, setSourceFilter] = useState<"ALL" | "CARACAL" | "OOS">("ALL");
   const [timeBucket, setTimeBucket] = useState<string>("ALL");
   const [sectorFilter, setSectorFilter] = useState<string>("ALL");
-  const [showWatch, setShowWatch] = useState(true);
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(true);
 
@@ -129,32 +128,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     for (const r of signals) if (r.event === "ENTRY") s.add(`${r.name}|${r.side}`);
     return s;
   }, [signals]);
-
-  // ---- WATCHLIST (09:15 body breaks, de-duplicated per name+side) ----
-  // CHANGE: names that already produced an ENTRY are dropped from the section
-  // entirely (they are already in ENTRIES below) rather than shown with a chip.
-  // `watchPool` is that set BEFORE the sector filter, so the sector dropdown
-  // can still list a sector whose only v3 names are still pending.
-  const watchPool = useMemo(() => {
-    const byKey = new Map<string, any>();
-    for (const s of signals.filter(isWatch)) {
-      const k = `${s.name}|${s.side}`;
-      const prev = byKey.get(k);
-      if (!prev || (s.ts ?? 0) > (prev.ts ?? 0)) byKey.set(k, s);
-    }
-    return Array.from(byKey.values()).filter((s) => !enteredKeys.has(`${s.name}|${s.side}`));
-  }, [signals, enteredKeys]);
-
-  // The entry-time bucket filter deliberately does NOT apply here: every flag
-  // is stamped 09:15, so any bucket would empty the section.
-  const watchRows = useMemo(() => {
-    let f = watchPool;
-    if (sideFilter !== "ALL") f = f.filter((s) => s.side === sideFilter);
-    if (sourceFilter === "OOS") f = [];
-    f = f.filter(passesSector);
-    return [...f].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchPool, sideFilter, sourceFilter, sectorFilter]);
 
   // ---- ENTRIES ----
   // Deduped + side/source filtered, but BEFORE the two new filters, so each of
@@ -197,14 +170,11 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       if (!isV3(s) || !passesTime(s)) continue;
       for (const sec of sectorsOf(s)) counts.set(sec, (counts.get(sec) ?? 0) + 1);
     }
-    for (const s of watchPool) {
-      for (const sec of sectorsOf(s)) if (!counts.has(sec)) counts.set(sec, 0);
-    }
     return Array.from(counts.entries()).sort(
       (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseRows, timeBucket, watchPool]);
+  }, [baseRows, timeBucket]);
 
   const rows = useMemo(() => {
     const f = baseRows.filter((s) => passesTime(s) && passesSector(s));
@@ -237,14 +207,9 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     ["pullback_hm", "PB"],
   ];
 
-  // "ON WATCHLIST" now counts names STILL PENDING -- the section no longer
-  // renders names that converted, so counting every flag published today would
-  // report rows that are not there.
-  const nWatchAll = watchPool.length;
   const nEntry = rows.filter((s) => s.cap !== "OOS").length;
   const nOos = signals.filter((s) => s.cap === "OOS").length;
   const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px] gap-3 min-w-[820px]";
-  const WGRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_90px] gap-3 min-w-[620px]";
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -268,12 +233,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
           <div className="w-2 h-2 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 8px ${ACCENT}80` }} />
           <span className="font-mono text-[11px] font-medium" style={{ color: ACCENT }}>
             {nEntry} ENTRIES TODAY
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ background: "#60a5fa", boxShadow: "0 0 8px #60a5fa80" }} />
-          <span className="font-mono text-[11px] font-medium" style={{ color: "#60a5fa" }}>
-            {nWatchAll} ON WATCHLIST
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -332,20 +291,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
             </button>
           );
         })}
-        <span className="mx-1 h-4 w-px bg-[#ffffff18]" />
-        <button
-          type="button"
-          onClick={() => setShowWatch(!showWatch)}
-          className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
-          style={{
-            color: showWatch ? "#60a5fa" : "var(--color-muted, #6b7280)",
-            borderColor: showWatch ? "#60a5fa66" : "#ffffff18",
-            background: showWatch ? "#60a5fa14" : "transparent",
-            boxShadow: showWatch ? "0 0 10px #60a5fa25" : "none",
-          }}
-        >
-          WATCHLIST ({watchRows.length})
-        </button>
         <span className="ml-auto font-mono text-[10px] tracking-[0.22em] text-[#6b7280]">
           {rows.length} ROWS
         </span>
@@ -423,82 +368,6 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto custom-scrollbar-caracal">
-        {/* ---------------- WATCHLIST ---------------- */}
-        {showWatch && (
-          <>
-            <div
-              className="flex items-center gap-2 px-3 py-2 md:px-4 border-b"
-              style={{ borderColor: "var(--color-border)", background: "#60a5fa0c" }}
-            >
-              <span className="font-mono text-[10px] tracking-[0.2em] font-semibold" style={{ color: "#60a5fa" }}>
-                WATCHLIST · 09:15 CLOSE BROKE PREV-DAY BODY · STILL PENDING
-              </span>
-              <span className="font-mono text-[10px]" style={{ color: "var(--color-muted)" }}>
-                provisional — not tradeable until an ENTRY row appears; names that
-                converted drop off here and show in ENTRIES below
-              </span>
-            </div>
-            <div
-              className={`grid items-center border-b px-3 py-2 md:px-4 ${WGRID}`}
-              style={{ borderColor: "var(--color-border)", background: "rgba(10, 14, 23, 0.75)" }}
-            >
-              {["#", "TIME", "STOCK", "SIDE", "09:15 CLOSE", "PD BODY"].map((h, i) => (
-                <span
-                  key={h}
-                  className={`font-mono text-[9px] tracking-[0.14em] ${i >= 3 ? "text-right" : "text-left"}`}
-                  style={{ color: "var(--color-muted)" }}
-                >
-                  {h}
-                </span>
-              ))}
-            </div>
-            {watchRows.length === 0 && (
-              <div className="px-3 py-6 text-center font-mono text-xs" style={{ color: "var(--color-muted)" }}>
-                No pending watchlist rows. The 09:15 break publishes from ~09:20 IST;
-                names that already converted are listed under ENTRIES.
-              </div>
-            )}
-            {watchRows.map((s, i) => {
-              const long = s.side === "LONG";
-              const sideColor = long ? "var(--color-bull, #10b981)" : "#ef4444";
-              return (
-                <div
-                  key={`w-${s.name}-${s.side}-${i}`}
-                  className={`grid items-center border-b px-3 py-2.5 md:px-4 ${WGRID} hover:bg-[#ffffff04] transition-colors`}
-                  style={{ borderColor: "var(--color-border)", background: "transparent" }}
-                >
-                  <span className="font-mono text-[11px] font-bold" style={{ color: "var(--color-muted2)" }}>
-                    #{i + 1}
-                  </span>
-                  <span className="font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
-                    {String(s.time || "09:15").slice(0, 5)}
-                  </span>
-                  <div className="min-w-0 flex items-center gap-1.5">
-                    <a
-                      href={buildTradingViewUrl(s.name, s.name)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="min-w-0 truncate text-[13px] font-semibold hover:underline"
-                      style={{ color: "var(--color-text2)" }}
-                    >
-                      {s.name}
-                    </a>
-                  </div>
-                  <span className="text-right font-mono text-[11px] font-semibold" style={{ color: sideColor }}>
-                    {long ? "▲" : "▼"}
-                  </span>
-                  <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
-                    {fmt(s.entry)}
-                  </span>
-                  <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-muted2)" }}>
-                    {fmt(s.level)}
-                  </span>
-                </div>
-              );
-            })}
-          </>
-        )}
-
         {/* ---------------- ENTRIES ---------------- */}
         <div
           className="flex items-center gap-2 px-3 py-2 md:px-4 border-b"
