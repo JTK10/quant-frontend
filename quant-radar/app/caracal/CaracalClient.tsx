@@ -191,6 +191,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
     ["name", "STOCK"],
     ["side", "SIDE"],
     ["entry", "ENTRY"],
+    ["chg_pct", "CHG%"],
     ["dpoc", "DPOC%"],
     ["vol_ahead", "AHEAD"],
     ["rvol", "RVOL"],
@@ -199,7 +200,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
 
   const nEntry = rows.filter((s) => s.cap !== "OOS").length;
   const nOos = signals.filter((s) => s.cap === "OOS").length;
-  const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px_70px] gap-3 min-w-[890px]";
+  const GRID = "grid-cols-[44px_60px_minmax(150px,1.4fr)_70px_90px_70px_70px_70px_70px_70px] gap-3 min-w-[960px]";
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -458,6 +459,12 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
               </span>
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
                 {fmt(s.entry)}
+              </span>
+              <span
+                className="text-right font-mono text-[11px]"
+                style={{ color: (num(s.chg_pct) ?? 0) >= 0 ? "var(--color-bull, #10b981)" : "#ef4444" }}
+              >
+                {fmt(s.chg_pct, 2)}
               </span>
               <span className="text-right font-mono text-[11px]" style={{ color: "var(--color-text)" }}>
                 {fmt(s.dpoc, 1)}
