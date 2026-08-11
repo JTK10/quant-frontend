@@ -47,12 +47,13 @@ const sectorsOf = (s: any): string[] =>
   SECTOR_MAP[String(s?.name ?? "").trim().toUpperCase()] ?? [];
 
 /**
- * Entry-time buckets, exactly as specified: the FIRST is 20 minutes, the rest
- * are 15. Inclusive start, exclusive end. An entry outside 09:55-11:30 matches
- * no bucket -- it is visible under "ALL" and nowhere else.
+ * Entry-time buckets. The FIRST is 25 minutes, the rest 15. Inclusive start,
+ * exclusive end. It opens at 09:50, not 09:55, because that is the engine's
+ * ENTRY_FROM -- starting at 09:55 left a 09:50 entry matching no bucket at all.
+ * An entry outside 09:50-11:30 is visible under "ALL" and nowhere else.
  */
 const TIME_BUCKETS: Array<{ key: string; from: number; to: number }> = [
-  { key: "09:55-10:15", from: 9 * 60 + 55, to: 10 * 60 + 15 },
+  { key: "09:50-10:15", from: 9 * 60 + 50, to: 10 * 60 + 15 },
   { key: "10:15-10:30", from: 10 * 60 + 15, to: 10 * 60 + 30 },
   { key: "10:30-10:45", from: 10 * 60 + 30, to: 10 * 60 + 45 },
   { key: "10:45-11:00", from: 10 * 60 + 45, to: 11 * 60 + 0 },
