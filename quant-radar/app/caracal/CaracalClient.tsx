@@ -90,6 +90,10 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
   const [sourceFilter, setSourceFilter] = useState<"ALL" | "CARACAL" | "OOS">("ALL");
   const [timeBucket, setTimeBucket] = useState<string>("ALL");
   const [sectorFilter, setSectorFilter] = useState<string>("ALL");
+  // vol_ahead = share of the 20-session volume profile still sitting AHEAD of
+  // price in the trade direction. Low means little resting supply/demand left to
+  // absorb the move. The engine gates at 0.30; this is a tighter view on top.
+  const [aheadMax, setAheadMax] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<string>("time");
   const [ascending, setAscending] = useState(true);
 
@@ -116,6 +120,15 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
   const passesSector = (s: any) => {
     if (sectorFilter === "ALL" || !isV3(s)) return true;
     return sectorsOf(s).includes(sectorFilter);
+  };
+
+  // v3 rows only. A row with no vol_ahead at all is NOT silently kept -- an
+  // unknown value cannot satisfy a threshold, and keeping it would quietly
+  // widen the filter the user asked for.
+  const passesAhead = (s: any) => {
+    if (aheadMax === null || !isV3(s)) return true;
+    const v = num(s.vol_ahead);
+    return v !== null && v < aheadMax;
   };
 
   // ---- ENTRIES ----
@@ -166,7 +179,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
   }, [baseRows, timeBucket]);
 
   const rows = useMemo(() => {
-    const f = baseRows.filter((s) => passesTime(s) && passesSector(s));
+    const f = baseRows.filter((s) => passesTime(s) && passesSector(s) && passesAhead(s));
     return [...f].sort((a, b) => {
       const cmp = (() => {
         switch (sortKey) {
@@ -184,7 +197,7 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
       return ascending ? cmp : -cmp;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseRows, timeBucket, sectorFilter, sortKey, ascending]);
+  }, [baseRows, timeBucket, sectorFilter, aheadMax, sortKey, ascending]);
 
   const headers: Array<[string, string]> = [
     ["time", "TIME"],
@@ -340,12 +353,33 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
             </option>
           ))}
         </select>
-        {(timeBucket !== "ALL" || sectorFilter !== "ALL") && (
+        <span className="mx-1 h-4 w-px bg-[#ffffff18]" />
+        <span className="font-mono text-[9px] tracking-[0.18em] text-[#6b7280]">AHEAD&lt;</span>
+        {[0.20, 0.10, 0.05].map((v) => {
+          const on = aheadMax === v;
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setAheadMax(on ? null : v)}
+              className="rounded-lg border px-2 py-1 font-mono text-[10px] tracking-[0.12em] transition-all duration-300"
+              style={{
+                color: on ? ACCENT : "var(--color-muted, #6b7280)",
+                borderColor: on ? `${ACCENT}55` : "#ffffff18",
+                background: on ? `${ACCENT}12` : "transparent",
+              }}
+            >
+              {v.toFixed(2)}
+            </button>
+          );
+        })}
+        {(timeBucket !== "ALL" || sectorFilter !== "ALL" || aheadMax !== null) && (
           <button
             type="button"
             onClick={() => {
               setTimeBucket("ALL");
               setSectorFilter("ALL");
+              setAheadMax(null);
             }}
             className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.18em] transition-all duration-300"
             style={{ color: "var(--color-muted, #6b7280)", borderColor: "#ffffff18" }}
