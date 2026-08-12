@@ -49,7 +49,9 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
       for (const r of prev?.rows || []) m.set(r.n, num(r[SK]) ?? 0);
     }
     return m;
-  }, [ordered]);
+    // SK matters: the delta is measured against the SELECTED score, so flipping
+    // the toggle has to rebuild this map, not reuse the other score's baseline.
+  }, [ordered, SK]);
 
   // "selected" is only ever used to briefly highlight the clicked bar/card and
   // to scroll to it -- it never hides other sectors, every card always shows.
