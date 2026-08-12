@@ -31,6 +31,14 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
     [snaps]
   );
   const latest = ordered.length ? ordered[ordered.length - 1] : null;
+  // AFAC.3 (magnitude + rvol level + control candle) publishes alongside AFAC.2.
+  // Forward-tested over 26 sessions: AFAC.3's top-5 beat AFAC.2's on the next
+  // 60 min on 21 of 26 days (paired t=3.36, p=0.0025), while AFAC.2's leaders
+  // were NEGATIVE at every N. Default to v3, but keep the switch: v3 has two
+  // live sessions behind it, v2 has months.
+  const [useV3, setUseV3] = useState(true);
+  const SK = useV3 ? "score_afac3" : "score";
+  const NK = useV3 ? "net_afac3" : "net";
   const rows: any[] = latest?.rows || [];
   const sectors: any[] = latest?.sectors || [];
 
@@ -38,7 +46,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
     const m = new Map<string, number>();
     if (ordered.length >= 4) {
       const prev = ordered[ordered.length - 4]; // ~15 min back
-      for (const r of prev?.rows || []) m.set(r.n, num(r.score) ?? 0);
+      for (const r of prev?.rows || []) m.set(r.n, num(r[SK]) ?? 0);
     }
     return m;
   }, [ordered]);
@@ -87,15 +95,40 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
       .filter((s) => s.sec !== "OTHER" && bySec.has(s.sec))
       .map((s) => ({
         ...s,
-        stocks: bySec.get(s.sec)!.sort((a, b) => (num(b.score) ?? 0) - (num(a.score) ?? 0)),
-      }));
-  }, [rows, sectors]);
+        // `net` is what every card renders, so point it at the selected score
+        // rather than editing each call site
+        net: num(s[NK]) ?? num(s.net) ?? 0,
+        stocks: bySec.get(s.sec)!.sort((a, b) => (num(b[SK]) ?? 0) - (num(a[SK]) ?? 0)),
+      }))
+      .sort((a, b) => b.net - a.net);
+  }, [rows, sectors, SK, NK]);
 
   return (
     <div className="min-h-0 flex-1 overflow-auto px-3 pb-10 md:px-6" style={{ background: "#000" }}>
+      <div className="mt-3 flex items-center gap-2">
+        <span className="font-mono text-[9px] tracking-[0.18em] text-[#6b7280]">SCORE</span>
+        {[["AFAC.3", true], ["AFAC.2", false]].map(([lbl, v]) => (
+          <button
+            key={String(lbl)}
+            type="button"
+            onClick={() => setUseV3(v as boolean)}
+            className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.14em] transition-all duration-300"
+            style={{
+              color: useV3 === v ? ACCENT : "var(--color-muted, #6b7280)",
+              borderColor: useV3 === v ? `${ACCENT}55` : "#ffffff18",
+              background: useV3 === v ? `${ACCENT}12` : "transparent",
+            }}
+          >
+            {lbl}
+          </button>
+        ))}
+        <span className="font-mono text-[9px] text-[#6b7280]">
+          {useV3 ? "magnitude + rvol level + control candle" : "original bucket count"}
+        </span>
+      </div>
       {cards.length === 0 ? (
         <div className="mt-16 text-center font-mono text-xs text-[#6b7280]">
-          No AFAC.2 data for this date — snapshots publish every 5 min from ~09:45 IST.
+          No AFAC data for this date — snapshots publish every 5 min from ~09:45 IST.
         </div>
       ) : (
         <>
@@ -103,7 +136,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
             <SectorBarChart
               sectors={sectors
                 .filter((s) => s.sec !== "OTHER")
-                .map((s) => ({ sec: s.sec, net: num(s.net) ?? 0, n: s.n }))}
+                .map((s) => ({ sec: s.sec, net: num(s[NK]) ?? num(s.net) ?? 0, n: s.n }))}
               onSelect={handleSelect}
               selected={selected}
             />
@@ -192,7 +225,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                         {card.stocks.map((r: any) => {
                           const long = r.side === "LONG";
                           const chg = num(r.chg) ?? 0;
-                          const delta = prevScores.has(r.n) ? (num(r.score) ?? 0) - (prevScores.get(r.n) ?? 0) : null;
+                          const delta = prevScores.has(r.n) ? (num(r[SK]) ?? 0) - (prevScores.get(r.n) ?? 0) : null;
                           return (
                             <tr key={r.n} className="transition-colors hover:bg-white/5">
                               <td style={{ padding: "5px 0 5px 8px" }}>
@@ -227,7 +260,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                                 </span>
                               </td>
                               <td style={{ fontSize: 12, fontWeight: 600, color: "#fff", padding: "5px 8px" }}>
-                                {fmt(r.score, 0)}
+                                {fmt(r[SK], 0)}
                                 {delta !== null && delta > 0 && (
                                   <span className="ml-1 font-mono" style={{ fontSize: 10, fontWeight: 400, color: PILL_GREEN_FG }}>
                                     +{fmt(delta, 0)}
