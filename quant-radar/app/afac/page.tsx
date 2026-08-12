@@ -15,7 +15,7 @@ async function getAfacRows(dateStr: string) {
     // rows/cycle came over the wire at 2.70MB, past Vercel's 2MiB cache-entry
     // limit, and the route returned [] -- this page rendered blank.
     const url = await getInternalApiUrl(
-      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2&topN=${TOP_N}&rankBy=score`,
+      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2&topN=${TOP_N}&rankBy=score_afac3`,
     );
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
@@ -24,7 +24,7 @@ async function getAfacRows(dateStr: string) {
       throw new Error(`AFAC signal route failed: ${response.status}`);
     }
     const data = await response.json();
-    // AFAC.2 snapshots: one doc per 5-min cycle, source:"afac2", each carrying an
+    // AFAC snapshots: one doc per 5-min cycle, source:"afac2", each carrying an
     // embedded `rows` array (every gated stock, sorted by score desc) computed by
     // afac2_score.py on the VM (split-pool funnel + monotonic "safest mover"
     // quality score). We flatten each cycle's top-30 into one row-per-stock-per-
@@ -45,8 +45,13 @@ async function getAfacRows(dateStr: string) {
           imb: i + 1, // rank within this cycle's top-30
           name: r.n,
           side: r.side,
-          score: r.score,
+          // both scores travel; the client picks which to show. rankBy above is
+          // AFAC.3, so `_d` (the cycle delta the route resolves) is AFAC.3's.
+          score: r.score_afac3 ?? r.score,
+          scoreV2: r.score,
           scoreDelta: r._d ?? null,
+          nCtrl: r.n_ctrl ?? null,
+          rvol: r.rvol ?? null,
           chg: r.chg,
           entry: r.px,
           sector: secs.map((s) => s.replace(/^NIFTY_/, "").replace(/_/g, " ")).join(" / "),
@@ -94,7 +99,7 @@ export default async function AfacPage({ searchParams }: { searchParams: DateSea
             NSE FNO UNIVERSE
           </span>
           <span className="font-mono text-sm font-bold tracking-[0.18em] text-[#fce205]">
-            TOP {TOP_N} BY AFAC.2
+            TOP {TOP_N} BY AFAC.3
           </span>
         </div>
         <div className="flex gap-4 ml-8">

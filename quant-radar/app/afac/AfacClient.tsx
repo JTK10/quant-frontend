@@ -66,7 +66,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
     ["time", "TIME"],
     ["name", "STOCK"],
     ["sector", "SECTOR"],
-    ["score", "AFAC.2"],
+    ["score", "AFAC.3"],
     ["scoreDelta", "Δ CYCLE"],
     ["dyn", "DYN"],
     ["dpoc", "DPOC%"],
