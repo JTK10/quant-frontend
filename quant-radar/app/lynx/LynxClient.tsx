@@ -85,7 +85,16 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
     );
   }
 
-  const inWindow = latest.cut >= SCORE_FROM && latest.cut <= SCORE_TO;
+  // Trust the publisher's own `scoring` flag rather than recomputing the window
+  // from local constants. Two copies of the same rule in two repos only agree
+  // until one changes -- and that implicit-sync assumption is exactly what
+  // produced tonight's earlier bugs (the missing sig_date, the dropped
+  // whitelist fields). The constants remain only as a fallback for docs
+  // published before the flag existed.
+  const inWindow =
+    typeof latest.scoring === "boolean"
+      ? latest.scoring
+      : latest.cut >= SCORE_FROM && latest.cut <= SCORE_TO;
 
   return (
     <div className="h-full overflow-auto px-4 pb-10 pt-3">
@@ -192,7 +201,10 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
                   NAME
                 </th>
                 {ordered.map((s) => {
-                  const scoring = s.cut >= SCORE_FROM && s.cut <= SCORE_TO;
+                  const scoring =
+                    typeof s.scoring === "boolean"
+                      ? s.scoring
+                      : s.cut >= SCORE_FROM && s.cut <= SCORE_TO;
                   return (
                     <th
                       key={s.cut}
