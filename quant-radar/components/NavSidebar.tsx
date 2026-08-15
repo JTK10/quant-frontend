@@ -54,6 +54,28 @@ const CaracalIcon = (props: any) => (
   </svg>
 );
 
+const LynxIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    {/* Ear tufts — shorter and set wider than the caracal's, which are the
+        tallest of any cat and already carry that silhouette on this nav */}
+    <path d="M 7 8.5 L 5.5 2.5 L 10 6" />
+    <path d="M 5.5 2.5 L 5 1.2" />
+    <path d="M 17 8.5 L 18.5 2.5 L 14 6" />
+    <path d="M 18.5 2.5 L 19 1.2" />
+    <path d="M 10 6 C 11 5.4, 13 5.4, 14 6" /> {/* Crown */}
+    {/* Broad face tapering to a narrow chin */}
+    <path d="M 7 8.5 C 6.6 11.5, 8 14.5, 12 16.8 C 16 14.5, 17.4 11.5, 17 8.5" />
+    {/* The flared cheek ruff — the lynx's real signature, and what separates
+        this glyph from the caracal at 24px */}
+    <path d="M 6.8 10.5 L 3.6 12.6 L 6.2 13.6 L 4.4 16.2" />
+    <path d="M 17.2 10.5 L 20.4 12.6 L 17.8 13.6 L 19.6 16.2" />
+    <path d="M 9.4 10.6 L 10.9 11" />   {/* Left eye */}
+    <path d="M 14.6 10.6 L 13.1 11" />  {/* Right eye */}
+    <path d="M 10.9 13 L 13.1 13 L 12 14.4 Z" /> {/* Nose */}
+    <path d="M 12 14.4 L 12 15.8" />    {/* Mouth */}
+  </svg>
+);
+
 // -- Retired 2026-08-05: RFAC and Smart List. Between them the v2dyn and
 // smartlist snapshot sources were 67% of the PANTHER payload every page had to
 // download (ORDS ignores ?source, so every page pays for every source). The
@@ -66,7 +88,7 @@ const NAV_ITEMS: any[] = [
   { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
   { href: "/fable", icon: Bot, label: "Fable", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/strike", icon: Crown, label: "Strike", color: "#f59e0b", rgb: "245,158,11" },
-  { href: "/lynx", icon: Crosshair, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
+  { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
 ];
 
 // -- Hidden 2026-07: Panther-live and Elephant (panther-rank) engines retired on
