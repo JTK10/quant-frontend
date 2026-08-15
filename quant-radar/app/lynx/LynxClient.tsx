@@ -240,13 +240,6 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
             </tbody>
           </table>
         </div>
-        <div className="mt-2 text-[10px] leading-relaxed text-zinc-600">
-          Selection is by how OFTEN a name sits in the top 3 across the {SCORE_FROM}–{SCORE_TO}{" "}
-          cuts, with mean rank breaking ties. A single snapshot demotes a name that pauses
-          mid-move — which is the pattern that precedes continuation — so LYNX scores the
-          whole window instead. Only names trading at least 1.0% beyond the prior day&apos;s
-          high (long) or low (short) are ranked at all.
-        </div>
       </div>
     </div>
   );
