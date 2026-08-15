@@ -66,6 +66,7 @@ const NAV_ITEMS: any[] = [
   { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
   { href: "/fable", icon: Bot, label: "Fable", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/strike", icon: Crown, label: "Strike", color: "#f59e0b", rgb: "245,158,11" },
+  { href: "/lynx", icon: Crosshair, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
 ];
 
 // -- Hidden 2026-07: Panther-live and Elephant (panther-rank) engines retired on
