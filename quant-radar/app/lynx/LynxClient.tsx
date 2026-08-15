@@ -224,7 +224,15 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
                     className="sticky left-0 px-2 py-1.5 font-medium"
                     style={{ background: t.side === "LONG" ? LONG_BG : SHORT_BG }}
                   >
-                    {t.sym}
+                    <a
+                      href={buildTradingViewUrl(t.sym)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                      style={{ color: ACCENT }}
+                    >
+                      {t.sym}
+                    </a>
                   </td>
                   {t.series.map((p, i) => (
                     <td key={i} className="px-1.5 py-1.5 text-center">
