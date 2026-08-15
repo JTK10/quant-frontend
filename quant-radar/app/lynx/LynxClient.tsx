@@ -36,8 +36,20 @@ function sgn(v: any, d = 2): string {
 }
 
 export default function LynxClient({ snaps }: { snaps: any[] }) {
+  // Sort on ts first: it is numeric and always set by the publisher, whereas a
+  // missing `cut` silently degrades a string sort into a no-op that leaves the
+  // docs in whatever order the API returned (newest-first from ORDS), which
+  // then makes the LAST element the EARLIEST cut. That is exactly what happened
+  // on 2026-08-16 -- the page showed the 09:45 snapshot as "latest" and drew the
+  // persistence trail backwards. `cut` remains the tiebreak.
   const ordered = useMemo(
-    () => [...snaps].sort((a, b) => String(a.cut || "").localeCompare(String(b.cut || ""))),
+    () =>
+      [...snaps].sort((a, b) => {
+        const ta = Number(a?.ts) || 0;
+        const tb = Number(b?.ts) || 0;
+        if (ta !== tb) return ta - tb;
+        return String(a?.cut ?? "").localeCompare(String(b?.cut ?? ""));
+      }),
     [snaps]
   );
   const latest = ordered.length ? ordered[ordered.length - 1] : null;

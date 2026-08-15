@@ -970,6 +970,21 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       slip_pct: row.slip_pct,
       ref_prem: row.ref_prem,
       held_min: row.held_min,
+      // Preserve LYNX snapshot fields. Hit by the trap the STRIKE note above
+      // describes, on 2026-08-16: LYNX published cut/universe/gated/
+      // config_session/stale/scoring/replay correctly and they reached PANTHER,
+      // but none survived here. `rows` did (it was already listed for AFAC.2),
+      // so the cards rendered while every header value came back undefined --
+      // and the trail's column labels printed "fined", which is
+      // "undefined".slice(-5). The snapshot's own `cut` being lost also broke
+      // the page's sort, so it selected the 09:45 doc as "latest".
+      cut: row.cut,
+      universe: row.universe,
+      gated: row.gated,
+      config_session: row.config_session,
+      stale: row.stale,
+      scoring: row.scoring,
+      replay: row.replay,
     };
   });
 }
