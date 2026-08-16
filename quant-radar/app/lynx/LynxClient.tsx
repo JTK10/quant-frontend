@@ -140,6 +140,21 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
         </span>
       </div>
 
+      {/* A doc exists but no board yet. This is the normal state from 09:30
+          until the first scoring cut at 09:45, and again on a quiet morning
+          when nothing has travelled 1% past yesterday's extreme. Without a
+          line here the page shows populated header chips above an empty grid,
+          which on a first live morning reads as broken rather than as early. */}
+      {rows.length === 0 && (
+        <div className="rounded border border-white/10 bg-white/[0.02] px-3 py-6 text-center">
+          <div className="text-xs text-zinc-400">No names past the PD gate yet</div>
+          <div className="mt-1 text-[11px] text-zinc-600">
+            The leaderboard builds from {SCORE_FROM}. Early in the session few names
+            have travelled far enough beyond yesterday&apos;s high or low to be ranked.
+          </div>
+        </div>
+      )}
+
       {/* ---- the leaderboard ------------------------------------------- */}
       <div className="grid gap-3 md:grid-cols-3">
         {rows.map((r: any, i: number) => {
