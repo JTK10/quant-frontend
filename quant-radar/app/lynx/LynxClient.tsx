@@ -42,16 +42,27 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
   // then makes the LAST element the EARLIEST cut. That is exactly what happened
   // on 2026-08-16 -- the page showed the 09:45 snapshot as "latest" and drew the
   // persistence trail backwards. `cut` remains the tiebreak.
-  const ordered = useMemo(
-    () =>
-      [...snaps].sort((a, b) => {
-        const ta = Number(a?.ts) || 0;
-        const tb = Number(b?.ts) || 0;
-        if (ta !== tb) return ta - tb;
-        return String(a?.cut ?? "").localeCompare(String(b?.cut ?? ""));
-      }),
-    [snaps]
-  );
+  //
+  // Deduped by `cut`, newest ts winning. The ORDS handler upserts on cut, so a
+  // republish of a session should not produce duplicates -- this is a guard,
+  // not a fix for an observed bug. It matters because the failure mode is
+  // silent and ugly: two docs for one cut draw that column twice, showing the
+  // same name against two different counts for the same minute, and this sort
+  // has already produced one subtle ordering bug (2026-08-16).
+  const ordered = useMemo(() => {
+    const best = new Map<string, any>();
+    for (const s of snaps) {
+      const k = String(s?.cut ?? "");
+      const cur = best.get(k);
+      if (!cur || (Number(s?.ts) || 0) >= (Number(cur?.ts) || 0)) best.set(k, s);
+    }
+    return Array.from(best.values()).sort((a, b) => {
+      const ta = Number(a?.ts) || 0;
+      const tb = Number(b?.ts) || 0;
+      if (ta !== tb) return ta - tb;
+      return String(a?.cut ?? "").localeCompare(String(b?.cut ?? ""));
+    });
+  }, [snaps]);
   const latest = ordered.length ? ordered[ordered.length - 1] : null;
   const rows: any[] = latest?.rows || [];
 
