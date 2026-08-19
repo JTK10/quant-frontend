@@ -59,17 +59,41 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
   // its top-3 count at each published cut. This is what makes LYNX different
   // from a snapshot scanner -- a name that keeps reappearing is the signal --
   // so it gets its own strip rather than being buried in a tooltip.
+  //
+  // Reads `pool` -- the FULL gated shortlist -- and falls back to `rows` (the
+  // top-3 board) for snapshots published before `pool` existed. Restricting the
+  // strip to `rows` meant a name could clear the PD gate at 09:45, stay
+  // eligible all morning and never appear at all, purely because it never
+  // reached the front. Those names are the ones worth seeing: on 2026-08-19
+  // CUMMINSIND and COALINDIA were gated from the first scoring cut and both
+  // outperformed the two names that actually led the board.
   const trail = useMemo(() => {
-    const names = new Set<string>();
-    ordered.forEach((s) => (s.rows || []).forEach((r: any) => names.add(r.sym)));
-    return Array.from(names).map((sym) => ({
-      sym,
-      side: ordered.flatMap((s) => s.rows || []).find((r: any) => r.sym === sym)?.side,
-      series: ordered.map((s) => {
-        const hit = (s.rows || []).find((r: any) => r.sym === sym);
-        return { cut: s.cut, n: hit ? num(hit.n_top3) ?? 0 : null };
+    const src = (s: any) => (s.pool && s.pool.length ? s.pool : s.rows) || [];
+    const meta = new Map<string, { side?: string; best: number }>();
+    ordered.forEach((s) =>
+      src(s).forEach((r: any) => {
+        const cur = meta.get(r.sym);
+        const n = num(r.n_top3) ?? 0;
+        if (!cur) meta.set(r.sym, { side: r.side, best: n });
+        else if (n > cur.best) cur.best = n;
       }),
-    }));
+    );
+    return Array.from(meta.entries())
+      .sort((a, b) => b[1].best - a[1].best || a[0].localeCompare(b[0]))
+      .map(([sym, m]) => ({
+        sym,
+        side: m.side,
+        series: ordered.map((s) => {
+          const hit = src(s).find((r: any) => r.sym === sym);
+          return {
+            cut: s.cut,
+            n: hit ? num(hit.n_top3) ?? 0 : null,
+            // `live` is absent on `rows` and on pre-`pool` snapshots; treating
+            // that as "live" keeps old docs rendering exactly as they did.
+            live: hit ? hit.live !== false : false,
+          };
+        }),
+      }));
   }, [ordered]);
 
   if (!latest) {
@@ -206,7 +230,7 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
       {/* ---- persistence trail ------------------------------------------ */}
       <div className="mt-5">
         <div className="mb-2 text-[11px] uppercase tracking-widest text-zinc-500">
-          Rank persistence — top-3 count by cut
+          Rank persistence — every gated name, top-3 count by cut
         </div>
         <div className="overflow-x-auto rounded-lg border border-white/10" style={{ background: GLASS }}>
           <table className="w-full text-[11px] tabular-nums">
@@ -252,9 +276,16 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
                   {t.series.map((p, i) => (
                     <td key={i} className="px-1.5 py-1.5 text-center">
                       {p.n === null ? (
+                        // never cleared the gate at this cut
                         <span className="text-zinc-700">·</span>
+                      ) : p.n === 0 ? (
+                        // gated and eligible, but has not reached the top 3
+                        <span className="text-zinc-600">0</span>
                       ) : (
-                        <span style={{ color: ACCENT }}>{p.n}</span>
+                        // dimmed once a name falls back inside the prior range
+                        <span style={{ color: ACCENT, opacity: p.live ? 1 : 0.45 }}>
+                          {p.n}
+                        </span>
                       )}
                     </td>
                   ))}

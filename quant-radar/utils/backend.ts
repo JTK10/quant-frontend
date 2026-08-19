@@ -985,6 +985,7 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       stale: row.stale,
       scoring: row.scoring,
       replay: row.replay,
+      pool: row.pool,
     };
   });
 }
