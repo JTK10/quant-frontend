@@ -66,46 +66,32 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
   const latest = ordered.length ? ordered[ordered.length - 1] : null;
   const rows: any[] = latest?.rows || [];
 
-  // The persistence trail: for every name that ever reached the leaderboard,
-  // its top-3 count at each published cut. This is what makes LYNX different
-  // from a snapshot scanner -- a name that keeps reappearing is the signal --
-  // so it gets its own strip rather than being buried in a tooltip.
+  // The gated shortlist, split in two. `pool` carries every name the gate has
+  // admitted this session with its detail columns; `rows` (top 3 only) remains
+  // the fallback for snapshots published before `pool` existed.
   //
-  // Reads `pool` -- the FULL gated shortlist -- and falls back to `rows` (the
-  // top-3 board) for snapshots published before `pool` existed. Restricting the
-  // strip to `rows` meant a name could clear the PD gate at 09:45, stay
-  // eligible all morning and never appear at all, purely because it never
-  // reached the front. Those names are the ones worth seeing: on 2026-08-19
-  // CUMMINSIND and COALINDIA were gated from the first scoring cut and both
-  // outperformed the two names that actually led the board.
-  const trail = useMemo(() => {
-    const src = (s: any) => (s.pool && s.pool.length ? s.pool : s.rows) || [];
-    const meta = new Map<string, { side?: string; best: number }>();
-    ordered.forEach((s) =>
-      src(s).forEach((r: any) => {
-        const cur = meta.get(r.sym);
-        const n = num(r.n_top3) ?? 0;
-        if (!cur) meta.set(r.sym, { side: r.side, best: n });
-        else if (n > cur.best) cur.best = n;
-      }),
-    );
-    return Array.from(meta.entries())
-      .sort((a, b) => b[1].best - a[1].best || a[0].localeCompare(b[0]))
-      .map(([sym, m]) => ({
-        sym,
-        side: m.side,
-        series: ordered.map((s) => {
-          const hit = src(s).find((r: any) => r.sym === sym);
-          return {
-            cut: s.cut,
-            n: hit ? num(hit.n_top3) ?? 0 : null,
-            // `live` is absent on `rows` and on pre-`pool` snapshots; treating
-            // that as "live" keeps old docs rendering exactly as they did.
-            live: hit ? hit.live !== false : false,
-          };
-        }),
-      }));
-  }, [ordered]);
+  // RANKED vs EARLY is the split that matters, and it is not cosmetic.
+  // Selection counts only cuts inside 09:45-11:00, so a name gated at 09:30
+  // carries n_top3 = 0 -- it is NOT a pick. But it is the earliest evidence
+  // available, roughly fifteen minutes before the first ranked board exists.
+  // Listed together the early names read as failed picks, which is the
+  // opposite of what they are.
+  const pool = useMemo(() => {
+    const src: any[] =
+      (latest?.pool && latest.pool.length ? latest.pool : latest?.rows) || [];
+    const all = src.map((r: any) => ({ ...r, n: num(r.n_top3) ?? 0 }));
+    const byRank = (a: any, b: any) =>
+      b.n - a.n ||
+      (num(a.best_rank) ?? 99) - (num(b.best_rank) ?? 99) ||
+      String(a.sym).localeCompare(String(b.sym));
+    const byFirst = (a: any, b: any) =>
+      String(a.first ?? "~").localeCompare(String(b.first ?? "~")) ||
+      (num(a.rank) ?? 99) - (num(b.rank) ?? 99);
+    return {
+      ranked: all.filter((r) => r.n > 0).sort(byRank),
+      early: all.filter((r) => r.n === 0).sort(byFirst),
+    };
+  }, [latest]);
 
   if (!latest) {
     return (
@@ -238,74 +224,16 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
         })}
       </div>
 
-      {/* ---- persistence trail ------------------------------------------ */}
-      <div className="mt-5">
-        <div className="mb-2 text-[11px] uppercase tracking-widest text-zinc-500">
-          Rank persistence — every gated name, top-3 count by cut
-        </div>
-        <div className="overflow-x-auto rounded-lg border border-white/10" style={{ background: GLASS }}>
-          <table className="w-full text-[11px] tabular-nums">
-            <thead>
-              <tr style={{ background: HEAD_BG, color: HEAD_FG }}>
-                <th className="sticky left-0 px-2 py-1.5 text-left" style={{ background: HEAD_BG }}>
-                  NAME
-                </th>
-                {ordered.map((s) => {
-                  const scoring =
-                    typeof s.scoring === "boolean"
-                      ? s.scoring
-                      : s.cut >= SCORE_FROM && s.cut <= SCORE_TO;
-                  return (
-                    <th
-                      key={s.cut}
-                      className="px-1.5 py-1.5 text-center font-normal"
-                      style={{ color: scoring ? HEAD_FG : "rgb(90,90,98)" }}
-                    >
-                      {String(s.cut).slice(-5)}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {trail.map((t) => (
-                <tr key={t.sym} className="border-t border-white/5">
-                  <td
-                    className="sticky left-0 px-2 py-1.5 font-medium"
-                    style={{ background: t.side === "LONG" ? LONG_BG : SHORT_BG }}
-                  >
-                    <a
-                      href={buildTradingViewUrl(t.sym)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:underline"
-                      style={{ color: ACCENT }}
-                    >
-                      {t.sym}
-                    </a>
-                  </td>
-                  {t.series.map((p, i) => (
-                    <td key={i} className="px-1.5 py-1.5 text-center">
-                      {p.n === null ? (
-                        // never cleared the gate at this cut
-                        <span className="text-zinc-700">·</span>
-                      ) : p.n === 0 ? (
-                        // gated and eligible, but has not reached the top 3
-                        <span className="text-zinc-600">0</span>
-                      ) : (
-                        // dimmed once a name falls back inside the prior range
-                        <span style={{ color: ACCENT, opacity: p.live ? 1 : 0.45 }}>
-                          {p.n}
-                        </span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* ---- the gated shortlist, with detail ------------------------- */}
+      <PoolTable
+        title={`Ranked — held a top-3 slot (${pool.ranked.length})`}
+        rows={pool.ranked}
+        showCount
+      />
+      <PoolTable
+        title={`Early gate — cleared the level, not yet ranked (${pool.early.length})`}
+        rows={pool.early}
+      />
     </div>
   );
 }
@@ -317,6 +245,104 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <span className="tabular-nums" style={accent ? { color: ACCENT } : undefined}>
         {value}
       </span>
+    </div>
+  );
+}
+
+function PoolTable({
+  title,
+  rows,
+  showCount,
+}: {
+  title: string;
+  rows: any[];
+  showCount?: boolean;
+}) {
+  if (!rows.length) return null;
+  // vol_ahead is the share of the 20-session hl2 volume profile sitting ahead
+  // of price in the trade direction -- the same construction skeleton_scan
+  // uses, so this is the number the rest of the stack means by "volume ahead".
+  // Near zero is the interesting state: nothing left overhead to absorb a move.
+  const ahead = (v: number | null) =>
+    v === null ? "—" : `${(v * 100).toFixed(1)}%`;
+  return (
+    <div className="mt-5">
+      <div className="mb-2 text-[11px] uppercase tracking-widest text-zinc-500">
+        {title}
+      </div>
+      <div
+        className="overflow-x-auto rounded-lg border border-white/10"
+        style={{ background: GLASS }}
+      >
+        <table className="w-full text-[11px] tabular-nums">
+          <thead>
+            <tr style={{ background: HEAD_BG, color: HEAD_FG }}>
+              <th className="sticky left-0 px-2 py-1.5 text-left" style={{ background: HEAD_BG }}>
+                NAME
+              </th>
+              {["SIDE", "PRICE", "MOVE%", "PAST PD%", "RVOL", "dPOC%", "AHEAD", "ATR3", "FIRST"].map(
+                (h) => (
+                  <th key={h} className="px-2 py-1.5 text-right font-normal">
+                    {h}
+                  </th>
+                ),
+              )}
+              {showCount && <th className="px-2 py-1.5 text-right font-normal">TOP-3</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const va = num(r.vol_ahead);
+              return (
+                <tr
+                  key={r.sym}
+                  className="border-t border-white/5"
+                  // a name that has fallen back inside the prior day's range is
+                  // still listed -- it stopped qualifying, it did not stop
+                  // mattering -- but it must not read as live
+                  style={{ opacity: r.live === false ? 0.45 : 1 }}
+                >
+                  <td
+                    className="sticky left-0 px-2 py-1.5 font-medium"
+                    style={{ background: r.side === "LONG" ? LONG_BG : SHORT_BG }}
+                  >
+                    <a
+                      href={buildTradingViewUrl(r.sym)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                      style={{ color: ACCENT }}
+                    >
+                      {r.sym}
+                    </a>
+                  </td>
+                  <td className="px-2 py-1.5 text-right text-zinc-400">{r.side}</td>
+                  <td className="px-2 py-1.5 text-right">{fmt(r.px, 2)}</td>
+                  <td className="px-2 py-1.5 text-right" style={{ color: ACCENT }}>
+                    {fmt(r.mv, 2)}
+                  </td>
+                  <td className="px-2 py-1.5 text-right">{fmt(r.pd_dist, 2)}</td>
+                  <td className="px-2 py-1.5 text-right">{fmt(r.rvol, 2)}</td>
+                  <td className="px-2 py-1.5 text-right">{sgn(r.dpoc, 2)}</td>
+                  <td
+                    className="px-2 py-1.5 text-right"
+                    style={va !== null && va <= 0.1 ? { color: ACCENT } : undefined}
+                  >
+                    {ahead(va)}
+                  </td>
+                  <td className="px-2 py-1.5 text-right text-zinc-400">{fmt(r.atr3, 2)}</td>
+                  <td className="px-2 py-1.5 text-right text-zinc-400">{r.first ?? "—"}</td>
+                  {showCount && (
+                    <td className="px-2 py-1.5 text-right" style={{ color: ACCENT }}>
+                      {r.n}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
