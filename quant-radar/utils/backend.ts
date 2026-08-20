@@ -836,7 +836,11 @@ export type PantherRow = {
   pullback_hm?: any;
   pre_pullback_ext?: any;
   first3_level?: any;
-  // FABLE paper-bot fields
+  // KAIROS / FABLE bot fields
+  mode?: any;
+  n_top3?: any;
+  lynx_cut?: any;
+  order_id?: any;
   kind?: any;
   signal_id?: any;
   reason?: any;
@@ -957,6 +961,13 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       moved_pct: row.moved_pct,
       strike: row.strike,
       otm_pct: row.otm_pct,
+      // KAIROS: `mode` drives the LIVE/PAPER badge, so dropping it here
+      // would show PAPER while the bot is armed -- the worst bug this page
+      // could have. n_top3/lynx_cut carry which LYNX pick was traded.
+      mode: row.mode,
+      n_top3: row.n_top3,
+      lynx_cut: row.lynx_cut,
+      order_id: row.order_id,
       prem: row.prem,
       bid: row.bid,
       ask: row.ask,

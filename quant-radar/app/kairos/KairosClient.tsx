@@ -18,7 +18,7 @@ function pnlColor(v: any): string {
   return n >= 0 ? "#10b981" : "#ef4444";
 }
 
-export default function FableClient({ events }: { events: any[] }) {
+export default function KairosClient({ events }: { events: any[] }) {
   const { open, closed, realized, unrealized } = useMemo(() => {
     const bySid = new Map<string, { entry?: any; mtm?: any; exit?: any }>();
     for (const e of events) {
