@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 
 const ACCENT = "#a78bfa";
@@ -229,10 +229,12 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
         title={`Ranked — held a top-3 slot (${pool.ranked.length})`}
         rows={pool.ranked}
         showCount
+        initial={{ key: "n", dir: -1 }}
       />
       <PoolTable
         title={`Early gate — cleared the level, not yet ranked (${pool.early.length})`}
         rows={pool.early}
+        initial={{ key: "first", dir: 1 }}
       />
     </div>
   );
@@ -249,15 +251,56 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
+const COLS: {
+  key: string;
+  label: string;
+  num: boolean;
+  fmt?: (r: any) => React.ReactNode;
+}[] = [
+  { key: "sym", label: "NAME", num: false },
+  { key: "side", label: "SIDE", num: false },
+  { key: "px", label: "PRICE", num: true },
+  { key: "mv", label: "MOVE%", num: true },
+  { key: "pd_dist", label: "PAST PD%", num: true },
+  { key: "rvol", label: "RVOL", num: true },
+  { key: "dpoc", label: "dPOC%", num: true },
+  { key: "vol_ahead", label: "AHEAD", num: true },
+  { key: "atr3", label: "ATR3", num: true },
+  { key: "first", label: "FIRST", num: false },
+  { key: "n", label: "TOP-3", num: true },
+];
+
 function PoolTable({
   title,
   rows,
   showCount,
+  initial,
 }: {
   title: string;
   rows: any[];
   showCount?: boolean;
+  initial: { key: string; dir: 1 | -1 };
 }) {
+  const [sort, setSort] = useState<{ key: string; dir: 1 | -1 }>(initial);
+  const cols = COLS.filter((c) => c.key !== "n" || showCount);
+
+  // Nulls sort LAST in both directions rather than being treated as very small.
+  // vol_ahead is the column this matters for: 0.0 is the most interesting value
+  // it takes (nothing left overhead) and a missing profile is not the same
+  // thing, so they must not collide at the top of an ascending sort.
+  const sorted = useMemo(() => {
+    const c = COLS.find((x) => x.key === sort.key);
+    return [...rows].sort((a, b) => {
+      const av = a[sort.key];
+      const bv = b[sort.key];
+      const an = av === null || av === undefined;
+      const bn = bv === null || bv === undefined;
+      if (an || bn) return an && bn ? 0 : an ? 1 : -1;
+      if (c?.num) return (Number(av) - Number(bv)) * sort.dir;
+      return String(av).localeCompare(String(bv)) * sort.dir;
+    });
+  }, [rows, sort]);
+
   if (!rows.length) return null;
   // vol_ahead is the share of the 20-session hl2 volume profile sitting ahead
   // of price in the trade direction -- the same construction skeleton_scan
@@ -265,6 +308,11 @@ function PoolTable({
   // Near zero is the interesting state: nothing left overhead to absorb a move.
   const ahead = (v: number | null) =>
     v === null ? "—" : `${(v * 100).toFixed(1)}%`;
+  const click = (key: string) =>
+    setSort((s) =>
+      s.key === key ? { key, dir: (s.dir === 1 ? -1 : 1) as 1 | -1 } : { key, dir: -1 },
+    );
+
   return (
     <div className="mt-5">
       <div className="mb-2 text-[11px] uppercase tracking-widest text-zinc-500">
@@ -277,21 +325,26 @@ function PoolTable({
         <table className="w-full text-[11px] tabular-nums">
           <thead>
             <tr style={{ background: HEAD_BG, color: HEAD_FG }}>
-              <th className="sticky left-0 px-2 py-1.5 text-left" style={{ background: HEAD_BG }}>
-                NAME
-              </th>
-              {["SIDE", "PRICE", "MOVE%", "PAST PD%", "RVOL", "dPOC%", "AHEAD", "ATR3", "FIRST"].map(
-                (h) => (
-                  <th key={h} className="px-2 py-1.5 text-right font-normal">
-                    {h}
-                  </th>
-                ),
-              )}
-              {showCount && <th className="px-2 py-1.5 text-right font-normal">TOP-3</th>}
+              {cols.map((c, i) => (
+                <th
+                  key={c.key}
+                  onClick={() => click(c.key)}
+                  className={`cursor-pointer select-none px-2 py-1.5 font-normal hover:text-white ${
+                    i === 0 ? "sticky left-0 text-left" : "text-right"
+                  }`}
+                  style={i === 0 ? { background: HEAD_BG } : undefined}
+                  title="Click to sort"
+                >
+                  {c.label}
+                  <span style={{ color: ACCENT }}>
+                    {sort.key === c.key ? (sort.dir === 1 ? " ↑" : " ↓") : ""}
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {sorted.map((r) => {
               const va = num(r.vol_ahead);
               return (
                 <tr
