@@ -98,6 +98,25 @@ export default function ChartsClient({ names }: { names: Name[] }) {
   ]);
   const [active, setActive] = useState(0);
   const [typed, setTyped] = useState("");
+  const [showPicker, setShowPicker] = useState(false);
+  const [full, setFull] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Real fullscreen on the GRID, not a CSS fake: the nav rail and page header
+  // live outside this component and cannot be hidden from here, and a
+  // position:fixed overlay would still sit under them in the stacking order.
+  const toggleFull = useCallback(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen?.();
+  }, []);
+
+  useEffect(() => {
+    const on = () => setFull(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", on);
+    return () => document.removeEventListener("fullscreenchange", on);
+  }, []);
 
   // Restore from the URL so a grid can be bookmarked or shared. Runs once;
   // writes below are replaceState so the back button is not filled with noise.
@@ -158,10 +177,10 @@ export default function ChartsClient({ names }: { names: Name[] }) {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5 p-2">
       {/* ---- controls ---------------------------------------------------- */}
       <div
-        className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 px-3 py-2"
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-white/10 px-2 py-1"
         style={{ background: GLASS }}
       >
         <div className="flex items-center gap-1">
@@ -224,6 +243,27 @@ export default function ChartsClient({ names }: { names: Name[] }) {
           ))}
         </div>
 
+        <button
+          onClick={() => setShowPicker((v) => !v)}
+          className="rounded px-2 py-1 text-[11px]"
+          style={{
+            border: `1px solid ${showPicker ? ACCENT : "rgba(255,255,255,0.10)"}`,
+            color: showPicker ? ACCENT : "#9ca3af",
+            background: showPicker ? HEAD_BG : "transparent",
+          }}
+        >
+          LYNX {names.length ? `(${names.length})` : ""} {showPicker ? "▴" : "▾"}
+        </button>
+
+        <button
+          onClick={toggleFull}
+          title="fullscreen grid"
+          className="rounded px-2 py-1 text-[11px]"
+          style={{ border: `1px solid ${ACCENT}`, color: ACCENT }}
+        >
+          {full ? "✕ exit" : "⛶ full"}
+        </button>
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -249,7 +289,7 @@ export default function ChartsClient({ names }: { names: Name[] }) {
       </div>
 
       {/* ---- LYNX picker ------------------------------------------------- */}
-      {(ranked.length > 0 || gated.length > 0) && (
+      {showPicker && (ranked.length > 0 || gated.length > 0) && (
         <div
           className="rounded-lg border border-white/10 px-3 py-2"
           style={{ background: GLASS }}
@@ -275,8 +315,11 @@ export default function ChartsClient({ names }: { names: Name[] }) {
 
       {/* ---- the grid ---------------------------------------------------- */}
       <div
-        className="grid min-h-0 flex-1 gap-2"
+        ref={gridRef}
+        className="grid min-h-0 flex-1 gap-1"
         style={{
+          background: "#0A0A0B",
+          padding: full ? "4px" : 0,
           gridTemplateColumns: `repeat(${cfg.cols}, minmax(0, 1fr))`,
           gridAutoRows: "minmax(0, 1fr)",
         }}
