@@ -137,9 +137,10 @@ export default function ChartsClient({ names }: { names: Name[] }) {
   }, [slots, layout, interval]);
 
   const cfg = LAYOUTS.find((l) => l.key === layout) || LAYOUTS[3];
+  const paneCount = cfg.panes;
 
   const setSlot = useCallback(
-    (i: number, sym: string) => {
+    (i: number, sym: string, advance = false) => {
       const v = (sym || "").trim().toUpperCase();
       if (!v) return;
       setSlots((prev) => {
@@ -147,8 +148,12 @@ export default function ChartsClient({ names }: { names: Name[] }) {
         next[i] = v;
         return next;
       });
+      // Without this every pick lands in pane 1 and overwrites the last one,
+      // which reads as "the chart will not change" when in fact it changed and
+      // was immediately replaced. Advancing fills the grid left to right.
+      if (advance) setActive((a) => (a + 1) % paneCount);
     },
-    []
+    [paneCount]
   );
 
   const ranked = useMemo(() => names.filter((n) => n.tier === "RANKED"), [names]);
@@ -157,7 +162,7 @@ export default function ChartsClient({ names }: { names: Name[] }) {
   const chip = (n: Name) => (
     <button
       key={n.sym}
-      onClick={() => setSlot(active, n.sym)}
+      onClick={() => setSlot(active, n.sym, true)}
       title={`load into pane ${active + 1}`}
       className="rounded border px-2 py-1 text-[11px] transition hover:brightness-125"
       style={{
@@ -267,7 +272,7 @@ export default function ChartsClient({ names }: { names: Name[] }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            setSlot(active, typed);
+            setSlot(active, typed, true);
             setTyped("");
           }}
           className="flex items-center gap-2"
@@ -327,7 +332,6 @@ export default function ChartsClient({ names }: { names: Name[] }) {
         {Array.from({ length: cfg.panes }).map((_, i) => (
           <div
             key={i}
-            onClick={() => setActive(i)}
             className="relative min-h-0 overflow-hidden rounded-lg border"
             style={{
               borderColor:
@@ -335,9 +339,18 @@ export default function ChartsClient({ names }: { names: Name[] }) {
               background: "#0d0d10",
             }}
           >
-            <div className="absolute left-2 top-2 z-10 rounded bg-black/70 px-1.5 py-0.5 text-[10px] tracking-wider text-zinc-400">
+            <button
+              onClick={() => setActive(i)}
+              title="make this the target pane"
+              className="absolute left-2 top-2 z-10 rounded px-1.5 py-0.5 text-[10px] tracking-wider"
+              style={{
+                background: active === i ? ACCENT : "rgba(0,0,0,0.70)",
+                color: active === i ? "#0A0A0B" : "#9ca3af",
+                fontWeight: active === i ? 700 : 400,
+              }}
+            >
               {i + 1} · {slots[i]}
-            </div>
+            </button>
             <Pane
               symbol={tvSymbol(slots[i])}
               interval={interval}
