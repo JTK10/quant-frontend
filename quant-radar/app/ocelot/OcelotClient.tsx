@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { buildTradingViewUrl } from "@/utils/backend";
 
 type Row = {
   s: string;            // symbol
@@ -108,7 +109,16 @@ function Board({
                   <td className="px-3 py-1.5 tabular-nums text-white/30">{i + 1}</td>
                   <td className="px-3 py-1.5 font-medium">
                     <span className="inline-flex items-center gap-1.5">
-                      {r.s}
+                      <a
+                        href={buildTradingViewUrl(r.s, r.s)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline decoration-white/20 decoration-dotted underline-offset-[3px] transition hover:decoration-white/70"
+                        style={{ color: "inherit" }}
+                        title={`Open ${r.s} on TradingView`}
+                      >
+                        {r.s}
+                      </a>
                       {r.brk && (
                         <span
                           className="rounded-sm px-1 text-[9px] font-semibold tracking-wide"
