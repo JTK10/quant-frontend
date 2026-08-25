@@ -997,6 +997,14 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       scoring: row.scoring,
       replay: row.replay,
       pool: row.pool,
+      // Preserve OCELOT snapshot fields. Same trap as the STRIKE and LYNX notes
+      // above: the /ocelot page rendered "0 names" on both boards with the cut
+      // time showing correctly, because `cut` was already listed but the boards
+      // themselves were not. n/nq drive the "x of y above Rs 50 Cr" counter.
+      bull: row.bull,
+      bear: row.bear,
+      n: row.n,
+      nq: row.nq,
     };
   });
 }

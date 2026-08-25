@@ -88,6 +88,7 @@ const NAV_ITEMS: any[] = [
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
   { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
+  { href: "/ocelot", icon: Activity, label: "Ocelot", color: "#f97316", rgb: "249,115,22" },
 // -- Removed 2026-08-23: TradingView embeds cannot show NSE symbols. Indian
 // exchange symbols are blocked in widgets by the NSE Data Sharing & Usage
 // Policy, so every pane rendered "this symbol is only available on
