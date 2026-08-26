@@ -14,6 +14,15 @@ type Row = {
   cr: number | null;    // notional, Rs crore
 };
 
+type Breadth = {
+  n?: number;      // names with a prior-day level
+  up?: number;     // how many are past their prior HIGH
+  dn?: number;     // how many are past their prior LOW
+  pct_up?: number;
+  pct_dn?: number;
+  skew?: number;   // (up - dn) / n
+};
+
 type Snap = {
   cut?: string;
   time?: string;
@@ -21,7 +30,46 @@ type Snap = {
   nq?: number;
   bull?: Row[];
   bear?: Row[];
+  brdth?: Breadth;
 };
+
+/**
+ * How much of the market has already taken its prior-day level.
+ *
+ * This exists because of 26 Aug 2026: 67% of names were above their prior high
+ * by 10:00, so "broke its level" told you nothing — everything had. The board's
+ * top pick lost 1.11% and the universe closed -0.48% with a 25% win rate. The
+ * session before, 19% were above and the same board worked.
+ *
+ * Both days the skew also ran OPPOSITE to the outcome — breaks skewed down and
+ * the market rose, breaks skewed up and it fell. That is two observations, so it
+ * is shown as context, not as a signal.
+ */
+function readBreadth(b?: Breadth) {
+  const up = b?.pct_up ?? null;
+  const dn = b?.pct_dn ?? null;
+  if (up === null || dn === null) return null;
+  const lopsided = Math.max(up, dn);
+  if (lopsided >= 55)
+    return {
+      tone: "#f59e0b",
+      label: "ONE-SIDED",
+      note: `${lopsided.toFixed(0)}% of the market is past its prior-day ${
+        up >= dn ? "high" : "low"
+      } — the level filter is not discriminating today.`,
+    };
+  if (lopsided >= 40)
+    return {
+      tone: "#a3a3a3",
+      label: "BROAD",
+      note: "A large share of the market has broken its level; treat the filter as weak.",
+    };
+  return {
+    tone: "#22c55e",
+    label: "NORMAL",
+    note: "Level breaks are selective — the filter is carrying information.",
+  };
+}
 
 const ACCENT = "#f97316";
 
@@ -242,6 +290,50 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
           {snap?.nq ?? "--"} of {snap?.n ?? "--"} above ₹50 Cr
         </span>
       </div>
+
+      {(() => {
+        const b = snap?.brdth;
+        const r = readBreadth(b);
+        if (!b || !r) return null;
+        const up = b.pct_up ?? 0;
+        const dn = b.pct_dn ?? 0;
+        return (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2">
+            <span className="text-[10px] uppercase tracking-[0.12em] text-white/35">
+              Market breadth
+            </span>
+
+            <span
+              className="rounded-sm px-1.5 py-0.5 text-[9.5px] font-semibold tracking-wide"
+              style={{ background: `${r.tone}22`, color: r.tone }}
+            >
+              {r.label}
+            </span>
+
+            <span className="font-mono text-[12px] tabular-nums">
+              <span style={{ color: "#22c55e" }}>{up.toFixed(0)}%</span>
+              <span className="text-white/30"> past prior high</span>
+              <span className="mx-1.5 text-white/15">·</span>
+              <span style={{ color: "#ef4444" }}>{dn.toFixed(0)}%</span>
+              <span className="text-white/30"> past prior low</span>
+              <span className="mx-1.5 text-white/15">·</span>
+              <span className="text-white/45">
+                {b.up ?? 0}/{b.dn ?? 0} of {b.n ?? 0}
+              </span>
+            </span>
+
+            {/* one bar: green = share past prior high, red = past prior low */}
+            <span className="flex h-1.5 min-w-[140px] flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+              <span style={{ width: `${up}%`, background: "#22c55e" }} />
+              <span style={{ width: `${dn}%`, background: "#ef4444" }} />
+            </span>
+
+            <span className="w-full text-[11px] leading-relaxed text-white/40 lg:w-auto lg:flex-[1_1_100%]">
+              {r.note}
+            </span>
+          </div>
+        );
+      })()}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
         <Board title="BULL · CALL SIDE" rows={snap?.bull ?? []} brokenOnly={brokenOnly} tint="#22c55e" />

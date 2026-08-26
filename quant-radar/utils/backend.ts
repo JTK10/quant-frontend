@@ -1005,6 +1005,9 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       bear: row.bear,
       n: row.n,
       nq: row.nq,
+      // brdth: share of the universe already past its prior-day level. When most
+      // of the market has broken, the level filter stops discriminating.
+      brdth: row.brdth,
     };
   });
 }
