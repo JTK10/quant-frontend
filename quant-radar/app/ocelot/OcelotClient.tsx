@@ -11,6 +11,8 @@ type Row = {
   c: number;            // cover  -- options bought back behind price
   w: number;            // write  -- options sold behind price
   sq: number;           // flow score
+  a15: number | null;   // OI arriving in front of price, last 15 min, % of prev-day OI
+  bt: string | null;    // cut at which price left the opening range
   cr: number | null;    // notional, Rs crore
 };
 
@@ -87,11 +89,20 @@ const ACCENT = "#f97316";
  * not hidden: LAURUSLABS was 1-LEG all day on 08-25 and was that session's
  * cleanest trade, so it is a caution, not a veto.
  */
-type SortKey = "d" | "sq";
+type SortKey = "d" | "sq" | "a15";
 
 function rank(rows: Row[], brokenOnly: boolean, by: SortKey) {
   const list = brokenOnly ? rows.filter((r) => r.brk === true) : [...rows];
   return list.sort((a, b) => {
+    // A15 sorts ASCENDING -- low is the good side. Money arriving in front of
+    // price is the barrier being defended; an empty barrier is what continues.
+    // 08-27: MANAPPURAM fell 4.76% on -0.5%, HCLTECH stalled on +10.6%.
+    if (by === "a15") {
+      const av = a.a15 ?? Infinity;
+      const bv = b.a15 ?? Infinity;
+      if (av !== bv) return av - bv;
+      return (b.d ?? -Infinity) - (a.d ?? -Infinity);
+    }
     if (by === "sq") {
       const s = (b.sq ?? -Infinity) - (a.sq ?? -Infinity);
       if (s !== 0) return s;
@@ -158,7 +169,9 @@ function Board({
             <tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
               <th className="px-3 py-2 text-left font-medium">#</th>
               <th className="px-3 py-2 text-left font-medium">Symbol</th>
+              <th className="px-3 py-2 text-right font-medium">Broke</th>
               <SortTh k="d" label="Dist %" />
+              <SortTh k="a15" label="A15 %" />
               <SortTh k="sq" label="SQ" />
               <th className="px-3 py-2 text-right font-medium">₹ Cr</th>
             </tr>
@@ -166,7 +179,7 @@ function Board({
           <tbody>
             {ranked.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={7} className="px-3 py-8 text-center text-[12px] text-white/30">
                   {brokenOnly
                     ? "No name has taken the prior-day level yet at this cut."
                     : "No rows in this cut."}
@@ -212,11 +225,32 @@ function Board({
                       )}
                     </span>
                   </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums text-white/45">
+                    {r.bt ?? "--"}
+                  </td>
                   <td
                     className="px-3 py-1.5 text-right font-semibold tabular-nums"
                     style={{ color: (r.d ?? 0) > 0 ? tint : "rgba(255,255,255,0.35)" }}
                   >
                     {r.d === null || r.d === undefined ? "--" : `${r.d > 0 ? "+" : ""}${r.d.toFixed(2)}`}
+                  </td>
+                  <td
+                    className="px-3 py-1.5 text-right font-semibold tabular-nums"
+                    style={{
+                      color:
+                        r.a15 === null || r.a15 === undefined
+                          ? "rgba(255,255,255,0.25)"
+                          : r.a15 <= 3
+                            ? "#22c55e"      // barrier empty -- nobody defending
+                            : r.a15 >= 10
+                              ? "#ef4444"    // barrier filling -- money arriving in front
+                              : "rgba(255,255,255,0.75)",
+                    }}
+                    title="OI arriving in front of price over the last 15 min, as % of yesterday's close OI on those strikes. Low is good."
+                  >
+                    {r.a15 === null || r.a15 === undefined
+                      ? "--"
+                      : `${r.a15 > 0 ? "+" : ""}${r.a15.toFixed(1)}`}
                   </td>
                   <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-white/80">
                     {r.sq?.toFixed(3)}
@@ -301,7 +335,7 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
 
         <span className="ml-auto flex items-center gap-1.5 text-[11px] text-white/45">
           <span className="text-[10px] uppercase tracking-[0.12em] text-white/35">Sort</span>
-          {(["d", "sq"] as SortKey[]).map((k) => (
+          {(["d", "a15", "sq"] as SortKey[]).map((k) => (
             <button
               key={k}
               onClick={() => setSortBy(k)}
@@ -312,7 +346,7 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
                   : { borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
               }
             >
-              {k === "d" ? "Dist %" : "SQ"}
+              {k === "d" ? "Dist %" : k === "a15" ? "A15 %" : "SQ"}
             </button>
           ))}
         </span>
