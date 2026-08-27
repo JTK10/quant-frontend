@@ -12,7 +12,9 @@ type Row = {
   w: number;            // write  -- options sold behind price
   sq: number;           // flow score
   a15: number | null;   // OI arriving in front of price, last 15 min, % of prev-day OI
-  bt: string | null;    // cut at which price left the opening range
+  bt: string | null;    // cut at which price broke the level
+  lv: number | null;    // the level itself
+  ls: string | null;    // where the level came from: PDH / PDL / OR
   cr: number | null;    // notional, Rs crore
 };
 
@@ -226,7 +228,32 @@ function Board({
                     </span>
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-white/45">
-                    {r.bt ?? "--"}
+                    {r.bt ? (
+                      <span
+                        className="inline-flex items-center gap-1"
+                        title={
+                          r.ls === "OR"
+                            ? `Opened through the prior-day level, so the first 3 candles became the level (${r.lv ?? "--"})`
+                            : `Prior-day level still live at the open (${r.lv ?? "--"})`
+                        }
+                      >
+                        {r.bt}
+                        {r.ls && (
+                          <span
+                            className="rounded-sm px-1 text-[9px] tracking-wide"
+                            style={
+                              r.ls === "OR"
+                                ? { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }
+                                : { background: `${tint}18`, color: tint }
+                            }
+                          >
+                            {r.ls}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      "--"
+                    )}
                   </td>
                   <td
                     className="px-3 py-1.5 text-right font-semibold tabular-nums"
