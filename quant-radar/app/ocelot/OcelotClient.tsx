@@ -74,19 +74,29 @@ function readBreadth(b?: Breadth) {
 const ACCENT = "#f97316";
 
 /**
- * Ranking is by DISTANCE past the prior-day level, not by the flow score.
+ * Two sorts, because the evidence is genuinely split.
  *
- * On the ten confirmed winners, distance put 9 of 10 inside the top five while
- * the flow score managed 7, and averaging the two ranked worse than distance
- * alone. So `d` is the sort key and `sq` is a column.
+ * On the ten winners RK supplied after the fact, DISTANCE past the prior-day
+ * level put 9 of 10 inside the top five where SQ managed 7 — so `d` is the
+ * default. But on 2026-08-25, the first forward unselected session, SQ ranked
+ * better: rho(MFE) +0.173 vs +0.080, and top-decile MAE 0.41 vs 1.03. Averaging
+ * the two was worse than either alone, every time it was tried.
  *
  * Rows with no cover (c === 0) are pure one-sided writing -- the shape that
- * topped the board on the two sessions that failed. They are shown, but marked,
- * because a name with both legs firing beat a higher-scoring name with none.
+ * topped the board on the two sessions that failed. They are dimmed and marked,
+ * not hidden: LAURUSLABS was 1-LEG all day on 08-25 and was that session's
+ * cleanest trade, so it is a caution, not a veto.
  */
-function rank(rows: Row[], brokenOnly: boolean) {
+type SortKey = "d" | "sq";
+
+function rank(rows: Row[], brokenOnly: boolean, by: SortKey) {
   const list = brokenOnly ? rows.filter((r) => r.brk === true) : [...rows];
   return list.sort((a, b) => {
+    if (by === "sq") {
+      const s = (b.sq ?? -Infinity) - (a.sq ?? -Infinity);
+      if (s !== 0) return s;
+      return (b.d ?? -Infinity) - (a.d ?? -Infinity);
+    }
     const ad = a.d ?? -Infinity;
     const bd = b.d ?? -Infinity;
     if (bd !== ad) return bd - ad;
@@ -104,13 +114,15 @@ function Board({
   rows,
   brokenOnly,
   tint,
+  sortBy,
 }: {
   title: string;
   rows: Row[];
   brokenOnly: boolean;
   tint: string;
+  sortBy: SortKey;
 }) {
-  const ranked = rank(rows, brokenOnly);
+  const ranked = rank(rows, brokenOnly, sortBy);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-baseline gap-3 px-1 pb-2">
@@ -128,18 +140,19 @@ function Board({
             <tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
               <th className="px-3 py-2 text-left font-medium">#</th>
               <th className="px-3 py-2 text-left font-medium">Symbol</th>
-              <th className="px-3 py-2 text-right font-medium">Spot</th>
-              <th className="px-3 py-2 text-right font-medium">Dist %</th>
-              <th className="px-3 py-2 text-right font-medium">Cover</th>
-              <th className="px-3 py-2 text-right font-medium">Write</th>
-              <th className="px-3 py-2 text-right font-medium">SQ</th>
+              <th className="px-3 py-2 text-right font-medium">
+                Dist %{sortBy === "d" && <span style={{ color: tint }}> ▼</span>}
+              </th>
+              <th className="px-3 py-2 text-right font-medium">
+                SQ{sortBy === "sq" && <span style={{ color: tint }}> ▼</span>}
+              </th>
               <th className="px-3 py-2 text-right font-medium">₹ Cr</th>
             </tr>
           </thead>
           <tbody>
             {ranked.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={5} className="px-3 py-8 text-center text-[12px] text-white/30">
                   {brokenOnly
                     ? "No name has taken the prior-day level yet at this cut."
                     : "No rows in this cut."}
@@ -185,18 +198,13 @@ function Board({
                       )}
                     </span>
                   </td>
-                  <td className="px-3 py-1.5 text-right tabular-nums text-white/70">
-                    {fmt(r.sp, 1)}
-                  </td>
                   <td
                     className="px-3 py-1.5 text-right font-semibold tabular-nums"
                     style={{ color: (r.d ?? 0) > 0 ? tint : "rgba(255,255,255,0.35)" }}
                   >
                     {r.d === null || r.d === undefined ? "--" : `${r.d > 0 ? "+" : ""}${r.d.toFixed(2)}`}
                   </td>
-                  <td className="px-3 py-1.5 text-right tabular-nums text-white/55">{fmt(r.c)}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums text-white/55">{fmt(r.w)}</td>
-                  <td className="px-3 py-1.5 text-right tabular-nums text-white/80">
+                  <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-white/80">
                     {r.sq?.toFixed(3)}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-white/40">{fmt(r.cr)}</td>
@@ -222,6 +230,7 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
 
   const [idx, setIdx] = useState<number | null>(null);
   const [brokenOnly, setBrokenOnly] = useState(true);
+  const [sortBy, setSortBy] = useState<SortKey>("d");
 
   // Default to the newest cut, but don't pin it: once the user scrubs back the
   // selection must stay put even as auto-refresh appends new cuts.
@@ -276,7 +285,25 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
           </button>
         )}
 
-        <label className="ml-auto flex cursor-pointer items-center gap-2 text-[11px] text-white/55">
+        <span className="ml-auto flex items-center gap-1.5 text-[11px] text-white/45">
+          <span className="text-[10px] uppercase tracking-[0.12em] text-white/35">Sort</span>
+          {(["d", "sq"] as SortKey[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => setSortBy(k)}
+              className="rounded-md border px-2 py-0.5 transition"
+              style={
+                sortBy === k
+                  ? { borderColor: ACCENT, color: ACCENT, background: `${ACCENT}18` }
+                  : { borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
+              }
+            >
+              {k === "d" ? "Dist %" : "SQ"}
+            </button>
+          ))}
+        </span>
+
+        <label className="flex cursor-pointer items-center gap-2 text-[11px] text-white/55">
           <input
             type="checkbox"
             checked={brokenOnly}
@@ -336,15 +363,16 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
       })()}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-        <Board title="BULL · CALL SIDE" rows={snap?.bull ?? []} brokenOnly={brokenOnly} tint="#22c55e" />
-        <Board title="BEAR · PUT SIDE" rows={snap?.bear ?? []} brokenOnly={brokenOnly} tint="#ef4444" />
+        <Board title="BULL · CALL SIDE" rows={snap?.bull ?? []} brokenOnly={brokenOnly} tint="#22c55e" sortBy={sortBy} />
+        <Board title="BEAR · PUT SIDE" rows={snap?.bear ?? []} brokenOnly={brokenOnly} tint="#ef4444" sortBy={sortBy} />
       </div>
 
       <p className="px-1 text-[10.5px] leading-relaxed text-white/25">
         Ranked by distance past the prior-day level, not by SQ — on the confirmed winners
-        distance ranked 9 of 10 inside the top five where SQ managed 7. Cover = options
-        bought back behind price; write = options sold behind price. Rows marked 1-LEG have
-        no cover leg.
+        distance ranked 9 of 10 inside the top five where SQ managed 7 — but on the first
+        forward session SQ ranked better, so both sorts are offered. SQ is the share of
+        open interest behind price that turned favourable today. Rows marked 1-LEG have no
+        cover leg.
       </p>
     </div>
   );
