@@ -115,14 +115,32 @@ function Board({
   brokenOnly,
   tint,
   sortBy,
+  onSort,
 }: {
   title: string;
   rows: Row[];
   brokenOnly: boolean;
   tint: string;
   sortBy: SortKey;
+  onSort: (k: SortKey) => void;
 }) {
   const ranked = rank(rows, brokenOnly, sortBy);
+
+  // The column header is where people actually click to sort, so it drives the
+  // same state as the toolbar buttons rather than being inert decoration.
+  const SortTh = ({ k, label }: { k: SortKey; label: string }) => (
+    <th className="px-3 py-2 text-right font-medium">
+      <button
+        onClick={() => onSort(k)}
+        className="inline-flex items-center gap-1 uppercase tracking-[0.1em] transition hover:text-white"
+        style={{ color: sortBy === k ? tint : undefined }}
+        title={`Sort by ${label}`}
+      >
+        {label}
+        <span style={{ opacity: sortBy === k ? 1 : 0.25 }}>▼</span>
+      </button>
+    </th>
+  );
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-baseline gap-3 px-1 pb-2">
@@ -140,12 +158,8 @@ function Board({
             <tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
               <th className="px-3 py-2 text-left font-medium">#</th>
               <th className="px-3 py-2 text-left font-medium">Symbol</th>
-              <th className="px-3 py-2 text-right font-medium">
-                Dist %{sortBy === "d" && <span style={{ color: tint }}> ▼</span>}
-              </th>
-              <th className="px-3 py-2 text-right font-medium">
-                SQ{sortBy === "sq" && <span style={{ color: tint }}> ▼</span>}
-              </th>
+              <SortTh k="d" label="Dist %" />
+              <SortTh k="sq" label="SQ" />
               <th className="px-3 py-2 text-right font-medium">₹ Cr</th>
             </tr>
           </thead>
@@ -363,8 +377,8 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
       })()}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-        <Board title="BULL · CALL SIDE" rows={snap?.bull ?? []} brokenOnly={brokenOnly} tint="#22c55e" sortBy={sortBy} />
-        <Board title="BEAR · PUT SIDE" rows={snap?.bear ?? []} brokenOnly={brokenOnly} tint="#ef4444" sortBy={sortBy} />
+        <Board title="BULL · CALL SIDE" rows={snap?.bull ?? []} brokenOnly={brokenOnly} tint="#22c55e" sortBy={sortBy} onSort={setSortBy} />
+        <Board title="BEAR · PUT SIDE" rows={snap?.bear ?? []} brokenOnly={brokenOnly} tint="#ef4444" sortBy={sortBy} onSort={setSortBy} />
       </div>
 
       <p className="px-1 text-[10.5px] leading-relaxed text-white/25">
