@@ -223,6 +223,25 @@ async function buildPayload(
       return { ...snap, rows: top };
     });
     rows = [...passthrough, ...trimmed];
+
+    // Same trim for the two-sided board shape. OCELOT publishes `bull`/`bear`
+    // arrays rather than `rows`, so it fell through to passthrough and shipped
+    // every entry of all 78 cuts: 1.23MB on 2026-08-28, and that was after the
+    // a15/bt/lv/ls fields pushed each doc from 13.4KB to 15.9KB. Same failure
+    // mode waiting as AFAC's -- past 2MiB the Data Cache entry silently fails
+    // to store and the route returns [].
+    rows = rows.map((s: any) => {
+      if (!Array.isArray(s.bull) && !Array.isArray(s.bear)) return s;
+      const cut = (side: any[]) =>
+        [...side]
+          .sort((a, b) => (b?.[rankBy] ?? -Infinity) - (a?.[rankBy] ?? -Infinity))
+          .slice(0, topN);
+      return {
+        ...s,
+        bull: Array.isArray(s.bull) ? cut(s.bull) : s.bull,
+        bear: Array.isArray(s.bear) ? cut(s.bear) : s.bear,
+      };
+    });
   }
 
   if (latestCycle) {

@@ -7,6 +7,7 @@ import { getInternalApiUrl } from "@/utils/internalApi";
 export const dynamic = "force-dynamic";
 
 const ACCENT = "#f97316";
+const TOP_N = 20;
 
 async function getOcelotSnaps(dateStr: string) {
   try {
@@ -16,8 +17,11 @@ async function getOcelotSnaps(dateStr: string) {
     // across cuts is the thing intraday capture exists to show.
     //
     // sources= is the page-level filter; the route pushes it upstream as :src.
+    // topN/rankBy trims each cut's bull/bear arrays server-side, the same way
+    // /afac does. The page renders 20 rows a side; without this all 78 cuts
+    // shipped every entry -- 1.23MB, and climbing each time a field is added.
     const url = await getInternalApiUrl(
-      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=ocelot`
+      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=ocelot&topN=${TOP_N}&rankBy=d`
     );
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
