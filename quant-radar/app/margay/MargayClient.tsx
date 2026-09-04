@@ -72,7 +72,6 @@ function Board({ title, rows, tint }: { title: string; rows: Row[]; tint: string
               <th className="px-3 py-2 text-left font-medium">Symbol</th>
               <th className="px-3 py-2 text-left font-medium">Type</th>
               <th className="px-3 py-2 text-right font-medium">Broke</th>
-              <th className="px-3 py-2 text-right font-medium">Level → Spot</th>
               <th className="px-3 py-2 text-right font-medium">CE%chg</th>
               <th className="px-3 py-2 text-right font-medium">PE%chg</th>
               <th className="px-3 py-2 text-right font-medium">Move %</th>
@@ -82,7 +81,7 @@ function Board({ title, rows, tint }: { title: string; rows: Row[]; tint: string
           <tbody>
             {ranked.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={8} className="px-3 py-8 text-center text-[12px] text-white/30">
                   No matches at this cut.
                 </td>
               </tr>
@@ -117,16 +116,6 @@ function Board({ title, rows, tint }: { title: string; rows: Row[]; tint: string
                 </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/45">
                   {r.brk ?? (r.type === "RANGE_BREAK" ? "waiting" : "--")}
-                </td>
-                <td
-                  className="px-3 py-1.5 text-right tabular-nums text-white/50"
-                  title={
-                    r.type === "RANGE_BREAK"
-                      ? "The true 09:15->10:00 range level, and where it's trading now"
-                      : "The prior-day level that broke, and where it's trading now"
-                  }
-                >
-                  {fmt(r.lv, 2)} → {fmt(r.sp, 2)}
                 </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmtPct(r.ce_chg, false)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmtPct(r.pe_chg, false)}</td>
