@@ -76,6 +76,23 @@ const LynxIcon = (props: any) => (
   </svg>
 );
 
+const MargayIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    {/* Short rounded ears -- unlike the caracal/lynx tufts, a margay's are
+        low and unremarkable. Its own signature is next: */}
+    <path d="M 6 8 C 5 5.5, 7 4, 8.5 5.5" />
+    <path d="M 18 8 C 19 5.5, 17 4, 15.5 5.5" />
+    <path d="M 8.5 5.5 C 10 4.6, 14 4.6, 15.5 5.5" /> {/* Crown */}
+    <path d="M 6 8 C 5.3 12, 7.5 16.5, 12 18.5 C 16.5 16.5, 18.7 12, 18 8" /> {/* Face outline */}
+    {/* Oversized eyes -- a margay's largest relative to any wild cat, the
+        adaptation for a fully nocturnal, tree-climbing hunt */}
+    <circle cx="9" cy="11" r="2" />
+    <circle cx="15" cy="11" r="2" />
+    <path d="M 10.5 15.5 L 13.5 15.5 L 12 17.5 Z" /> {/* Nose */}
+    <path d="M 12 17.5 L 12 19" />                    {/* Mouth */}
+  </svg>
+);
+
 // -- Retired 2026-08-05: RFAC and Smart List. Between them the v2dyn and
 // smartlist snapshot sources were 67% of the PANTHER payload every page had to
 // download (ORDS ignores ?source, so every page pays for every source). The
@@ -89,6 +106,7 @@ const NAV_ITEMS: any[] = [
   { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/ocelot", icon: Activity, label: "Ocelot", color: "#f97316", rgb: "249,115,22" },
+  { href: "/margay", icon: MargayIcon, label: "Margay", color: "#a855f7", rgb: "168,85,247" },
 // -- Removed 2026-08-23: TradingView embeds cannot show NSE symbols. Indian
 // exchange symbols are blocked in widgets by the NSE Data Sharing & Usage
 // Policy, so every pane rendered "this symbol is only available on
