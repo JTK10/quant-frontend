@@ -13,8 +13,12 @@ async function getMargaySnaps(dateStr: string) {
     // Same route, same convention as /ocelot: sources= is pushed upstream as
     // :src, the doc shape is identical (source/cap/sig_date/date/cut/time/ts/
     // bull/bear) so no server-side trimming is needed here -- MARGAY publishes
-    // ALL matches per cut (not top-N), and the count stays small because both
-    // locked sub-patterns already gate on notional + an early-break window.
+    // ALL matches per cut (not top-N). PDL_BREAK/PDH_BREAK is kept small by
+    // notional + the 09:30 window; RANGE_BREAK only gates on notional+clear+
+    // held with no time window, so on a strongly one-sided trend day it can
+    // carry a large share of the universe, republished every cut from 10:00.
+    // Same failure mode /ocelot hit at 1.23MB (see panther-signals/route.ts) --
+    // worth a size check if this page ever renders slow on a trend day.
     const url = await getInternalApiUrl(
       `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=margay`
     );
