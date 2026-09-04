@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 
+type RowType = "RANGE_BREAK" | "PDL_BREAK" | "PDH_BREAK";
+
 type Row = {
   s: string;                // symbol
-  type: "RANGE_BREAK" | "PDL_BREAK" | "PDH_BREAK";
+  type: RowType;
   lv: number | null;        // the level -- 09:15->10:00 true range (RANGE_BREAK) or PDL/PDH
   brk: string | null;       // break time. null on RANGE_BREAK means still waiting.
   ce_chg: number | null;    // call OI %chg in the 1.5% band since 09:15 (PDL/PDH_BREAK only)
@@ -13,6 +15,7 @@ type Row = {
   mv: number | null;        // %move from prior close, live every cut
   sp: number | null;        // spot
   cr: number | null;        // notional, Rs crore
+  ratio: number | null;     // dominant-leg/other-leg OI%chg (PDL/PDH_BREAK only)
 };
 
 type Snap = {
@@ -24,22 +27,44 @@ type Snap = {
 
 const ACCENT = "#a855f7";
 
-const TYPE_TINT: Record<Row["type"], string> = {
+const TYPE_TINT: Record<RowType, string> = {
   RANGE_BREAK: "rgba(255,255,255,0.5)",
   PDL_BREAK: "#ef4444",
   PDH_BREAK: "#22c55e",
 };
 
-const TYPE_LABEL: Record<Row["type"], string> = {
+const TYPE_LABEL: Record<RowType, string> = {
   RANGE_BREAK: "RANGE",
   PDL_BREAK: "PDL",
   PDH_BREAK: "PDH",
 };
 
-function rank(rows: Row[]) {
-  // Both sides sort by mv descending -- it's already signed so the favourable
-  // direction is positive on both boards (rise% for bull, fall% for bear).
-  return [...rows].sort((a, b) => (b.mv ?? -Infinity) - (a.mv ?? -Infinity));
+const TYPE_FILTERS: Array<"ALL" | RowType> = ["ALL", "RANGE_BREAK", "PDL_BREAK", "PDH_BREAK"];
+const TYPE_FILTER_LABEL: Record<"ALL" | RowType, string> = {
+  ALL: "All",
+  RANGE_BREAK: "Range",
+  PDL_BREAK: "PDL",
+  PDH_BREAK: "PDH",
+};
+
+type SortKey = "mv" | "ratio";
+
+function rankAndFilter(rows: Row[], typeFilter: "ALL" | RowType, sortBy: SortKey) {
+  const list = typeFilter === "ALL" ? [...rows] : rows.filter((r) => r.type === typeFilter);
+  return list.sort((a, b) => {
+    if (sortBy === "ratio") {
+      // Rows with no ratio (RANGE_BREAK, or a PDL/PDH row whose other leg
+      // wasn't positive) sort to the bottom rather than dropping out --
+      // still visible, just not competing on a number they don't have.
+      const av = a.ratio ?? -Infinity;
+      const bv = b.ratio ?? -Infinity;
+      if (av !== bv) return bv - av;
+      return (b.mv ?? -Infinity) - (a.mv ?? -Infinity);
+    }
+    // mv is already signed so the favourable direction is positive on both
+    // boards (rise% for bull, fall% for bear).
+    return (b.mv ?? -Infinity) - (a.mv ?? -Infinity);
+  });
 }
 
 const fmtPct = (v: number | null | undefined, withSign = true) =>
@@ -52,8 +77,36 @@ const fmt = (v: number | null | undefined, dp = 0) =>
     ? "--"
     : v.toLocaleString("en-IN", { minimumFractionDigits: dp, maximumFractionDigits: dp });
 
-function Board({ title, rows, tint }: { title: string; rows: Row[]; tint: string }) {
-  const ranked = rank(rows);
+function Board({
+  title,
+  rows,
+  tint,
+  typeFilter,
+  sortBy,
+  onSort,
+}: {
+  title: string;
+  rows: Row[];
+  tint: string;
+  typeFilter: "ALL" | RowType;
+  sortBy: SortKey;
+  onSort: (k: SortKey) => void;
+}) {
+  const ranked = rankAndFilter(rows, typeFilter, sortBy);
+
+  const SortTh = ({ k, label }: { k: SortKey; label: string }) => (
+    <th className="px-3 py-2 text-right font-medium">
+      <button
+        onClick={() => onSort(k)}
+        className="inline-flex items-center gap-1 uppercase tracking-[0.1em] transition hover:text-white"
+        style={{ color: sortBy === k ? tint : undefined }}
+        title={`Sort by ${label}`}
+      >
+        {label}
+        <span style={{ opacity: sortBy === k ? 1 : 0.25 }}>▼</span>
+      </button>
+    </th>
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -74,14 +127,15 @@ function Board({ title, rows, tint }: { title: string; rows: Row[]; tint: string
               <th className="px-3 py-2 text-right font-medium">Broke</th>
               <th className="px-3 py-2 text-right font-medium">CE%chg</th>
               <th className="px-3 py-2 text-right font-medium">PE%chg</th>
-              <th className="px-3 py-2 text-right font-medium">Move %</th>
+              <SortTh k="ratio" label="Ratio" />
+              <SortTh k="mv" label="Move %" />
               <th className="px-3 py-2 text-right font-medium">₹ Cr</th>
             </tr>
           </thead>
           <tbody>
             {ranked.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={9} className="px-3 py-8 text-center text-[12px] text-white/30">
                   No matches at this cut.
                 </td>
               </tr>
@@ -120,6 +174,13 @@ function Board({ title, rows, tint }: { title: string; rows: Row[]; tint: string
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmtPct(r.ce_chg, false)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmtPct(r.pe_chg, false)}</td>
                 <td
+                  className="px-3 py-1.5 text-right tabular-nums"
+                  style={{ color: r.ratio !== null && r.ratio !== undefined ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.25)" }}
+                  title="Dominant leg's OI%chg over the other leg's -- how many stocks broke PDL/PDH the same morning, ranked by conviction."
+                >
+                  {r.ratio === null || r.ratio === undefined ? "--" : `${r.ratio.toFixed(2)}x`}
+                </td>
+                <td
                   className="px-3 py-1.5 text-right font-semibold tabular-nums"
                   style={{ color: (r.mv ?? 0) > 0 ? tint : "rgba(255,255,255,0.35)" }}
                 >
@@ -146,6 +207,8 @@ export default function MargayClient({ snaps }: { snaps: Snap[] }) {
   }, [snaps]);
 
   const [idx, setIdx] = useState<number | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"ALL" | RowType>("ALL");
+  const [sortBy, setSortBy] = useState<SortKey>("mv");
   const active = idx === null ? cuts.length - 1 : Math.min(idx, cuts.length - 1);
   const snap = cuts[active]?.[1];
 
@@ -194,18 +257,52 @@ export default function MargayClient({ snaps }: { snaps: Snap[] }) {
             Jump to latest
           </button>
         )}
+
+        <span className="ml-auto flex items-center gap-1.5 text-[11px] text-white/45">
+          <span className="text-[10px] uppercase tracking-[0.12em] text-white/35">Type</span>
+          {TYPE_FILTERS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeFilter(t)}
+              className="rounded-md border px-2 py-0.5 transition"
+              style={
+                typeFilter === t
+                  ? { borderColor: ACCENT, color: ACCENT, background: `${ACCENT}18` }
+                  : { borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
+              }
+            >
+              {TYPE_FILTER_LABEL[t]}
+            </button>
+          ))}
+        </span>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-        <Board title="BULL · PDH / RANGE" rows={snap?.bull ?? []} tint="#22c55e" />
-        <Board title="BEAR · PDL / RANGE" rows={snap?.bear ?? []} tint="#ef4444" />
+        <Board
+          title="BULL · PDH / RANGE"
+          rows={snap?.bull ?? []}
+          tint="#22c55e"
+          typeFilter={typeFilter}
+          sortBy={sortBy}
+          onSort={setSortBy}
+        />
+        <Board
+          title="BEAR · PDL / RANGE"
+          rows={snap?.bear ?? []}
+          tint="#ef4444"
+          typeFilter={typeFilter}
+          sortBy={sortBy}
+          onSort={setSortBy}
+        />
       </div>
 
       <p className="px-1 text-[10.5px] leading-relaxed text-white/25">
-        Two locked patterns, all matches shown (not top-N), ranked by Move % from prior close.
-        RANGE = clear+held decided once at 10:00, waiting for the true 09:15-10:00 range to
-        break. PDL/PDH = prior-day level broken early (by 09:30), sticky once the 1.5% band
-        OI%chg confirms -- stays on the list for the session even if a later cut would fail it.
+        Two locked patterns, all matches shown (not top-N). RANGE = clear+held decided once at
+        10:00, waiting for the true 09:15-10:00 range to break. PDL/PDH = prior-day level broken
+        early (by 09:30), sticky once the 1.5% band OI%chg confirms -- stays on the list for the
+        session even if a later cut would fail it. Ratio = dominant leg's OI%chg over the other
+        leg's, cumulative from the 09:15 open -- click the column header to sort by it instead of
+        Move %.
       </p>
     </div>
   );
