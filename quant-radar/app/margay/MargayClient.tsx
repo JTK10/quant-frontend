@@ -140,13 +140,12 @@ function Board({
               <SortTh k="ratio" label="Ratio" />
               <SortTh k="tgt_pct" label="Target %" />
               <SortTh k="mv" label="Move %" />
-              <th className="px-3 py-2 text-right font-medium">₹ Cr</th>
             </tr>
           </thead>
           <tbody>
             {ranked.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={9} className="px-3 py-8 text-center text-[12px] text-white/30">
                   No matches at this cut.
                 </td>
               </tr>
@@ -217,7 +216,6 @@ function Board({
                 >
                   {fmtPct(r.mv)}
                 </td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-white/40">{fmt(r.cr)}</td>
               </tr>
             ))}
           </tbody>
