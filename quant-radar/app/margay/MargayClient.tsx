@@ -16,6 +16,8 @@ type Row = {
   sp: number | null;        // spot
   cr: number | null;        // notional, Rs crore
   ratio: number | null;     // dominant-leg/other-leg OI%chg (PDL/PDH_BREAK only)
+  tgt: number | null;       // next strike where the wall is BUILDING since 09:15
+  tgt_pct: number | null;   // room to it, % from spot -- drains as price advances
 };
 
 type Snap = {
@@ -47,11 +49,19 @@ const TYPE_FILTER_LABEL: Record<"ALL" | RowType, string> = {
   PDH_BREAK: "PDH",
 };
 
-type SortKey = "mv" | "ratio";
+type SortKey = "mv" | "ratio" | "tgt_pct";
 
 function rankAndFilter(rows: Row[], typeFilter: "ALL" | RowType, sortBy: SortKey) {
   const list = typeFilter === "ALL" ? [...rows] : rows.filter((r) => r.type === typeFilter);
   return list.sort((a, b) => {
+    if (sortBy === "tgt_pct") {
+      // Most room to the next building wall first. A name with no readable
+      // target sorts last rather than dropping out.
+      const av = a.tgt_pct ?? -Infinity;
+      const bv = b.tgt_pct ?? -Infinity;
+      if (av !== bv) return bv - av;
+      return (b.mv ?? -Infinity) - (a.mv ?? -Infinity);
+    }
     if (sortBy === "ratio") {
       // Rows with no ratio (RANGE_BREAK, or a PDL/PDH row whose other leg
       // wasn't positive) sort to the bottom rather than dropping out --
@@ -128,6 +138,7 @@ function Board({
               <th className="px-3 py-2 text-right font-medium">CE%chg</th>
               <th className="px-3 py-2 text-right font-medium">PE%chg</th>
               <SortTh k="ratio" label="Ratio" />
+              <SortTh k="tgt_pct" label="Target %" />
               <SortTh k="mv" label="Move %" />
               <th className="px-3 py-2 text-right font-medium">₹ Cr</th>
             </tr>
@@ -135,7 +146,7 @@ function Board({
           <tbody>
             {ranked.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={10} className="px-3 py-8 text-center text-[12px] text-white/30">
                   No matches at this cut.
                 </td>
               </tr>
@@ -179,6 +190,26 @@ function Board({
                   title="Dominant leg's OI%chg over the other leg's -- how many stocks broke PDL/PDH the same morning, ranked by conviction."
                 >
                   {r.ratio === null || r.ratio === undefined ? "--" : `${r.ratio.toFixed(2)}x`}
+                </td>
+                <td
+                  className="px-3 py-1.5 text-right tabular-nums"
+                  style={{
+                    color:
+                      r.tgt_pct === null || r.tgt_pct === undefined
+                        ? "rgba(255,255,255,0.25)"
+                        : r.tgt_pct >= 1.5
+                          ? "#22c55e"      // room to run
+                          : r.tgt_pct <= 0.5
+                            ? "#ef4444"    // exhausted -- wall is right here
+                            : "rgba(255,255,255,0.75)",
+                  }}
+                  title={
+                    r.tgt === null || r.tgt === undefined
+                      ? "No readable target"
+                      : `Next strike building OI since 09:15: ${r.tgt}. This is the room before price meets it.`
+                  }
+                >
+                  {r.tgt_pct === null || r.tgt_pct === undefined ? "--" : `${r.tgt_pct.toFixed(2)}%`}
                 </td>
                 <td
                   className="px-3 py-1.5 text-right font-semibold tabular-nums"
