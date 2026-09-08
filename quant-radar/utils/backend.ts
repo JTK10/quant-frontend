@@ -1005,6 +1005,15 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       bear: row.bear,
       n: row.n,
       nq: row.nq,
+      // NEOFELIS funnel counts, bear (nb/nm) and bull (nbb/nmb). The publisher
+      // caps near-misses at 30 per cut per side, so `bear.length` is not the
+      // number of body breaks -- these carry the real denominators (93 breaks
+      // -> 3 armed on the bear side, 2026-09-07) and without them here the page
+      // would quietly report the capped 33 instead.
+      nb: row.nb,
+      nm: row.nm,
+      nbb: row.nbb,
+      nmb: row.nmb,
       // brdth: share of the universe already past its prior-day level. When most
       // of the market has broken, the level filter stops discriminating.
       brdth: row.brdth,

@@ -93,6 +93,24 @@ const MargayIcon = (props: any) => (
   </svg>
 );
 
+const NeofelisIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    {/* Low set-back ears and a heavy square muzzle -- Neofelis is built like a
+        small panther, not like the slight Leopardus cats above it. */}
+    <path d="M 6.5 8 C 5.6 5.8, 7.4 4.6, 8.8 6" />
+    <path d="M 17.5 8 C 18.4 5.8, 16.6 4.6, 15.2 6" />
+    <path d="M 8.8 6 C 10.2 5.2, 13.8 5.2, 15.2 6" />
+    <path d="M 6.5 8 C 5.9 12.2, 7.9 16.4, 12 18.6 C 16.1 16.4, 18.1 12.2, 17.5 8" />
+    <path d="M 9.2 11 L 10.8 11" />                   {/* Narrow, level eyes */}
+    <path d="M 13.2 11 L 14.8 11" />
+    {/* The cloud markings the animal is named for -- large irregular blotches,
+        not the small rosettes of an ocelot or margay. */}
+    <path d="M 7.6 13.4 C 8.6 12.6, 9.6 13.4, 8.9 14.4 C 8.3 15.2, 7.2 14.4, 7.6 13.4 Z" />
+    <path d="M 16.4 13.4 C 15.4 12.6, 14.4 13.4, 15.1 14.4 C 15.7 15.2, 16.8 14.4, 16.4 13.4 Z" />
+    <path d="M 10.6 15.4 L 13.4 15.4 L 12 17.4 Z" />  {/* Nose */}
+  </svg>
+);
+
 // -- Retired 2026-08-05: RFAC and Smart List. Between them the v2dyn and
 // smartlist snapshot sources were 67% of the PANTHER payload every page had to
 // download (ORDS ignores ?source, so every page pays for every source). The
@@ -107,6 +125,7 @@ const NAV_ITEMS: any[] = [
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/ocelot", icon: Activity, label: "Ocelot", color: "#f97316", rgb: "249,115,22" },
   { href: "/margay", icon: MargayIcon, label: "Margay", color: "#a855f7", rgb: "168,85,247" },
+  { href: "/neofelis", icon: NeofelisIcon, label: "Neofelis", color: "#2dd4bf", rgb: "45,212,191" },
 // -- Removed 2026-08-23: TradingView embeds cannot show NSE symbols. Indian
 // exchange symbols are blocked in widgets by the NSE Data Sharing & Usage
 // Policy, so every pane rendered "this symbol is only available on
