@@ -1021,6 +1021,7 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       t0: row.t0,
       arm_last: row.arm_last,
       cov: row.cov,
+      ob: row.ob,
       // brdth: share of the universe already past its prior-day level. When most
       // of the market has broken, the level filter stops discriminating.
       brdth: row.brdth,

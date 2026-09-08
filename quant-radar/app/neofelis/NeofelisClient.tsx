@@ -20,6 +20,7 @@ type Row = {
   cr: number | null;         // notional, Rs crore
   tgt: number | null;        // next strike building OI since 09:15
   tgt_pct: number | null;    // room to it, % from spot
+  ob: boolean | null;        // morning order-block base, 09:15-10:00 pivot
 };
 
 type Snap = {
@@ -51,6 +52,11 @@ type Tab = "ARMED" | "MISS" | "ALL";
 const TABS: Tab[] = ["ARMED", "MISS", "ALL"];
 const TAB_LABEL: Record<Tab, string> = { ARMED: "Armed", MISS: "Near miss", ALL: "All" };
 
+// OB = a same-side order block built by TODAY's 09:15-10:00 candles, with price
+// clear of it. The pivot needs 10 bars to confirm, so nothing can be true
+// before 10:05 -- a dash before then means "not decided yet", not "no".
+type ObFilter = "ALL" | "OB";
+
 type SortKey = "w" | "dp" | "mv" | "tgt_pct";
 
 const fmtPct = (v: number | null | undefined, dp = 2, sign = false) =>
@@ -78,6 +84,7 @@ function Board({
   nMiss,
   tint,
   tab,
+  obFilter,
   sortBy,
   onSort,
 }: {
@@ -87,6 +94,7 @@ function Board({
   nMiss: number;
   tint: string;
   tab: Tab;
+  obFilter: ObFilter;
   sortBy: SortKey;
   onSort: (k: SortKey) => void;
 }) {
@@ -101,7 +109,8 @@ function Board({
   const effSort: SortKey = sortBy === "w" && !gate.oi ? "dp" : sortBy;
 
   const ranked = useMemo(() => {
-    const base = tab === "ARMED" ? armed : tab === "MISS" ? miss : rows;
+    let base = tab === "ARMED" ? armed : tab === "MISS" ? miss : rows;
+    if (obFilter === "OB") base = base.filter((r) => r.ob === true);
     return [...base].sort((a, b) => {
       if (tab === "ALL" && a.st !== b.st) return a.st === "ARMED" ? -1 : 1;
       const av = a[effSort];
@@ -113,7 +122,7 @@ function Board({
       if (bv == null) return -1;
       return (bv as number) - (av as number);
     });
-  }, [rows, armed, miss, tab, effSort]);
+  }, [rows, armed, miss, tab, effSort, obFilter]);
 
   const SortTh = ({ k, label, title }: { k: SortKey; label: string; title?: string }) => (
     <th className="px-2.5 py-2 text-right font-medium">
@@ -160,13 +169,19 @@ function Board({
               />
               <SortTh k="tgt_pct" label="Tgt %" />
               <SortTh k="mv" label="Move %" />
+              <th
+                className="px-2.5 py-2 text-center font-medium"
+                title="A same-side order block built by today's 09:15-10:00 candles, with price clear of it. The pivot needs 10 bars to confirm, so this cannot be true before 10:05."
+              >
+                OB
+              </th>
               <th className="px-2.5 py-2 text-left font-medium">State</th>
             </tr>
           </thead>
           <tbody>
             {ranked.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={10} className="px-3 py-8 text-center text-[12px] text-white/30">
                   {tab === "ARMED" ? "Nothing armed at this cut." : "No rows at this cut."}
                 </td>
               </tr>
@@ -243,6 +258,9 @@ function Board({
                   >
                     {fmtPct(r.mv, 2, true)}
                   </td>
+                  <td className="px-2.5 py-1.5 text-center">
+                    <ObCell v={r.ob} />
+                  </td>
                   <td
                     className="px-2.5 py-1.5 text-[10.5px]"
                     style={{ color: on ? ACCENT : "rgba(255,255,255,0.35)" }}
@@ -265,6 +283,22 @@ function Board({
   );
 }
 
+function ObCell({ v }: { v: boolean | null }) {
+  if (v === null || v === undefined) return <span className="text-white/20">--</span>;
+  return (
+    <span
+      className="rounded-sm px-1.5 py-0.5 text-[9.5px] font-semibold tracking-wide"
+      style={
+        v
+          ? { background: "rgba(45,212,191,0.16)", color: "#2dd4bf" }
+          : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.3)" }
+      }
+    >
+      {v ? "OB" : "no"}
+    </span>
+  );
+}
+
 export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
   const cuts = useMemo(() => {
     const seen = new Map<string, Snap>();
@@ -277,6 +311,7 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
 
   const [idx, setIdx] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>("ARMED");
+  const [obFilter, setObFilter] = useState<ObFilter>("ALL");
   const [sortBy, setSortBy] = useState<SortKey>("w");
 
   const active = idx === null ? cuts.length - 1 : Math.min(idx, cuts.length - 1);
@@ -331,6 +366,19 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
         )}
 
         <span className="ml-auto flex items-center gap-1.5 text-[11px] text-white/45">
+          <button
+            onClick={() => setObFilter(obFilter === "OB" ? "ALL" : "OB")}
+            className="rounded-md border px-2 py-0.5 transition"
+            title="Show only names with a morning order-block base (09:15-10:00 pivot, price clear of it). Nothing qualifies before 10:05."
+            style={
+              obFilter === "OB"
+                ? { borderColor: ACCENT, color: ACCENT, background: `${ACCENT}18` }
+                : { borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
+            }
+          >
+            OB only
+          </button>
+          <span className="mx-1 text-white/15">|</span>
           {TABS.map((t) => (
             <button
               key={t}
@@ -395,6 +443,7 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
           nMiss={snap?.nmb ?? bull.filter((r) => r.st !== "ARMED").length}
           tint="#22c55e"
           tab={tab}
+          obFilter={obFilter}
           sortBy={sortBy}
           onSort={setSortBy}
         />
@@ -405,6 +454,7 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
           nMiss={snap?.nm ?? bear.filter((r) => r.st !== "ARMED").length}
           tint="#ef4444"
           tab={tab}
+          obFilter={obFilter}
           sortBy={sortBy}
           onSort={setSortBy}
         />
