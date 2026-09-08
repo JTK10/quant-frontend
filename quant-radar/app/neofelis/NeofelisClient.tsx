@@ -31,6 +31,9 @@ type Snap = {
   nm?: number;   // bear near misses, before the cap
   nbb?: number;  // bull body breaks
   nmb?: number;  // bull near misses
+  t0?: string | null;        // first cut the capture process handled today
+  arm_last?: string | null;  // end of the arm window, from the service
+  cov?: number | null;       // this cut's symbol coverage, 0-1
 };
 
 const ACCENT = "#2dd4bf";
@@ -91,27 +94,37 @@ function Board({
   const miss = rows.filter((r) => r.st !== "ARMED");
   const gate = GATE[side];
 
+  // Sorting the bull board by Written would rank it on a column that does not
+  // gate it, so fall back to Depth there unless the user picks another. The
+  // header below highlights THIS key, not the raw sortBy -- the default is "w",
+  // so the bull board used to open with Written lit while ordering by Depth.
+  const effSort: SortKey = sortBy === "w" && !gate.oi ? "dp" : sortBy;
+
   const ranked = useMemo(() => {
     const base = tab === "ARMED" ? armed : tab === "MISS" ? miss : rows;
-    // Sorting the bull board by Written would rank it on a column that does
-    // not gate it, so fall back to Depth there unless the user picks another.
-    const key: SortKey = sortBy === "w" && !gate.oi ? "dp" : sortBy;
     return [...base].sort((a, b) => {
       if (tab === "ALL" && a.st !== b.st) return a.st === "ARMED" ? -1 : 1;
-      return ((b[key] ?? -Infinity) as number) - ((a[key] ?? -Infinity) as number);
+      const av = a[effSort];
+      const bv = b[effSort];
+      // Both null subtracts to NaN and leaves the order implementation-defined,
+      // which is common on the MISS tab sorted by Tgt %. Compare explicitly.
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return (bv as number) - (av as number);
     });
-  }, [rows, armed, miss, tab, sortBy, gate.oi]);
+  }, [rows, armed, miss, tab, effSort]);
 
   const SortTh = ({ k, label, title }: { k: SortKey; label: string; title?: string }) => (
     <th className="px-2.5 py-2 text-right font-medium">
       <button
         onClick={() => onSort(k)}
         className="inline-flex items-center gap-1 uppercase tracking-[0.08em] transition hover:text-white"
-        style={{ color: sortBy === k ? ACCENT : undefined }}
+        style={{ color: effSort === k ? ACCENT : undefined }}
         title={title ?? `Sort by ${label}`}
       >
         {label}
-        <span style={{ opacity: sortBy === k ? 1 : 0.25 }}>▼</span>
+        <span style={{ opacity: effSort === k ? 1 : 0.25 }}>▼</span>
       </button>
     </th>
   );
@@ -186,7 +199,7 @@ function Board({
                   <td className="px-2.5 py-1.5 text-right tabular-nums text-white/60">{fmtNum(r.lv, 2)}</td>
                   <td
                     className="px-2.5 py-1.5 text-right tabular-nums"
-                    style={{ color: on ? depthColor(r.dp, side) : "rgba(255,255,255,0.4)" }}
+                    style={{ color: depthColor(r.dp, side) }}
                     title="Frozen at the break cut. This is the entry decision, not a running readout."
                   >
                     {fmtPct(r.dp)}
@@ -334,6 +347,45 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
           ))}
         </span>
       </div>
+
+      {(() => {
+        // An empty board after a late start looks exactly like a quiet session.
+        // The service publishes the first cut it handled today so the page can
+        // tell those apart instead of rendering a confident blank.
+        const t0 = snap?.t0;
+        const armLast = snap?.arm_last ?? "09:50";
+        const cov = snap?.cov;
+        const missedAll = !!t0 && t0 > armLast;
+        const missedPart = !!t0 && !missedAll && t0 > "09:20";
+        const thin = typeof cov === "number" && cov < 0.98;
+        if (!missedAll && !missedPart && !thin) return null;
+        return (
+          <div
+            className="rounded-md px-3 py-2 text-[11.5px] leading-relaxed"
+            style={{
+              background: missedAll ? "rgba(248,81,73,0.10)" : "rgba(210,153,34,0.10)",
+              border: `1px solid ${missedAll ? "#f85149" : "#d29922"}55`,
+              color: missedAll ? "#f85149" : "#d29922",
+            }}
+          >
+            {missedAll && (
+              <>Capture started at {t0}, after the {armLast} arm window closed. No name
+              could arm today &mdash; an empty board here means the window was missed,
+              not that nothing qualified.</>
+            )}
+            {missedPart && (
+              <>Capture started at {t0}, inside the 09:20&ndash;{armLast} arm window.
+              Names that broke before {t0} could not be seen, so this board is
+              incomplete.</>
+            )}
+            {thin && (
+              <>{missedAll || missedPart ? " " : ""}Coverage at this cut is{" "}
+              {Math.round((cov as number) * 100)}% of the universe &mdash; names missing
+              from the feed are absent from both boards and from the break counts.</>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
         <Board

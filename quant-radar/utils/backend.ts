@@ -1014,6 +1014,13 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       nm: row.nm,
       nbb: row.nbb,
       nmb: row.nmb,
+      // NEOFELIS restart marker. t0 is the first cut the capture process
+      // handled today; if it is past arm_last the arm window never opened and
+      // an empty board means "we missed it", not "nothing qualified". Without
+      // these the two are indistinguishable on the page.
+      t0: row.t0,
+      arm_last: row.arm_last,
+      cov: row.cov,
       // brdth: share of the universe already past its prior-day level. When most
       // of the market has broken, the level filter stops discriminating.
       brdth: row.brdth,
