@@ -44,7 +44,7 @@ export default async function NeofelisPage({ searchParams }: { searchParams: Dat
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
       <PageHeader
         title="NEOFELIS"
-        subtitle="PDH/PDL BODY BREAK · DEPTH GATE · TRAPPED WRITERS"
+        subtitle="PRIOR-DAY LEVEL · 09:20-09:50"
         badge="LIVE"
         dateStr={dateStr}
         accentColor={ACCENT}

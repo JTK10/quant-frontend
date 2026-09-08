@@ -35,23 +35,13 @@ type Snap = {
 
 const ACCENT = "#2dd4bf";
 
-// The two sides do NOT share a gate, and the UI has to say so or the board
-// lies about itself. Bear: depth 0.5-1.5% AND written>5%. Bull: depth>0.8%
-// and no OI condition at all -- on a PDH break every OI leg tested came back
-// flat, so there is nothing to gate on.
-const GATE: Record<Side, { lo: number; hi: number | null; oi: boolean; note: string }> = {
-  bear: {
-    lo: 0.5,
-    hi: 1.5,
-    oi: true,
-    note: "depth 0.5-1.5% AND put OI written below spot >5%",
-  },
-  bull: {
-    lo: 0.8,
-    hi: null,
-    oi: false,
-    note: "depth >0.8% only -- no OI gate, every leg tested was flat",
-  },
+// The two sides do NOT share a gate. Bear: depth 0.5-1.5% AND written>5%.
+// Bull: depth>0.8% and no OI condition at all -- on a PDH break every OI leg
+// tested came back flat, so there is nothing to gate on. Not spelled out on
+// the page (RK's call); it still drives depthColor and the sort fallback.
+const GATE: Record<Side, { lo: number; hi: number | null; oi: boolean }> = {
+  bear: { lo: 0.5, hi: 1.5, oi: true },
+  bull: { lo: 0.8, hi: null, oi: false },
 };
 
 type Tab = "ARMED" | "MISS" | "ALL";
@@ -130,21 +120,11 @@ function Board({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-1 pb-2">
         <h2 className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: tint }}>
-          {side === "bear" ? "BEAR · PDL BODY BREAK" : "BULL · PDH BODY BREAK"}
+          {side === "bear" ? "BEAR" : "BULL"}
         </h2>
         <span className="text-[11px] tabular-nums text-white/45">
           {nBreaks} breaks → <span style={{ color: ACCENT }}>{armed.length} armed</span>
         </span>
-        {side === "bull" && (
-          <span
-            className="rounded-sm px-1.5 py-0.5 text-[9px] font-semibold tracking-wide"
-            style={{ background: "#d2992222", color: "#d29922" }}
-            title="19 of the 31 research names came from a single session (3-Sep). Watch it, do not size it."
-          >
-            OBSERVATION ONLY
-          </span>
-        )}
-        <span className="text-[10px] text-white/25">{gate.note}</span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-white/[0.07] bg-white/[0.02]">
@@ -378,17 +358,6 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
         />
       </div>
 
-      <p className="px-1 text-[10.5px] leading-relaxed text-white/25">
-        A name arms when a 5-min candle CLOSES through its prior-day level between 09:20 and 09:50.
-        Membership FREEZES after 09:50: Depth and Written stay at their break-cut values because they
-        are the entry decision, while Move % and Tgt % keep updating every cut. The two sides do not
-        share a gate. BEAR needs depth 0.5-1.5% and put OI below spot up more than 5% -- 50% reach
-        1.5%, 36% cleanly, over 6 sessions and n=14. BULL has no working OI leg (all four tested
-        flat) so it gates on depth alone above 0.8% -- 39% reach against a 22% baseline, but 19 of
-        its 31 names came from one session, which is why it is marked observation only. Near miss
-        shows what the gates threw out and why: on the bear side a shallow break with strong writing
-        is the worst cell on the board, not a close call. Forward test, not a settled edge.
-      </p>
     </div>
   );
 }
