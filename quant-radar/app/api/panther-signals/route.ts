@@ -121,30 +121,11 @@ async function getRawByDate(targetDate: string, sourcesParam: string | null): Pr
     // both did on 2026-07-29). Without source in the key those collide and one
     // engine's row is silently dropped -- the Caracal page was losing exactly
     // its highest-conviction signals, the ones both engines agreed on.
-    // Rank on `pub`, the wall-clock publish time, and fall back to `ts`.
-    // `ts` is derived from the CUT, so a replay of the same cut produced a
-    // byte-identical value, `>` was never true, and the FIRST doc encountered
-    // won -- the exact opposite of what the paragraph above intends. That is
-    // how 2026-09-09 ended up with 152 documents for 78 cuts, one copy of each
-    // carrying the OB values and one carrying none, with ORDS row order
-    // deciding which the page rendered.
-    //
-    // Publishers stamp `pub` from 2026-09-09 on. Older documents have none and
-    // fall back to `ts`; since a publish always happens after its own cut, any
-    // stamped doc outranks every unstamped copy of the same cut.
-    //
-    // The comparison stays STRICT. For the documents already duplicated -- all
-    // of which tie because none carry `pub` -- ORDS returns the newest copy
-    // first, so first-encountered is the corrected one. Verified against the
-    // live 09-09 data: under `>` the kept copies are the ones carrying the OB
-    // values (12/14/12 at 10:05/10:30/15:05). Relaxing this to `>=` would keep
-    // the LAST copy instead and silently serve the stale originals.
-    const rank = (s: any) => (s?.pub ?? s?.ts ?? 0) as number;
     const bestByKey = new Map<string, any>();
     for (const s of filteredSignals) {
       const key = `${s.source ?? ""}|${s.name ?? ""}|${s.side ?? ""}|${s.time ?? ""}|${s.kind ?? s.event ?? ""}`;
       const prev = bestByKey.get(key);
-      if (!prev || rank(s) > rank(prev)) bestByKey.set(key, s);
+      if (!prev || (s.ts ?? 0) > (prev.ts ?? 0)) bestByKey.set(key, s);
     }
     const dedupedSignals = Array.from(bestByKey.values());
 
