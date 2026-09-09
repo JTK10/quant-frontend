@@ -48,9 +48,9 @@ const GATE: Record<Side, { lo: number; hi: number | null; oi: boolean }> = {
   bull: { lo: 0.8, hi: null, oi: false },
 };
 
-type Tab = "ARMED" | "MISS" | "ALL";
-const TABS: Tab[] = ["ARMED", "MISS", "ALL"];
-const TAB_LABEL: Record<Tab, string> = { ARMED: "Armed", MISS: "Near miss", ALL: "All" };
+// The Armed / Near miss / All tabs were removed on request -- the board always
+// shows the FULL list now. Armed is still visible per row: the accent bar, the
+// row tint and the State column.
 
 // OB = a same-side order block built by TODAY's 09:15-10:00 candles, with price
 // clear of it. The pivot needs 10 bars to confirm, so nothing can be true
@@ -83,7 +83,6 @@ function Board({
   nBreaks,
   nMiss,
   tint,
-  tab,
   obFilter,
   sortBy,
   onSort,
@@ -93,7 +92,6 @@ function Board({
   nBreaks: number;
   nMiss: number;
   tint: string;
-  tab: Tab;
   obFilter: ObFilter;
   sortBy: SortKey;
   onSort: (k: SortKey) => void;
@@ -109,10 +107,10 @@ function Board({
   const effSort: SortKey = sortBy === "w" && !gate.oi ? "dp" : sortBy;
 
   const ranked = useMemo(() => {
-    let base = tab === "ARMED" ? armed : tab === "MISS" ? miss : rows;
+    let base = rows;
     if (obFilter === "OB") base = base.filter((r) => r.ob === true);
     return [...base].sort((a, b) => {
-      if (tab === "ALL" && a.st !== b.st) return a.st === "ARMED" ? -1 : 1;
+      if (a.st !== b.st) return a.st === "ARMED" ? -1 : 1;   // armed always first
       const av = a[effSort];
       const bv = b[effSort];
       // Both null subtracts to NaN and leaves the order implementation-defined,
@@ -122,7 +120,7 @@ function Board({
       if (bv == null) return -1;
       return (bv as number) - (av as number);
     });
-  }, [rows, armed, miss, tab, effSort, obFilter]);
+  }, [rows, effSort, obFilter]);
 
   const SortTh = ({ k, label, title }: { k: SortKey; label: string; title?: string }) => (
     <th className="px-2.5 py-2 text-right font-medium">
@@ -182,7 +180,7 @@ function Board({
             {ranked.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-3 py-8 text-center text-[12px] text-white/30">
-                  {tab === "ARMED" ? "Nothing armed at this cut." : "No rows at this cut."}
+                  {obFilter === "OB" ? "Nothing with an OB base at this cut." : "No rows at this cut."}
                 </td>
               </tr>
             )}
@@ -274,7 +272,7 @@ function Board({
         </table>
       </div>
 
-      {tab !== "ARMED" && nMiss > miss.length && (
+      {nMiss > miss.length && (
         <p className="px-1 pt-1 text-[10px] text-white/25">
           near misses capped at {miss.length} of {nMiss}, ranked by {gate.oi ? "written" : "depth"}
         </p>
@@ -310,7 +308,6 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
   }, [snaps]);
 
   const [idx, setIdx] = useState<number | null>(null);
-  const [tab, setTab] = useState<Tab>("ARMED");
   const [obFilter, setObFilter] = useState<ObFilter>("ALL");
   const [sortBy, setSortBy] = useState<SortKey>("w");
 
@@ -378,21 +375,6 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
           >
             OB only
           </button>
-          <span className="mx-1 text-white/15">|</span>
-          {TABS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="rounded-md border px-2 py-0.5 transition"
-              style={
-                tab === t
-                  ? { borderColor: ACCENT, color: ACCENT, background: `${ACCENT}18` }
-                  : { borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
-              }
-            >
-              {TAB_LABEL[t]}
-            </button>
-          ))}
         </span>
       </div>
 
@@ -442,7 +424,6 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
           nBreaks={snap?.nbb ?? bull.length}
           nMiss={snap?.nmb ?? bull.filter((r) => r.st !== "ARMED").length}
           tint="#22c55e"
-          tab={tab}
           obFilter={obFilter}
           sortBy={sortBy}
           onSort={setSortBy}
@@ -453,7 +434,6 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
           nBreaks={snap?.nb ?? bear.length}
           nMiss={snap?.nm ?? bear.filter((r) => r.st !== "ARMED").length}
           tint="#ef4444"
-          tab={tab}
           obFilter={obFilter}
           sortBy={sortBy}
           onSort={setSortBy}
