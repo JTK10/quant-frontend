@@ -11,6 +11,7 @@ type Row = {
   st: State;
   why: string | null;        // reject reason, MISS only
   lv: number | null;         // prior-day low (bear) / high (bull)
+  rd: number | null;         // ROLLING depth past that level, live every cut
   brk: string | null;        // cut the body break happened
   dp: number | null;         // break depth %, frozen at the break cut
   w: number | null;          // OI written into the move %, frozen at the break cut
@@ -57,7 +58,7 @@ const GATE: Record<Side, { lo: number; hi: number | null; oi: boolean }> = {
 // before 10:05 -- a dash before then means "not decided yet", not "no".
 type ObFilter = "ALL" | "OB";
 
-type SortKey = "w" | "dp" | "mv" | "tgt_pct";
+type SortKey = "w" | "dp" | "mv" | "tgt_pct" | "rd";
 
 const fmtPct = (v: number | null | undefined, dp = 2, sign = false) =>
   v === null || v === undefined || Number.isNaN(v)
@@ -154,7 +155,11 @@ function Board({
               <th className="px-2.5 py-2 text-left font-medium">#</th>
               <th className="px-2.5 py-2 text-left font-medium">Symbol</th>
               <th className="px-2.5 py-2 text-right font-medium">Broke</th>
-              <th className="px-2.5 py-2 text-right font-medium">Level</th>
+              <SortTh
+                k="rd"
+                label="RD"
+                title="Rolling depth -- how far past the level the name is AT THIS CUT, recomputed every cut. Negative means it has slipped back inside. Depth beside it stays frozen at the break candle."
+              />
               <SortTh k="dp" label="Depth" title="How far the break candle CLOSED through the level." />
               <SortTh
                 k="w"
@@ -209,7 +214,13 @@ function Board({
                     </a>
                   </td>
                   <td className="px-2.5 py-1.5 text-right tabular-nums text-white/45">{r.brk ?? "--"}</td>
-                  <td className="px-2.5 py-1.5 text-right tabular-nums text-white/60">{fmtNum(r.lv, 2)}</td>
+                  <td
+                    className="px-2.5 py-1.5 text-right tabular-nums"
+                    style={{ color: r.rd == null ? undefined : r.rd < 0 ? "#8a8a93" : depthColor(r.rd, side) }}
+                    title={r.lv == null ? undefined : `Level ${r.lv}`}
+                  >
+                    {r.rd == null ? "--" : `${r.rd.toFixed(2)}%`}
+                  </td>
                   <td
                     className="px-2.5 py-1.5 text-right tabular-nums"
                     style={{ color: depthColor(r.dp, side) }}
