@@ -31,14 +31,15 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
     [snaps]
   );
   const latest = ordered.length ? ordered[ordered.length - 1] : null;
-  // AFAC.3 (magnitude + rvol level + control candle) publishes alongside AFAC.2.
-  // Forward-tested over 26 sessions: AFAC.3's top-5 beat AFAC.2's on the next
-  // 60 min on 21 of 26 days (paired t=3.36, p=0.0025), while AFAC.2's leaders
-  // were NEGATIVE at every N. Default to v3, but keep the switch: v3 has two
-  // live sessions behind it, v2 has months.
-  const [useV3, setUseV3] = useState(true);
-  const SK = useV3 ? "score_afac3" : "score";
-  const NK = useV3 ? "net_afac3" : "net";
+  // Sector Scope now runs on ROLLING DEPTH, not the AFAC score (2026-09-10).
+  // Per stock, rd is signed depth out of the prior-day range at this cut:
+  // positive above the prior high, negative below the prior low, exactly 0
+  // while the name is still inside it. A sector's net is the plain mean across
+  // its members, so names still inside pull it toward zero -- deliberate, it is
+  // what makes "barely out of range" readable. One metric, so the old
+  // AFAC.2 / AFAC.3 switch is gone.
+  const SK = "rd";
+  const NK = "net";
   const rows: any[] = latest?.rows || [];
   const sectors: any[] = latest?.sectors || [];
 
@@ -108,29 +109,20 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
   return (
     <div className="min-h-0 flex-1 overflow-auto px-3 pb-10 md:px-6" style={{ background: "#000" }}>
       <div className="mt-3 flex items-center gap-2">
-        <span className="font-mono text-[9px] tracking-[0.18em] text-[#6b7280]">SCORE</span>
-        {[["AFAC.3", true], ["AFAC.2", false]].map(([lbl, v]) => (
-          <button
-            key={String(lbl)}
-            type="button"
-            onClick={() => setUseV3(v as boolean)}
-            className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.14em] transition-all duration-300"
-            style={{
-              color: useV3 === v ? ACCENT : "var(--color-muted, #6b7280)",
-              borderColor: useV3 === v ? `${ACCENT}55` : "#ffffff18",
-              background: useV3 === v ? `${ACCENT}12` : "transparent",
-            }}
-          >
-            {lbl}
-          </button>
-        ))}
+        <span className="font-mono text-[9px] tracking-[0.18em] text-[#6b7280]">METRIC</span>
+        <span
+          className="rounded-lg border px-2.5 py-1 font-mono text-[10px] tracking-[0.14em]"
+          style={{ color: ACCENT, borderColor: `${ACCENT}55`, background: `${ACCENT}12` }}
+        >
+          RD
+        </span>
         <span className="font-mono text-[9px] text-[#6b7280]">
-          {useV3 ? "magnitude + rvol level + control candle" : "original bucket count"}
+          signed depth out of the prior-day range at this cut &middot; 0 = still inside
         </span>
       </div>
       {cards.length === 0 ? (
         <div className="mt-16 text-center font-mono text-xs text-[#6b7280]">
-          No AFAC data for this date — snapshots publish every 5 min from ~09:45 IST.
+          No sector data for this date — snapshots publish every 5 min from 09:15 IST.
         </div>
       ) : (
         <>
@@ -206,7 +198,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                     <table className="w-full border-separate border-spacing-0">
                       <thead>
                         <tr>
-                          {["Symbol", "", "Pre C", "%", "AFAC.2", "Signal"].map((h) => (
+                          {["Symbol", "", "Pre C", "%", "RD", "Signal"].map((h) => (
                             <th
                               key={h}
                               className="sticky top-0 z-10 text-left"
@@ -262,10 +254,10 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                                 </span>
                               </td>
                               <td style={{ fontSize: 12, fontWeight: 600, color: "#fff", padding: "5px 8px" }}>
-                                {fmt(r[SK], 0)}
+                                {fmt(r[SK], 2)}
                                 {delta !== null && delta > 0 && (
                                   <span className="ml-1 font-mono" style={{ fontSize: 10, fontWeight: 400, color: PILL_GREEN_FG }}>
-                                    +{fmt(delta, 0)}
+                                    +{fmt(delta, 2)}
                                   </span>
                                 )}
                               </td>

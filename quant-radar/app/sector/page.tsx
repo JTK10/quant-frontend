@@ -6,35 +6,36 @@ import { getInternalApiUrl } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
-async function getAfac2Snaps(dateStr: string) {
+async function getSectorSnaps(dateStr: string) {
   try {
     // lastN=4: this page renders only the newest snapshot (rows + sectors) and
     // one ~15min back for the score delta -- afac2 publishes ~69 cycles/day, so
     // fetching them all downloaded ~1.7MB to use two of them.
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2&lastN=4`);
+    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=sectorrd&lastN=4`);
     const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error(`AFAC2 route failed: ${response.status}`);
+    if (!response.ok) throw new Error(`sectorrd route failed: ${response.status}`);
     const data = await response.json();
-    // AFAC.2 snapshots: one doc per 5-min cycle, source:"afac2", with embedded
-    // rows (every gated stock, multi-sector tagged) and sectors (signed net
-    // score for the bar chart + breadth). Monotonic "safest mover" quality
-    // score -- descriptive leaderboard, not an entry signal.
-    return data.filter((s: any) => s.source === "afac2" || s.cap === "AFAC2");
+    // sectorrd snapshots: one doc per 5-min cut, source:"sectorrd", same shape
+    // AFAC.2 used -- rows (every mapped stock, multi-sector tagged) and sectors
+    // (net RD for the bar chart + breadth). RD is signed depth out of the
+    // prior-day range AT THAT CUT: + above the prior high, - below the prior
+    // low, 0 while still inside. Replaced AFAC on 2026-09-10.
+    return data.filter((s: any) => s.source === "sectorrd" || s.cap === "SECTORRD");
   } catch (err) {
-    console.error("Error fetching AFAC2 snapshots:", err);
+    console.error("Error fetching sectorrd snapshots:", err);
     return [];
   }
 }
 
 export default async function SectorPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
-  const snaps = await getAfac2Snaps(dateStr);
+  const snaps = await getSectorSnaps(dateStr);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
       <PageHeader
         title="SECTOR SCOPE"
-        subtitle="SECTOR LEADER BOARD"
+        subtitle="ROLLING DEPTH vs PRIOR-DAY RANGE"
         badge="LIVE"
         dateStr={dateStr}
         accentColor="#fce205"
