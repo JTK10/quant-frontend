@@ -70,11 +70,22 @@ type SideFilter = "ALL" | Side;
 
 type SortKey = "w" | "dp" | "mv" | "tgt_pct" | "rd" | "act" | "net";
 
-// A chain where almost no strike changes hands all day cannot be telling us
-// anything. Measured over 9 sessions: in the bottom HALF of Act the correlation
-// between any wall measure and the forward move is -0.003 -- noise. Above the
-// 75th percentile it is +0.168. Keeping only actrk>75 took 724 names to 237 and
-// the 60-min forward return from +0.013% to +0.141%, win 50% -> 55%.
+// Act does NOT predict direction. The +0.141% that first justified this filter
+// was look-ahead: it ranked names on their WHOLE-DAY activity and then used that
+// to pick a 10:00 entry. Rebuilt causally from the raw chain over 7 sessions the
+// edge is gone -- at 40k rows, activity-so-far returns -0.023% (3/7 sessions)
+// and the prior session's rank -0.067% (1/6), against -0.029% for taking every
+// break. Only the contaminated day-end version is positive, by +0.009%.
+//
+// The rank itself is perfectly knowable in advance (corr +0.911 with day-end,
+// and the two agree on this call for 87% of names) -- so this is not a case of
+// the causal version failing to find the same names. Activity simply does not
+// forecast the move.
+//
+// The column stays because it answers a different question: is this chain
+// liquid enough for ANY OI reading on the row to mean anything? KAYNES at 8.9%
+// and RELIANCE at 78.7% are not the same instrument. Treat a low number as a
+// reason to distrust Net and Written on that row, never as a short.
 const ACT_CUT = 75;
 
 const fmtPct = (v: number | null | undefined, dp = 2, sign = false) =>
@@ -189,7 +200,7 @@ function Board({
             <SortTh
               k="act"
               label="Act"
-              title="Share of this name's option strikes whose OI has actually moved today, shown as its percentile across all 210. Below the median the chain carries no signal at all; above 75 is where every OI measure we tested has its edge. A dead chain is a reason to skip the row, not to take the other side."
+              title="Share of this name's option strikes whose OI has actually moved today, shown as its percentile across all 210. This does NOT predict direction -- tested causally over 7 sessions it is flat to negative, and the earlier positive result was look-ahead. Read it as liquidity: a low number means Net and Written on this row rest on a chain that barely trades."
             />
             <SortTh
               k="net"
@@ -473,14 +484,14 @@ export default function NeofelisClient({ snaps }: { snaps: Snap[] }) {
           <button
             onClick={() => setActOnly(!actOnly)}
             className="rounded-md border px-2 py-0.5 transition"
-            title={`Keep only names whose chain is genuinely trading -- activity above the ${ACT_CUT}th percentile of the universe. Below the median, no OI measure we have tested has any relationship to the forward move.`}
+            title={`Hide names whose chain barely trades -- keeps activity above the ${ACT_CUT}th percentile. A liquidity screen, NOT an edge: filtering on it does not improve the forward return (tested causally over 7 sessions, -0.023%).`}
             style={
               actOnly
                 ? { borderColor: ACCENT, color: ACCENT, background: `${ACCENT}18` }
                 : { borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
             }
           >
-            Active only
+            Liquid only
           </button>
         </span>
       </div>
