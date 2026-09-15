@@ -133,7 +133,7 @@ function JaguarBoard({
               const typeLabel = r.side.includes("BREAKOUT") ? "(B)" : r.side.includes("REJECT") ? "(R)" : "";
               
               return (
-              <tr key={r.sym} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
+              <tr key={`${r.sym}-${r.time}`} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
                 <td className="px-3 py-1.5 font-mono text-[11px] text-white/60">{r.time}</td>
                 <td className="px-3 py-1.5 font-medium flex items-center gap-1.5">
                   <a
