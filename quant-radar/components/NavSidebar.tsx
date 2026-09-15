@@ -111,6 +111,21 @@ const NeofelisIcon = (props: any) => (
   </svg>
 );
 
+const JaguarIcon = (props: any) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    {/* Heavy jaw, thick neck, small rounded ears -- the jaguar silhouette */}
+    <path d="M 6.5 8 C 5 6, 8 4, 9.5 6" />
+    <path d="M 17.5 8 C 19 6, 16 4, 14.5 6" />
+    <path d="M 9.5 6 C 11 5.5, 13 5.5, 14.5 6" />
+    <path d="M 6.5 8 C 5.5 12, 6.5 17, 12 19 C 17.5 17, 18.5 12, 17.5 8" />
+    <circle cx="9.5" cy="11.5" r="1.5" />
+    <circle cx="14.5" cy="11.5" r="1.5" />
+    <path d="M 11 15 L 13 15 L 12 17 Z" />
+    {/* Central rosette marking */}
+    <circle cx="12" cy="7" r="1" />
+  </svg>
+);
+
 // -- Retired 2026-08-05: RFAC and Smart List. Between them the v2dyn and
 // smartlist snapshot sources were 67% of the PANTHER payload every page had to
 // download (ORDS ignores ?source, so every page pays for every source). The
@@ -120,6 +135,7 @@ const NAV_ITEMS: any[] = [
   { href: "/neofelis", icon: NeofelisIcon, label: "Neofelis", color: "#2dd4bf", rgb: "45,212,191" },
   { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
+  { href: "/jaguar", icon: JaguarIcon, label: "Jaguar", color: "#8b5cf6", rgb: "139,92,246" },
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/ocelot", icon: Activity, label: "Ocelot", color: "#f97316", rgb: "249,115,22" },
