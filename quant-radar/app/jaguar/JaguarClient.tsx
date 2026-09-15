@@ -4,12 +4,15 @@ import { buildTradingViewUrl } from "@/utils/backend";
 
 type JaguarRow = {
   sym: string;
+  time: string;
   spot: number;
   ce_cr: number;
   pe_cr: number;
   diff_cr: number;
   capitulation: boolean;
   side: string;
+  pdh?: number;
+  pdl?: number;
 };
 
 const fmt = (v: number | null | undefined, dp = 0) =>
@@ -41,24 +44,31 @@ function JaguarBoard({
         <table className="w-full border-collapse text-[12.5px]">
           <thead className="sticky top-0 z-10 bg-[#101013]">
             <tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
+              <th className="px-3 py-2 text-left font-medium">Time</th>
               <th className="px-3 py-2 text-left font-medium">Symbol</th>
-              <th className="px-3 py-2 text-right font-medium">Spot</th>
-              <th className="px-3 py-2 text-right font-medium">CE ₹Cr</th>
+              <th className="px-3 py-2 text-right font-medium">Entry</th>
+              <th className="px-3 py-2 text-right font-medium">PDH</th>
+              <th className="px-3 py-2 text-right font-medium">PDL</th>
               <th className="px-3 py-2 text-right font-medium">PE ₹Cr</th>
+              <th className="px-3 py-2 text-right font-medium">CE ₹Cr</th>
               <th className="px-3 py-2 text-right font-medium">Diff ₹Cr</th>
+              <th className="px-3 py-2 text-right font-medium">Opp Flow</th>
               <th className="px-3 py-2 text-center font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={10} className="px-3 py-8 text-center text-[12px] text-white/30">
                   No signals met the strict capitulation criteria.
                 </td>
               </tr>
             )}
-            {rows.map((r) => (
+            {rows.map((r) => {
+              const opposingFlow = r.side.includes("BULL") ? r.ce_cr : r.pe_cr;
+              return (
               <tr key={r.sym} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
+                <td className="px-3 py-1.5 font-mono text-[11px] text-white/60">{r.time}</td>
                 <td className="px-3 py-1.5 font-medium">
                   <a
                     href={buildTradingViewUrl(r.sym, r.sym)}
@@ -71,10 +81,15 @@ function JaguarBoard({
                   </a>
                 </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/80">{fmt(r.spot, 2)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.ce_cr, 2)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">{fmt(r.pdh, 2)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">{fmt(r.pdl, 2)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.pe_cr, 2)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.ce_cr, 2)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums font-semibold" style={{ color: tint }}>
                   {fmt(Math.abs(r.diff_cr), 2)}
+                </td>
+                <td className="px-3 py-1.5 text-right tabular-nums text-white/70" style={{ color: opposingFlow < 0 ? tint : "var(--color-muted)" }}>
+                  {fmt(opposingFlow, 2)}
                 </td>
                 <td className="px-3 py-1.5 text-center">
                   {r.capitulation && (
@@ -88,7 +103,8 @@ function JaguarBoard({
                   )}
                 </td>
               </tr>
-            ))}
+            );
+          })}
           </tbody>
         </table>
       </div>
