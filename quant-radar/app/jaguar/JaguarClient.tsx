@@ -34,6 +34,7 @@ function JaguarBoard({
   const [sortField, setSortField] = useState<SortField>('time');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [filterCap, setFilterCap] = useState(false);
+  const [filterType, setFilterType] = useState<'ALL' | 'B' | 'R'>('ALL');
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -47,6 +48,12 @@ function JaguarBoard({
 
   const processedRows = rows
     .filter(r => !filterCap || r.capitulation)
+    .filter(r => {
+      if (filterType === 'ALL') return true;
+      if (filterType === 'B') return r.side.includes('BREAKOUT');
+      if (filterType === 'R') return r.side.includes('REJECT');
+      return true;
+    })
     .sort((a, b) => {
       const oppA = a.side.includes("BULL") ? a.ce_cr : a.pe_cr;
       const oppB = b.side.includes("BULL") ? b.ce_cr : b.pe_cr;
@@ -74,17 +81,39 @@ function JaguarBoard({
             {processedRows.length} {processedRows.length === 1 ? "signal" : "signals"}
           </span>
         </div>
-        <button
-          onClick={() => setFilterCap(!filterCap)}
-          className="text-[10px] tracking-wider px-2 py-1 rounded border transition-colors"
-          style={{
-            borderColor: filterCap ? tint : 'rgba(255,255,255,0.1)',
-            color: filterCap ? tint : 'rgba(255,255,255,0.5)',
-            backgroundColor: filterCap ? `${tint}11` : 'transparent'
-          }}
-        >
-          {filterCap ? "CAPITULATION ONLY" : "ALL STATUS"}
-        </button>
+        <div className="flex gap-2">
+          <div className="flex bg-white/[0.05] rounded border border-white/[0.1] overflow-hidden">
+            <button
+              onClick={() => setFilterType('ALL')}
+              className={`px-2 py-1 text-[10px] tracking-wider transition-colors ${filterType === 'ALL' ? 'bg-white/20 text-white' : 'text-white/50 hover:bg-white/10'}`}
+            >
+              ALL
+            </button>
+            <button
+              onClick={() => setFilterType('B')}
+              className={`px-2 py-1 text-[10px] tracking-wider transition-colors ${filterType === 'B' ? 'bg-white/20 text-white' : 'text-white/50 hover:bg-white/10'}`}
+            >
+              BREAKOUT
+            </button>
+            <button
+              onClick={() => setFilterType('R')}
+              className={`px-2 py-1 text-[10px] tracking-wider transition-colors ${filterType === 'R' ? 'bg-white/20 text-white' : 'text-white/50 hover:bg-white/10'}`}
+            >
+              REVERSAL
+            </button>
+          </div>
+          <button
+            onClick={() => setFilterCap(!filterCap)}
+            className="text-[10px] tracking-wider px-2 py-1 rounded border transition-colors"
+            style={{
+              borderColor: filterCap ? tint : 'rgba(255,255,255,0.1)',
+              color: filterCap ? tint : 'rgba(255,255,255,0.5)',
+              backgroundColor: filterCap ? `${tint}11` : 'transparent'
+            }}
+          >
+            {filterCap ? "CAPITULATION ONLY" : "ALL STATUS"}
+          </button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-white/[0.07] bg-white/[0.02]">
