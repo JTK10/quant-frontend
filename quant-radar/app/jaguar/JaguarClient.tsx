@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 
 type JaguarRow = {
@@ -11,14 +12,15 @@ type JaguarRow = {
   diff_cr: number;
   capitulation: boolean;
   side: string;
-  pdh?: number;
-  pdl?: number;
 };
 
 const fmt = (v: number | null | undefined, dp = 0) =>
   v === null || v === undefined || Number.isNaN(v)
     ? "--"
     : v.toLocaleString("en-IN", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+
+type SortField = 'time' | 'ce_cr' | 'pe_cr' | 'opp_flow';
+type SortDir = 'asc' | 'desc';
 
 function JaguarBoard({
   title,
@@ -29,47 +31,111 @@ function JaguarBoard({
   rows: JaguarRow[];
   tint: string;
 }) {
+  const [sortField, setSortField] = useState<SortField>('time');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [filterCap, setFilterCap] = useState(false);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('desc'); }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <span className="opacity-30 ml-1">↕</span>;
+    return <span className="ml-1 text-white">{sortDir === 'asc' ? '↑' : '↓'}</span>;
+  };
+
+  const processedRows = rows
+    .filter(r => !filterCap || r.capitulation)
+    .sort((a, b) => {
+      const oppA = a.side.includes("BULL") ? a.ce_cr : a.pe_cr;
+      const oppB = b.side.includes("BULL") ? b.ce_cr : b.pe_cr;
+
+      let va: any = a.time;
+      let vb: any = b.time;
+      
+      if (sortField === 'ce_cr') { va = a.ce_cr; vb = b.ce_cr; }
+      else if (sortField === 'pe_cr') { va = a.pe_cr; vb = b.pe_cr; }
+      else if (sortField === 'opp_flow') { va = oppA; vb = oppB; }
+      
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-baseline gap-3 px-1 pb-2">
-        <h2 className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: tint }}>
-          {title}
-        </h2>
-        <span className="text-[11px] text-white/35">
-          {rows.length} {rows.length === 1 ? "signal" : "signals"}
-        </span>
+      <div className="flex items-center justify-between px-1 pb-2">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: tint }}>
+            {title}
+          </h2>
+          <span className="text-[11px] text-white/35">
+            {processedRows.length} {processedRows.length === 1 ? "signal" : "signals"}
+          </span>
+        </div>
+        <button
+          onClick={() => setFilterCap(!filterCap)}
+          className="text-[10px] tracking-wider px-2 py-1 rounded border transition-colors"
+          style={{
+            borderColor: filterCap ? tint : 'rgba(255,255,255,0.1)',
+            color: filterCap ? tint : 'rgba(255,255,255,0.5)',
+            backgroundColor: filterCap ? `${tint}11` : 'transparent'
+          }}
+        >
+          {filterCap ? "CAPITULATION ONLY" : "ALL STATUS"}
+        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-white/[0.07] bg-white/[0.02]">
         <table className="w-full border-collapse text-[12.5px]">
-          <thead className="sticky top-0 z-10 bg-[#101013]">
+          <thead className="sticky top-0 z-10 bg-[#101013] shadow-md shadow-black/20">
             <tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
-              <th className="px-3 py-2 text-left font-medium">Time</th>
+              <th 
+                className="px-3 py-2 text-left font-medium cursor-pointer hover:text-white/80 transition"
+                onClick={() => toggleSort('time')}
+              >
+                Time <SortIcon field="time" />
+              </th>
               <th className="px-3 py-2 text-left font-medium">Symbol</th>
               <th className="px-3 py-2 text-right font-medium">Entry</th>
-              <th className="px-3 py-2 text-right font-medium">PDH</th>
-              <th className="px-3 py-2 text-right font-medium">PDL</th>
-              <th className="px-3 py-2 text-right font-medium">PE ₹Cr</th>
-              <th className="px-3 py-2 text-right font-medium">CE ₹Cr</th>
-              <th className="px-3 py-2 text-right font-medium">Diff ₹Cr</th>
-              <th className="px-3 py-2 text-right font-medium">Opp Flow</th>
+              <th 
+                className="px-3 py-2 text-right font-medium cursor-pointer hover:text-white/80 transition"
+                onClick={() => toggleSort('pe_cr')}
+              >
+                PE ₹Cr <SortIcon field="pe_cr" />
+              </th>
+              <th 
+                className="px-3 py-2 text-right font-medium cursor-pointer hover:text-white/80 transition"
+                onClick={() => toggleSort('ce_cr')}
+              >
+                CE ₹Cr <SortIcon field="ce_cr" />
+              </th>
+              <th 
+                className="px-3 py-2 text-right font-medium cursor-pointer hover:text-white/80 transition"
+                onClick={() => toggleSort('opp_flow')}
+              >
+                Opp Flow <SortIcon field="opp_flow" />
+              </th>
               <th className="px-3 py-2 text-center font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {processedRows.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-[12px] text-white/30">
-                  No signals met the strict capitulation criteria.
+                <td colSpan={7} className="px-3 py-8 text-center text-[12px] text-white/30">
+                  No signals met the criteria.
                 </td>
               </tr>
             )}
-            {rows.map((r) => {
+            {processedRows.map((r) => {
               const opposingFlow = r.side.includes("BULL") ? r.ce_cr : r.pe_cr;
+              const typeLabel = r.side.includes("BREAKOUT") ? "(B)" : r.side.includes("REJECT") ? "(R)" : "";
+              
               return (
               <tr key={r.sym} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
                 <td className="px-3 py-1.5 font-mono text-[11px] text-white/60">{r.time}</td>
-                <td className="px-3 py-1.5 font-medium">
+                <td className="px-3 py-1.5 font-medium flex items-center gap-1.5">
                   <a
                     href={buildTradingViewUrl(r.sym, r.sym)}
                     target="_blank"
@@ -79,15 +145,13 @@ function JaguarBoard({
                   >
                     {r.sym}
                   </a>
+                  {typeLabel && (
+                    <span className="text-[10px] font-bold text-white/40">{typeLabel}</span>
+                  )}
                 </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/80">{fmt(r.spot, 2)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">{fmt(r.pdh, 2)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-white/60">{fmt(r.pdl, 2)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.pe_cr, 2)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.ce_cr, 2)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums font-semibold" style={{ color: tint }}>
-                  {fmt(Math.abs(r.diff_cr), 2)}
-                </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70" style={{ color: opposingFlow < 0 ? tint : "var(--color-muted)" }}>
                   {fmt(opposingFlow, 2)}
                 </td>
@@ -123,7 +187,7 @@ export default function JaguarClient({
     <div className="absolute inset-0 flex flex-col gap-6 p-3 md:flex-row md:p-6 overflow-hidden">
       {/* Bull Board */}
       <JaguarBoard
-        title="BULLISH BREAKOUTS"
+        title="BULLISH SIGNALS"
         rows={bulls}
         tint="var(--color-bull)"
       />
@@ -133,7 +197,7 @@ export default function JaguarClient({
 
       {/* Bear Board */}
       <JaguarBoard
-        title="BEARISH BREAKOUTS"
+        title="BEARISH SIGNALS"
         rows={bears}
         tint="var(--color-bear)"
       />
