@@ -146,7 +146,9 @@ function JaguarBoard({
                     {r.sym}
                   </a>
                   {typeLabel && (
-                    <span className="text-[10px] font-bold text-white/40">{typeLabel}</span>
+                    <span className="text-[11px] font-black text-white px-1.5 py-0.5 rounded-sm bg-white/10 ml-1">
+                      {typeLabel}
+                    </span>
                   )}
                 </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/80">{fmt(r.spot, 2)}</td>
