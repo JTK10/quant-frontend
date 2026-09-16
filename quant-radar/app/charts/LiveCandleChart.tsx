@@ -96,6 +96,7 @@ export default function LiveCandleChart({
   streamUrl,
   timeframe,
   initialBars = [],
+  compact = false,
 }: {
   symbol: string;
   streamUrl: string;
@@ -191,5 +192,5 @@ export default function LiveCandleChart({
     };
   }, [streamUrl, symbol, timeframe]);
 
-  return <div ref={hostRef} className="h-full min-h-[460px] w-full" aria-label={`${symbol} live price chart`} />;
+  return <div ref={hostRef} className={`h-full w-full ${compact ? "min-h-[330px]" : "min-h-[460px]"}`} aria-label={`${symbol} live price chart`} />;
 }
