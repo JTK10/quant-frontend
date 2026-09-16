@@ -35,6 +35,24 @@ type StreamMessage =
   | { type: "snapshot"; bars: CandleMessage[] }
   | { type: "ready"; interval: "5m" };
 
+const IST_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  day: "2-digit",
+  month: "short",
+});
+
+function timeToEpochSeconds(time: Time): number {
+  if (typeof time === "number") return time;
+  if (typeof time === "string") return Date.parse(time) / 1000;
+  return Date.UTC(time.year, time.month - 1, time.day) / 1000;
+}
+
+function formatIstTime(time: Time): string {
+  return IST_TIME_FORMATTER.format(new Date(timeToEpochSeconds(time) * 1000));
+}
 const INTERVAL_SECONDS: Record<Timeframe, number> = {
   "5m": 300,
   "15m": 900,
@@ -101,7 +119,8 @@ export default function LiveCandleChart({
       layout: { background: { type: ColorType.Solid, color: "#0b1220" }, textColor: "#b8c2d1" },
       grid: { vertLines: { color: "#172033" }, horzLines: { color: "#172033" } },
       rightPriceScale: { borderColor: "#25334b" },
-      timeScale: { borderColor: "#25334b", timeVisible: true, secondsVisible: false },
+      timeScale: { borderColor: "#25334b", timeVisible: true, secondsVisible: false, tickMarkFormatter: formatIstTime },
+      localization: { locale: "en-IN", timeFormatter: formatIstTime },
     });
     const candles = chart.addSeries(CandlestickSeries, {
       upColor: "#22c55e", downColor: "#ef4444", borderVisible: false,
