@@ -102,6 +102,7 @@ export default function LiveCandleChart({
   streamUrl: string;
   timeframe: Timeframe;
   initialBars?: ChartBar[];
+  compact?: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);

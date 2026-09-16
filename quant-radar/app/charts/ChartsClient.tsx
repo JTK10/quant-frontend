@@ -12,6 +12,7 @@ type Layout = 1 | 2 | 4;
 type ChartPanel = { symbol: string; timeframe: Timeframe };
 type ChartsClientProps = { streamUrl: string; initialSymbol?: string };
 
+const LAYOUTS: Layout[] = [1, 2, 4];
 const layoutLabels: Record<Layout, string> = { 1: "Single", 2: "2 Charts", 4: "4 Charts" };
 
 export default function ChartsClient({ streamUrl, initialSymbol }: ChartsClientProps) {
@@ -98,7 +99,7 @@ export default function ChartsClient({ streamUrl, initialSymbol }: ChartsClientP
         </div>
 
         <div className="mb-3 flex flex-wrap gap-2">
-          {(Object.keys(layoutLabels) as unknown as Layout[]).map((value) => (
+          {LAYOUTS.map((value) => (
             <button key={value} onClick={() => chooseLayout(value)} className="rounded border px-3 py-1.5 font-mono text-xs" style={{ borderColor: layout === value ? "var(--color-bull)" : "var(--color-border)", background: layout === value ? "rgba(34,197,94,.16)" : "var(--color-surface)" }}>
               {layoutLabels[value]}
             </button>
