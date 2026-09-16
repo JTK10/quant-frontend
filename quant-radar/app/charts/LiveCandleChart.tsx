@@ -53,6 +53,8 @@ const IST_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   month: "short",
 });
 
+const EMPTY_BARS: ChartBar[] = [];
+
 const INTERVAL_SECONDS: Record<Timeframe, number> = {
   "5m": 300,
   "15m": 900,
@@ -187,7 +189,7 @@ export default function LiveCandleChart({
   symbol,
   streamUrl,
   timeframe,
-  initialBars = [],
+  initialBars = EMPTY_BARS,
   compact = false,
 }: {
   symbol: string;
