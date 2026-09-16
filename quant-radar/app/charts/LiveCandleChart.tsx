@@ -40,6 +40,9 @@ type StreamMessage =
 
 type LinePoint = { time: UTCTimestamp; value: number };
 type ContextMenu = { x: number; y: number } | null;
+type IndicatorKey = "ema" | "supertrend" | "pdhPdl" | "pivots";
+type Indicators = Record<IndicatorKey, boolean>;
+const INDICATOR_LABELS: Record<IndicatorKey, string> = { ema: "EMA 9", supertrend: "ST 10,3", pdhPdl: "PDH/PDL", pivots: "P/R1/S1" };
 
 const IST_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -66,6 +69,11 @@ function timeToEpochSeconds(time: Time): number {
 
 function formatIstTime(time: Time): string {
   return IST_TIME_FORMATTER.format(new Date(timeToEpochSeconds(time) * 1000));
+}
+function formatIstTick(time: Time): string {
+  const p = IST_TIME_FORMATTER.formatToParts(new Date(timeToEpochSeconds(time) * 1000));
+  const v = (t: string) => p.find((x) => x.type === t)?.value ?? "";
+  return Number(v("hour")) === 9 && Number(v("minute")) <= 15 ? `${v("day")} ${v("month")}` : `${v("hour")}:${v("minute")}`;
 }
 
 function bucketStart(time: number, timeframe: Timeframe): number {
@@ -200,10 +208,16 @@ export default function LiveCandleChart({
   const redrawRef = useRef<(bars: ChartBar[]) => void>(() => {});
   const priceLinesRef = useRef<any[]>([]);
   const levelSignatureRef = useRef("");
+  const recentRangeRef = useRef<{ from: UTCTimestamp; to: UTCTimestamp } | null>(null);
+  const initialViewSetRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
+  const [indicators, setIndicators] = useState<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false });
+  const indicatorsRef = useRef<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false });
 
   const resetView = () => {
-    chartRef.current?.timeScale().fitContent();
+    const range = recentRangeRef.current;
+    if (range) chartRef.current?.timeScale().setVisibleRange(range);
+    else chartRef.current?.timeScale().fitContent();
     candleRef.current?.priceScale().applyOptions({ autoScale: true });
     setContextMenu(null);
   };
@@ -222,6 +236,11 @@ export default function LiveCandleChart({
   }, [symbol, initialBars]);
 
   useEffect(() => {
+    indicatorsRef.current = indicators;
+    redrawRef.current(aggregateBars([...barsRef.current.values()], timeframe));
+  }, [indicators, timeframe]);
+
+  useEffect(() => {
     const root = hostRef.current;
     if (!root) return;
     const chart = createChart(root, {
@@ -229,7 +248,7 @@ export default function LiveCandleChart({
       layout: { background: { type: ColorType.Solid, color: "#0b1220" }, textColor: "#b8c2d1" },
       grid: { vertLines: { color: "#172033" }, horzLines: { color: "#172033" } },
       rightPriceScale: { borderColor: "#25334b", autoScale: true },
-      timeScale: { borderColor: "#25334b", timeVisible: true, secondsVisible: false, tickMarkFormatter: formatIstTime },
+      timeScale: { borderColor: "#25334b", timeVisible: true, secondsVisible: false, tickMarkFormatter: formatIstTick },
       localization: { locale: "en-IN", timeFormatter: formatIstTime },
     });
     const candles = chart.addSeries(CandlestickSeries, {
@@ -255,31 +274,40 @@ export default function LiveCandleChart({
         value: bar.volume,
         color: bar.close >= bar.open ? "rgba(34,197,94,.45)" : "rgba(239,68,68,.45)",
       })));
-      ema.setData(ema9(bars));
-      const supertrendData = supertrend(bars);
-      superBull.setData(supertrendData.bull);
-      superBear.setData(supertrendData.bear);
 
-      const levels = previousSessionLevels(bars);
-      const signature = levels ? Object.values(levels).map((value) => value.toFixed(4)).join("|") : "";
+      if (bars.length) {
+        const latestDay = istDay(bars[bars.length - 1].time);
+        const recentBars = timeframe === "1D" ? bars.slice(-20) : bars.filter((bar) => istDay(bar.time) === latestDay);
+        if (recentBars.length) {
+          recentRangeRef.current = {
+            from: recentBars[0].time as UTCTimestamp,
+            to: (recentBars[recentBars.length - 1].time + INTERVAL_SECONDS[timeframe]) as UTCTimestamp,
+          };
+          if (!initialViewSetRef.current) {
+            chart.timeScale().setVisibleRange(recentRangeRef.current);
+            initialViewSetRef.current = true;
+          }
+        }
+      }
+
+      const enabled = indicatorsRef.current;
+      if (enabled.ema) ema.setData(ema9(bars)); else ema.setData([]);
+      if (enabled.supertrend) { const st = supertrend(bars); superBull.setData(st.bull); superBear.setData(st.bear); } else { superBull.setData([]); superBear.setData([]); }
+      const levels = enabled.pdhPdl || enabled.pivots ? previousSessionLevels(bars) : null;
+      const signature = levels ? `${enabled.pdhPdl}|${enabled.pivots}|${Object.values(levels).join("|")}` : "";
       if (signature === levelSignatureRef.current) return;
-      priceLinesRef.current.forEach((line) => candles.removePriceLine(line));
-      priceLinesRef.current = [];
-      levelSignatureRef.current = signature;
+      priceLinesRef.current.forEach((line) => candles.removePriceLine(line)); priceLinesRef.current = []; levelSignatureRef.current = signature;
       if (!levels) return;
       const specs = [
-        [levels.pdh, "PDH", "#ef4444", LineStyle.Dashed],
-        [levels.pdl, "PDL", "#22c55e", LineStyle.Dashed],
-        [levels.pivot, "P", "#a78bfa", LineStyle.Dotted],
-        [levels.r1, "R1", "#fb923c", LineStyle.Dotted],
-        [levels.s1, "S1", "#60a5fa", LineStyle.Dotted],
-      ] as const;
+        ...(enabled.pdhPdl ? [[levels.pdh, "PDH", "#ef4444", LineStyle.Dashed], [levels.pdl, "PDL", "#22c55e", LineStyle.Dashed]] as const : []),
+        ...(enabled.pivots ? [[levels.pivot, "P", "#a78bfa", LineStyle.Dotted], [levels.r1, "R1", "#fb923c", LineStyle.Dotted], [levels.s1, "S1", "#60a5fa", LineStyle.Dotted]] as const : []),
+      ];
       specs.forEach(([price, title, color, lineStyle]) => priceLinesRef.current.push(candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle, axisLabelVisible: true })));
     };
 
+    initialViewSetRef.current = false;
     const bars = aggregateBars([...barsRef.current.values()], timeframe);
     redrawRef.current(bars);
-    chart.timeScale().fitContent();
 
     return () => {
       redrawRef.current = () => {};
@@ -292,6 +320,8 @@ export default function LiveCandleChart({
       superBearRef.current = null;
       priceLinesRef.current = [];
       levelSignatureRef.current = "";
+      recentRangeRef.current = null;
+      initialViewSetRef.current = false;
     };
   }, [timeframe, symbol]);
 
@@ -344,11 +374,10 @@ export default function LiveCandleChart({
     >
       <div ref={hostRef} className="h-full w-full" aria-label={`${symbol} live price chart`} />
       <div className="absolute right-2 top-2 z-10 flex overflow-hidden rounded border text-xs shadow-lg" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>
-        <button type="button" onClick={(event) => { event.stopPropagation(); zoom(1.45); }} className="px-2 py-1 hover:bg-white/10" title="Zoom out">−</button>
-        <button type="button" onClick={(event) => { event.stopPropagation(); resetView(); }} className="border-x px-2 py-1 font-mono text-[10px] hover:bg-white/10" style={{ borderColor: "var(--color-border)" }} title="Reset chart view">RESET</button>
-        <button type="button" onClick={(event) => { event.stopPropagation(); zoom(0.7); }} className="px-2 py-1 hover:bg-white/10" title="Zoom in">+</button>
+        <button type="button" onClick={(event) => { event.stopPropagation(); zoom(1.45); }} className="px-2 py-1 hover:bg-white/10">−</button><button type="button" onClick={(event) => { event.stopPropagation(); resetView(); }} className="border-x px-2 py-1 font-mono text-[10px] hover:bg-white/10" style={{ borderColor: "var(--color-border)" }}>RESET</button><button type="button" onClick={(event) => { event.stopPropagation(); zoom(0.7); }} className="px-2 py-1 hover:bg-white/10">+</button>
       </div>
-      <div className="pointer-events-none absolute left-2 top-2 z-10 rounded px-2 py-1 font-mono text-[10px]" style={{ color: "#cbd5e1", background: "rgba(11,18,32,.72)" }}>EMA 9 · ST 10,3 · PDH/PDL · P/R1/S1</div>
+      <div className="absolute right-2 top-10 z-10 flex overflow-hidden rounded border font-mono text-[10px]" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>{(Object.keys(INDICATOR_LABELS) as IndicatorKey[]).map((key) => <button key={key} type="button" onClick={(event) => { event.stopPropagation(); setIndicators((current) => ({ ...current, [key]: !current[key] })); }} className="border-l px-2 py-1 hover:bg-white/10 first:border-l-0" style={{ borderColor: "var(--color-border)", color: indicators[key] ? "#fbbf24" : "#94a3b8" }}>{INDICATOR_LABELS[key]}</button>)}</div>
+      {Object.keys(INDICATOR_LABELS).some((key) => indicators[key as IndicatorKey]) && <div className="pointer-events-none absolute left-2 top-2 z-10 rounded px-2 py-1 font-mono text-[10px]" style={{ color: "#cbd5e1", background: "rgba(11,18,32,.72)" }}>{(Object.keys(INDICATOR_LABELS) as IndicatorKey[]).filter((key) => indicators[key]).map((key) => INDICATOR_LABELS[key]).join(" · ")}</div>}
       {contextMenu && (
         <button
           type="button"
