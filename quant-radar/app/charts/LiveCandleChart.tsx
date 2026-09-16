@@ -206,6 +206,7 @@ export default function LiveCandleChart({
   const superBearRef = useRef<ISeriesApi<"Line"> | null>(null);
   const barsRef = useRef(new Map<number, ChartBar>());
   const redrawRef = useRef<(bars: ChartBar[]) => void>(() => {});
+  const indicatorRedrawRef = useRef<(bars: ChartBar[]) => void>(() => {});
   const priceLinesRef = useRef<any[]>([]);
   const levelSignatureRef = useRef("");
   const recentRangeRef = useRef<{ from: UTCTimestamp; to: UTCTimestamp } | null>(null);
@@ -237,7 +238,7 @@ export default function LiveCandleChart({
 
   useEffect(() => {
     indicatorsRef.current = indicators;
-    redrawRef.current(aggregateBars([...barsRef.current.values()], timeframe));
+    indicatorRedrawRef.current(aggregateBars([...barsRef.current.values()], timeframe));
   }, [indicators, timeframe]);
 
   useEffect(() => {
@@ -290,6 +291,10 @@ export default function LiveCandleChart({
         }
       }
 
+      indicatorRedrawRef.current(bars);
+    };
+
+    indicatorRedrawRef.current = (bars) => {
       const enabled = indicatorsRef.current;
       if (enabled.ema) ema.setData(ema9(bars)); else ema.setData([]);
       if (enabled.supertrend) { const st = supertrend(bars); superBull.setData(st.bull); superBear.setData(st.bear); } else { superBull.setData([]); superBear.setData([]); }
@@ -311,6 +316,7 @@ export default function LiveCandleChart({
 
     return () => {
       redrawRef.current = () => {};
+      indicatorRedrawRef.current = () => {};
       chart.remove();
       chartRef.current = null;
       candleRef.current = null;
