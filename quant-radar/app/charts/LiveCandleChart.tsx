@@ -193,5 +193,5 @@ export default function LiveCandleChart({
     };
   }, [streamUrl, symbol, timeframe]);
 
-  return <div ref={hostRef} className={`h-full w-full ${compact ? "min-h-[330px]" : "min-h-[460px]"}`} aria-label={`${symbol} live price chart`} />;
+  return <div ref={hostRef} className={`h-[420px] w-full ${compact ? "lg:h-[330px]" : "lg:h-[520px]"}`} aria-label={`${symbol} live price chart`} />;
 }

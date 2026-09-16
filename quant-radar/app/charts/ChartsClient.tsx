@@ -115,7 +115,7 @@ export default function ChartsClient({ streamUrl, initialSymbol }: ChartsClientP
 
         <section className={`grid gap-3 ${gridClass}`}>
           {streamUrl ? visiblePanels.map((panel, index) => (
-            <article key={index} onClick={() => { setActivePanel(index); setDraftSymbol(panel.symbol); }} className="rounded border p-2 transition" style={{ borderColor: activePanel === index ? "var(--color-bull)" : "var(--color-border)", background: "var(--color-surface)" }}>
+            <article key={index} onClick={() => { setActivePanel(index); setDraftSymbol(panel.symbol); }} className="min-w-0 overflow-hidden rounded border p-2 transition" style={{ borderColor: activePanel === index ? "var(--color-bull)" : "var(--color-border)", background: "var(--color-surface)" }}>
               <div className="mb-1 flex items-center justify-between px-1 font-mono text-[11px]">
                 <span style={{ color: activePanel === index ? "var(--color-bull)" : "var(--color-text2)" }}>CHART {index + 1} · {panel.symbol}</span>
                 <span style={{ color: "var(--color-muted)" }}>{panel.timeframe} · IST</span>
