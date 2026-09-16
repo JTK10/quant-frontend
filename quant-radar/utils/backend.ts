@@ -858,6 +858,10 @@ export type PantherRow = {
   u_target?: any;
   u_stop?: any;
   underlying?: any;
+  // Jaguar snapshot fields
+  cut?: any;
+  bull?: any;
+  bear?: any;
   // AFAC.2 snapshot fields
   rows?: any;
   sectors?: any;
