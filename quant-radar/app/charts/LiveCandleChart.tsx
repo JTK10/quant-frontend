@@ -155,12 +155,17 @@ function previousSessionLevels(bars: ChartBar[]) {
   const previous = sessions.get(days[days.length - 2]);
   if (!previous) return null;
   const pivot = (previous.high + previous.low + previous.close) / 3;
+  const range = previous.high - previous.low;
   return {
     pdh: previous.high,
     pdl: previous.low,
     pivot,
     r1: 2 * pivot - previous.low,
     s1: 2 * pivot - previous.high,
+    r2: pivot + range,
+    s2: pivot - range,
+    r3: previous.high + 2 * (pivot - previous.low),
+    s3: previous.low - 2 * (previous.high - pivot),
   };
 }
 
@@ -306,10 +311,18 @@ export default function LiveCandleChart({
       priceLinesRef.current.forEach((line) => candles.removePriceLine(line)); priceLinesRef.current = []; levelSignatureRef.current = signature;
       if (!levels) return;
       const specs = [
-        ...(enabled.pdhPdl ? [[levels.pdh, "PDH", "#ef4444", LineStyle.Dashed], [levels.pdl, "PDL", "#22c55e", LineStyle.Dashed]] as const : []),
-        ...(enabled.pivots ? [[levels.pivot, "P", "#a78bfa", LineStyle.Dotted], [levels.r1, "R1", "#fb923c", LineStyle.Dotted], [levels.s1, "S1", "#60a5fa", LineStyle.Dotted]] as const : []),
+        ...(enabled.pdhPdl ? [[levels.pdh, "PDH", "#ff4d5f", LineStyle.Dashed, 2], [levels.pdl, "PDL", "#35e07a", LineStyle.Dashed, 2]] as const : []),
+        ...(enabled.pivots ? [
+          [levels.pivot, "P", "#c4b5fd", LineStyle.Dotted, 2],
+          [levels.r1, "R1", "#ffb15c", LineStyle.Dotted, 2],
+          [levels.r2, "R2", "#ff8a5c", LineStyle.Dashed, 1],
+          [levels.r3, "R3", "#ff647c", LineStyle.Dashed, 1],
+          [levels.s1, "S1", "#78b7ff", LineStyle.Dotted, 2],
+          [levels.s2, "S2", "#4da3ff", LineStyle.Dashed, 1],
+          [levels.s3, "S3", "#6f8cff", LineStyle.Dashed, 1],
+        ] as const : []),
       ];
-      specs.forEach(([price, title, color, lineStyle]) => priceLinesRef.current.push(candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle, axisLabelVisible: true })));
+      specs.forEach(([price, title, color, lineStyle, lineWidth]) => priceLinesRef.current.push(candles.createPriceLine({ price, title, color, lineWidth, lineStyle, axisLabelVisible: true })));
     };
 
     initialViewSetRef.current = false;
