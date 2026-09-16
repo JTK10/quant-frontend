@@ -135,6 +135,7 @@ const NAV_ITEMS: any[] = [
   { href: "/neofelis", icon: NeofelisIcon, label: "Neofelis", color: "#2dd4bf", rgb: "45,212,191" },
   { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
+  { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },
   { href: "/jaguar", icon: JaguarIcon, label: "Jaguar", color: "#8b5cf6", rgb: "139,92,246" },
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },

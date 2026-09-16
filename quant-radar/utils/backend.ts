@@ -325,6 +325,13 @@ export function normalizeSignalSide(value: unknown): "BULL" | "BEAR" | "NEUTRAL"
   return "NEUTRAL";
 }
 
+export function buildChartUrl(symbol: string, name?: string): string {
+  const token = textify(symbol) || textify(name) || "NIFTY 50";
+  const cleaned = token.replace(/\s+/g, "").toUpperCase();
+  const mapped = symbolMap[cleaned] || cleaned;
+  const finalSymbol = mapped === "NIFTY50" ? "NIFTY 50" : mapped === "INDIAVIX" ? "INDIA VIX" : mapped;
+  return `/charts?symbol=${encodeURIComponent(finalSymbol)}`;
+}
 export function buildTradingViewUrl(symbol: string, name?: string): string {
   const token = textify(symbol) || textify(name) || "NIFTY";
   const cleaned = token.replace(/\s+/g, "").toUpperCase();

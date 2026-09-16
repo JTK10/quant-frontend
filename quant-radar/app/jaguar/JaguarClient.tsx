@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildChartUrl } from "@/utils/backend";
 
 type JaguarRow = {
   sym: string;
@@ -166,11 +166,9 @@ function JaguarBoard({
                 <td className="px-3 py-1.5 font-mono text-[11px] text-white/60">{r.time}</td>
                 <td className="px-3 py-1.5 font-medium flex items-center gap-1.5">
                   <a
-                    href={buildTradingViewUrl(r.sym, r.sym)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={buildChartUrl(r.sym, r.sym)}
                     className="underline decoration-white/20 decoration-dotted underline-offset-[3px] transition hover:decoration-white/70"
-                    title={`Open ${r.sym} on TradingView`}
+                    title={`Open ${r.sym} chart`}
                   >
                     {r.sym}
                   </a>

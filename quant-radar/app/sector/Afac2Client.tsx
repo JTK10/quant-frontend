@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildChartUrl } from "@/utils/backend";
 import SectorBarChart from "./SectorBarChart";
 
 const ACCENT = "#fce205";
@@ -224,9 +224,7 @@ export default function Afac2Client({ snaps }: { snaps: any[] }) {
                             <tr key={r.n} className="transition-colors hover:bg-white/5">
                               <td style={{ padding: "5px 0 5px 8px" }}>
                                 <a
-                                  href={buildTradingViewUrl(r.n, r.n)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                  href={buildChartUrl(r.n, r.n)}
                                   style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}
                                   className="hover:underline"
                                 >
