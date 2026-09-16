@@ -266,8 +266,8 @@ export default function LiveCandleChart({
     const volume = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "" });
     volume.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     const ema = chart.addSeries(LineSeries, { color: "#fbbf24", lineWidth: 2, title: "EMA 9", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
-    const superBull = chart.addSeries(LineSeries, { color: "#22c55e", lineWidth: 2, lineStyle: LineStyle.Dotted, title: "Supertrend 10,3", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
-    const superBear = chart.addSeries(LineSeries, { color: "#ef4444", lineWidth: 2, lineStyle: LineStyle.Dotted, title: "Supertrend 10,3", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+    const superBull = chart.addSeries(LineSeries, { color: "#22c55e", lineWidth: 2, lineStyle: LineStyle.Solid, title: "Supertrend 10,3", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+    const superBear = chart.addSeries(LineSeries, { color: "#ef4444", lineWidth: 2, lineStyle: LineStyle.Solid, title: "Supertrend 10,3", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
     chartRef.current = chart;
     candleRef.current = candles;
     volumeRef.current = volume;
@@ -311,15 +311,15 @@ export default function LiveCandleChart({
       priceLinesRef.current.forEach((line) => candles.removePriceLine(line)); priceLinesRef.current = []; levelSignatureRef.current = signature;
       if (!levels) return;
       const specs = [
-        ...(enabled.pdhPdl ? [[levels.pdh, "PDH", "#ff4d5f", LineStyle.Dashed, 2], [levels.pdl, "PDL", "#35e07a", LineStyle.Dashed, 2]] as const : []),
+        ...(enabled.pdhPdl ? [[levels.pdh, "PDH", "#ff4d5f", LineStyle.Solid, 2], [levels.pdl, "PDL", "#35e07a", LineStyle.Solid, 2]] as const : []),
         ...(enabled.pivots ? [
-          [levels.pivot, "P", "#c4b5fd", LineStyle.Dotted, 2],
-          [levels.r1, "R1", "#ffb15c", LineStyle.Dotted, 2],
-          [levels.r2, "R2", "#ff8a5c", LineStyle.Dashed, 1],
-          [levels.r3, "R3", "#ff647c", LineStyle.Dashed, 1],
-          [levels.s1, "S1", "#78b7ff", LineStyle.Dotted, 2],
-          [levels.s2, "S2", "#4da3ff", LineStyle.Dashed, 1],
-          [levels.s3, "S3", "#6f8cff", LineStyle.Dashed, 1],
+          [levels.pivot, "P", "#c4b5fd", LineStyle.Solid, 2],
+          [levels.r1, "R1", "#ffb15c", LineStyle.Solid, 2],
+          [levels.r2, "R2", "#ff8a5c", LineStyle.Solid, 1],
+          [levels.r3, "R3", "#ff647c", LineStyle.Solid, 1],
+          [levels.s1, "S1", "#78b7ff", LineStyle.Solid, 2],
+          [levels.s2, "S2", "#4da3ff", LineStyle.Solid, 1],
+          [levels.s3, "S3", "#6f8cff", LineStyle.Solid, 1],
         ] as const : []),
       ];
       specs.forEach(([price, title, color, lineStyle, lineWidth]) => priceLinesRef.current.push(candles.createPriceLine({ price, title, color, lineWidth, lineStyle, axisLabelVisible: true })));
