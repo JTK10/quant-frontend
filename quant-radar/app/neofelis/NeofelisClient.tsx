@@ -25,6 +25,8 @@ type Row = {
   act?: number | null;       // % of this name's strikes whose OI moved today
   actrk?: number | null;     // that figure's percentile across the WHOLE universe
   net?: number | null;       // put build below spot minus call build above, cumulative
+  ce_cr?: number | null;     // cumulative CE notional since 09:15, Rs crore
+  pe_cr?: number | null;     // cumulative PE notional since 09:15, Rs crore
 };
 
 // The publisher sends two separate arrays. The board merges them into one list
@@ -68,7 +70,7 @@ const GATE: Record<Side, { lo: number; hi: number | null; oi: boolean }> = {
 type ObFilter = "ALL" | "OB";
 type SideFilter = "ALL" | Side;
 
-type SortKey = "w" | "dp" | "mv" | "tgt_pct" | "rd" | "act" | "net";
+type SortKey = "w" | "dp" | "mv" | "tgt_pct" | "rd" | "act" | "net" | "opp_flow";
 
 // Act does NOT predict direction. The +0.141% that first justified this filter
 // was look-ahead: it ranked names on their WHOLE-DAY activity and then used that
@@ -150,8 +152,8 @@ function Board({
     if (actOnly) base = base.filter((r) => (r.actrk ?? 0) > ACT_CUT);
     return [...base].sort((a, b) => {
       if (a.st !== b.st) return a.st === "ARMED" ? -1 : 1;   // armed always first
-      const av = a[sortBy];
-      const bv = b[sortBy];
+      const av = sortBy === "opp_flow" ? (a.side === "bull" ? a.ce_cr : a.pe_cr) : a[sortBy];
+      const bv = sortBy === "opp_flow" ? (b.side === "bull" ? b.ce_cr : b.pe_cr) : b[sortBy];
       // Both null subtracts to NaN and leaves the order implementation-defined,
       // which is common among the misses sorted by Tgt %. Compare explicitly.
       if (av == null && bv == null) return 0;
@@ -207,6 +209,11 @@ function Board({
               label="Net"
               title="Put OI built BELOW spot minus call OI built ABOVE it, cumulative since 09:15. Positive = more support than resistance. Shown for observation only -- across 237 filtered names it measured FLAT (corr +0.004), so it gates nothing."
             />
+            <SortTh
+              k="opp_flow"
+              label="Opp Flow"
+              title="Same cumulative opposing flow as Jaguar: CE for bull rows, PE for bear rows, in Rs crore since 09:15."
+            />
             <th
               className="px-2 py-2 text-center font-medium"
               title="A same-side order block built by today's 09:15-10:00 candles, with price clear of it. The pivot needs 8 bars to confirm, so this cannot be true before 10:05."
@@ -219,7 +226,7 @@ function Board({
         <tbody>
           {ranked.length === 0 && (
             <tr>
-              <td colSpan={13} className="px-3 py-8 text-center text-[12px] text-white/30">
+              <td colSpan={14} className="px-3 py-8 text-center text-[12px] text-white/30">
                 {actOnly
                   ? "Nothing above the activity cut at this filter."
                   : obFilter === "OB"
@@ -232,6 +239,7 @@ function Board({
             const on = r.st === "ARMED";
             const gate = GATE[r.side];
             const tint = TINT[r.side];
+            const opposingFlow = r.side === "bull" ? r.ce_cr : r.pe_cr;
             return (
               <tr
                 key={`${r.side}-${r.s}-${r.brk}`}
@@ -341,6 +349,13 @@ function Board({
                   title="Support built below spot minus resistance built above, since 09:15. Observation only."
                 >
                   {fmtPct(r.net, 1, true)}
+                </td>
+                <td
+                  className="px-2 py-1.5 text-right tabular-nums"
+                  style={{ color: opposingFlow != null && opposingFlow < 0 ? tint : "var(--color-muted)" }}
+                  title="Same cumulative opposing flow as Jaguar: CE for bull rows, PE for bear rows, in Rs crore since 09:15."
+                >
+                  {fmtPct(opposingFlow, 2)}
                 </td>
                 <td className="px-2 py-1.5 text-center">
                   <ObCell v={r.ob} />

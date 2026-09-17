@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 
+type Side = "bull" | "bear";
+
 type Row = {
   s: string;            // symbol
   sp: number | null;    // spot
@@ -16,6 +18,8 @@ type Row = {
   lv: number | null;    // the level itself
   ls: string | null;    // where the level came from: PDH / PDL / OR
   cr: number | null;    // notional, Rs crore
+  ce_cr?: number | null; // cumulative CE notional since 09:15, Rs crore
+  pe_cr?: number | null; // cumulative PE notional since 09:15, Rs crore
 };
 
 type Breadth = {
@@ -91,9 +95,9 @@ const ACCENT = "#f97316";
  * not hidden: LAURUSLABS was 1-LEG all day on 08-25 and was that session's
  * cleanest trade, so it is a caution, not a veto.
  */
-type SortKey = "d" | "sq" | "a15";
+type SortKey = "d" | "sq" | "a15" | "opp_flow";
 
-function rank(rows: Row[], brokenOnly: boolean, by: SortKey) {
+function rank(rows: Row[], brokenOnly: boolean, by: SortKey, side: Side) {
   const list = brokenOnly ? rows.filter((r) => r.brk === true) : [...rows];
   return list.sort((a, b) => {
     // A15 sorts ASCENDING -- low is the good side. Money arriving in front of
@@ -104,6 +108,11 @@ function rank(rows: Row[], brokenOnly: boolean, by: SortKey) {
       const bv = b.a15 ?? Infinity;
       if (av !== bv) return av - bv;
       return (b.d ?? -Infinity) - (a.d ?? -Infinity);
+    }
+    if (by === "opp_flow") {
+      const av = side === "bull" ? a.ce_cr : a.pe_cr;
+      const bv = side === "bull" ? b.ce_cr : b.pe_cr;
+      return (bv ?? -Infinity) - (av ?? -Infinity);
     }
     if (by === "sq") {
       const s = (b.sq ?? -Infinity) - (a.sq ?? -Infinity);
@@ -125,6 +134,7 @@ const fmt = (v: number | null | undefined, dp = 0) =>
 function Board({
   title,
   rows,
+  side,
   brokenOnly,
   tint,
   sortBy,
@@ -132,12 +142,13 @@ function Board({
 }: {
   title: string;
   rows: Row[];
+  side: Side;
   brokenOnly: boolean;
   tint: string;
   sortBy: SortKey;
   onSort: (k: SortKey) => void;
 }) {
-  const ranked = rank(rows, brokenOnly, sortBy);
+  const ranked = rank(rows, brokenOnly, sortBy, side);
 
   // The column header is where people actually click to sort, so it drives the
   // same state as the toolbar buttons rather than being inert decoration.
@@ -176,12 +187,13 @@ function Board({
               <SortTh k="a15" label="A15 %" />
               <SortTh k="sq" label="SQ" />
               <th className="px-3 py-2 text-right font-medium">₹ Cr</th>
+              <SortTh k="opp_flow" label="Opp Flow" />
             </tr>
           </thead>
           <tbody>
             {ranked.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={8} className="px-3 py-8 text-center text-[12px] text-white/30">
                   {brokenOnly
                     ? "No name has taken the prior-day level yet at this cut."
                     : "No rows in this cut."}
@@ -190,6 +202,7 @@ function Board({
             )}
             {ranked.map((r, i) => {
               const oneLegged = !r.c;
+              const opposingFlow = side === "bull" ? r.ce_cr : r.pe_cr;
               return (
                 <tr
                   key={r.s}
@@ -283,6 +296,13 @@ function Board({
                     {r.sq?.toFixed(3)}
                   </td>
                   <td className="px-3 py-1.5 text-right tabular-nums text-white/40">{fmt(r.cr)}</td>
+                  <td
+                    className="px-3 py-1.5 text-right tabular-nums"
+                    style={{ color: opposingFlow != null && opposingFlow < 0 ? tint : "var(--color-muted)" }}
+                    title="Same cumulative opposing flow as Jaguar: CE for bull rows, PE for bear rows, in Rs crore since 09:15."
+                  >
+                    {fmt(opposingFlow, 2)}
+                  </td>
                 </tr>
               );
             })}
@@ -362,7 +382,7 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
 
         <span className="ml-auto flex items-center gap-1.5 text-[11px] text-white/45">
           <span className="text-[10px] uppercase tracking-[0.12em] text-white/35">Sort</span>
-          {(["d", "a15", "sq"] as SortKey[]).map((k) => (
+          {(["d", "a15", "sq", "opp_flow"] as SortKey[]).map((k) => (
             <button
               key={k}
               onClick={() => setSortBy(k)}
@@ -373,7 +393,7 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
                   : { borderColor: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)" }
               }
             >
-              {k === "d" ? "Dist %" : k === "a15" ? "A15 %" : "SQ"}
+              {k === "d" ? "Dist %" : k === "a15" ? "A15 %" : k === "opp_flow" ? "Opp Flow" : "SQ"}
             </button>
           ))}
         </span>
@@ -438,8 +458,8 @@ export default function OcelotClient({ snaps }: { snaps: Snap[] }) {
       })()}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-        <Board title="BULL · CALL SIDE" rows={snap?.bull ?? []} brokenOnly={brokenOnly} tint="#22c55e" sortBy={sortBy} onSort={setSortBy} />
-        <Board title="BEAR · PUT SIDE" rows={snap?.bear ?? []} brokenOnly={brokenOnly} tint="#ef4444" sortBy={sortBy} onSort={setSortBy} />
+        <Board title="BULL · CALL SIDE" rows={snap?.bull ?? []} side="bull" brokenOnly={brokenOnly} tint="#22c55e" sortBy={sortBy} onSort={setSortBy} />
+        <Board title="BEAR · PUT SIDE" rows={snap?.bear ?? []} side="bear" brokenOnly={brokenOnly} tint="#ef4444" sortBy={sortBy} onSort={setSortBy} />
       </div>
 
       <p className="px-1 text-[10.5px] leading-relaxed text-white/25">
