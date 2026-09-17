@@ -21,9 +21,59 @@ async function getJaguarSignals(dateStr: string) {
   }
 }
 
+async function getAuxiliarySnaps(dateStr: string, source: "neofelis" | "ocelot") {
+  try {
+    const extra = source === "ocelot" ? "&topN=25&rankBy=d" : "";
+    const url = await getInternalApiUrl(
+      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=${source}${extra}`
+    );
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`${source} route failed: ${response.status}`);
+    const data = await response.json();
+    return (data as any[]).filter((snap) => snap.source === source);
+  } catch (err) {
+    console.error(`Error fetching ${source} snapshots for Jaguar:`, err);
+    return [];
+  }
+}
+
+type AuxSide = "bull" | "bear";
+type AuxPoint = { cut: string; row: any };
+
+function buildAuxHistory(snaps: any[]) {
+  const history = new Map<string, AuxPoint[]>();
+  for (const snap of snaps) {
+    const cut = String(snap.cut ?? snap.time ?? "");
+    for (const side of ["bull", "bear"] as AuxSide[]) {
+      for (const row of snap[side] ?? []) {
+        const symbol = String(row.s ?? row.sym ?? "");
+        if (!symbol || !cut) continue;
+        const key = `${side}:${symbol}`;
+        const points = history.get(key) ?? [];
+        points.push({ cut, row });
+        history.set(key, points);
+      }
+    }
+  }
+  for (const points of history.values()) points.sort((a, b) => a.cut.localeCompare(b.cut));
+  return history;
+}
+
+function rowAtOrBefore(history: Map<string, AuxPoint[]>, side: AuxSide, symbol: string, cut: string) {
+  const points = history.get(`${side}:${symbol}`) ?? [];
+  for (let i = points.length - 1; i >= 0; i -= 1) {
+    if (points[i].cut <= cut) return points[i].row;
+  }
+  return null;
+}
+
 export default async function JaguarSignalPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
-  const docs = await getJaguarSignals(dateStr);
+  const [docs, neofelisSnaps, ocelotSnaps] = await Promise.all([
+    getJaguarSignals(dateStr),
+    getAuxiliarySnaps(dateStr, "neofelis"),
+    getAuxiliarySnaps(dateStr, "ocelot"),
+  ]);
 
   const bullsMap = new Map();
   const bearsMap = new Map();
@@ -54,8 +104,23 @@ export default async function JaguarSignalPage({ searchParams }: { searchParams:
     }
   }
 
-  const bulls = Array.from(bullsMap.values());
-  const bears = Array.from(bearsMap.values());
+  const neofelisHistory = buildAuxHistory(neofelisSnaps);
+  const ocelotHistory = buildAuxHistory(ocelotSnaps);
+  const enrich = (row: any, side: AuxSide) => {
+    const neofelis = rowAtOrBefore(neofelisHistory, side, row.sym, row.time);
+    const ocelot = rowAtOrBefore(ocelotHistory, side, row.sym, row.time);
+    return {
+      ...row,
+      tgt: neofelis?.tgt ?? null,
+      tgt_pct: neofelis?.tgt_pct ?? null,
+      bt: ocelot?.bt ?? null,
+      lv: ocelot?.lv ?? null,
+      ls: ocelot?.ls ?? null,
+    };
+  };
+
+  const bulls = Array.from(bullsMap.values()).map((row) => enrich(row, "bull"));
+  const bears = Array.from(bearsMap.values()).map((row) => enrich(row, "bear"));
 
   // Sort by highest conviction (absolute diff_cr)
   bulls.sort((a, b) => Math.abs(b.diff_cr) - Math.abs(a.diff_cr));

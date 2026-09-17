@@ -12,6 +12,11 @@ type JaguarRow = {
   diff_cr: number;
   capitulation: boolean;
   side: string;
+  tgt: number | null;
+  tgt_pct: number | null;
+  bt: string | null;
+  lv: number | null;
+  ls: string | null;
 };
 
 const fmt = (v: number | null | undefined, dp = 0) =>
@@ -19,7 +24,7 @@ const fmt = (v: number | null | undefined, dp = 0) =>
     ? "--"
     : v.toLocaleString("en-IN", { minimumFractionDigits: dp, maximumFractionDigits: dp });
 
-type SortField = 'time' | 'ce_cr' | 'pe_cr' | 'opp_flow';
+type SortField = 'time' | 'ce_cr' | 'pe_cr' | 'opp_flow' | 'tgt_pct';
 type SortDir = 'asc' | 'desc';
 
 function JaguarBoard({
@@ -41,7 +46,7 @@ function JaguarBoard({
     else { setSortField(field); setSortDir('desc'); }
   };
 
-  const SortIcon = ({ field }: { field: SortField }) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return <span className="opacity-30 ml-1">↕</span>;
     return <span className="ml-1 text-white">{sortDir === 'asc' ? '↑' : '↓'}</span>;
   };
@@ -64,6 +69,7 @@ function JaguarBoard({
       if (sortField === 'ce_cr') { va = a.ce_cr; vb = b.ce_cr; }
       else if (sortField === 'pe_cr') { va = a.pe_cr; vb = b.pe_cr; }
       else if (sortField === 'opp_flow') { va = oppA; vb = oppB; }
+      else if (sortField === 'tgt_pct') { va = a.tgt_pct ?? -Infinity; vb = b.tgt_pct ?? -Infinity; }
       
       if (va < vb) return sortDir === 'asc' ? -1 : 1;
       if (va > vb) return sortDir === 'asc' ? 1 : -1;
@@ -124,27 +130,33 @@ function JaguarBoard({
                 className="px-3 py-2 text-left font-medium cursor-pointer hover:text-white/80 transition"
                 onClick={() => toggleSort('time')}
               >
-                Time <SortIcon field="time" />
+                Time {sortIcon('time')}
               </th>
               <th className="px-3 py-2 text-left font-medium">Symbol</th>
-              <th className="px-3 py-2 text-right font-medium">Entry</th>
+              <th className="px-3 py-2 text-right font-medium">Broke</th>
+              <th
+                className="px-3 py-2 text-right font-medium cursor-pointer hover:text-white/80 transition"
+                onClick={() => toggleSort('tgt_pct')}
+              >
+                Tgt % {sortIcon('tgt_pct')}
+              </th>
               <th 
                 className="px-3 py-2 text-right font-medium cursor-pointer hover:text-white/80 transition"
                 onClick={() => toggleSort('pe_cr')}
               >
-                PE ₹Cr <SortIcon field="pe_cr" />
+                PE ₹Cr {sortIcon('pe_cr')}
               </th>
               <th 
                 className="px-3 py-2 text-right font-medium cursor-pointer hover:text-white/80 transition"
                 onClick={() => toggleSort('ce_cr')}
               >
-                CE ₹Cr <SortIcon field="ce_cr" />
+                CE ₹Cr {sortIcon('ce_cr')}
               </th>
               <th 
                 className="px-3 py-2 text-right font-medium cursor-pointer hover:text-white/80 transition"
                 onClick={() => toggleSort('opp_flow')}
               >
-                Opp Flow <SortIcon field="opp_flow" />
+                Opp Flow {sortIcon('opp_flow')}
               </th>
               <th className="px-3 py-2 text-center font-medium">Status</th>
             </tr>
@@ -152,7 +164,7 @@ function JaguarBoard({
           <tbody>
             {processedRows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-[12px] text-white/30">
+                <td colSpan={8} className="px-3 py-8 text-center text-[12px] text-white/30">
                   No signals met the criteria.
                 </td>
               </tr>
@@ -180,7 +192,54 @@ function JaguarBoard({
                     </span>
                   )}
                 </td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-white/80">{fmt(r.spot, 2)}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums text-white/45">
+                  {r.bt ? (
+                    <span
+                      className="inline-flex items-center gap-1"
+                      title={
+                        r.ls === "OR"
+                          ? `Opened through the prior-day level, so the first 3 candles became the level (${r.lv ?? "--"})`
+                          : `Prior-day level still live at the open (${r.lv ?? "--"})`
+                      }
+                    >
+                      {r.bt}
+                      {r.ls && (
+                        <span
+                          className="rounded-sm px-1 text-[9px] tracking-wide"
+                          style={
+                            r.ls === "OR"
+                              ? { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }
+                              : { background: `${tint}18`, color: tint }
+                          }
+                        >
+                          {r.ls}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    "--"
+                  )}
+                </td>
+                <td
+                  className="px-3 py-1.5 text-right tabular-nums"
+                  style={{
+                    color:
+                      r.tgt_pct === null || r.tgt_pct === undefined
+                        ? "rgba(255,255,255,0.25)"
+                        : r.tgt_pct >= 1.5
+                          ? "#22c55e"
+                          : r.tgt_pct <= 0.5
+                            ? "#ef4444"
+                            : "rgba(255,255,255,0.75)",
+                  }}
+                  title={
+                    r.tgt === null || r.tgt === undefined
+                      ? "No readable Neofelis target at or before the Jaguar signal"
+                      : `Neofelis target strike: ${r.tgt}. Room from spot at the latest causal reading.`
+                  }
+                >
+                  {r.tgt_pct === null || r.tgt_pct === undefined ? "--" : `${r.tgt_pct.toFixed(2)}%`}
+                </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.pe_cr, 2)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.ce_cr, 2)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70" style={{ color: opposingFlow < 0 ? tint : "var(--color-muted)" }}>
