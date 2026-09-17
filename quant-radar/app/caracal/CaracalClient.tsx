@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { buildChartUrl } from "@/utils/backend";
+import { buildTradingViewUrl } from "@/utils/backend";
 import sectorMapData from "@/utils/sectorMap.json";
 
 const ACCENT = "#f59e0b";
@@ -455,7 +455,9 @@ export default function CaracalClient({ signals }: { signals: any[] }) {
               </span>
               <div className="min-w-0 flex items-center gap-1.5">
                 <a
-                  href={buildChartUrl(s.name, s.name)}
+                  href={buildTradingViewUrl(s.name, s.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="min-w-0 truncate text-[13px] font-semibold hover:underline"
                   style={{ color: "var(--color-text2)" }}
                 >

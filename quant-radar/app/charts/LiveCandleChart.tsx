@@ -86,6 +86,10 @@ function bucketStart(time: number, timeframe: Timeframe): number {
   return Math.floor(time / INTERVAL_SECONDS[timeframe]) * INTERVAL_SECONDS[timeframe];
 }
 
+export function normalizeFiveMinuteBar(bar: ChartBar): ChartBar {
+  return { ...bar, time: bucketStart(bar.time, "5m") };
+}
+
 function istDay(time: number): string {
   return new Date((time + 19_800) * 1000).toISOString().slice(0, 10);
 }
@@ -190,6 +194,14 @@ function asCandle(bar: ChartBar): CandlestickData<UTCTimestamp> {
   return { ...bar, time: bar.time as UTCTimestamp };
 }
 
+function asVolume(bar: ChartBar) {
+  return {
+    time: bar.time as UTCTimestamp,
+    value: bar.volume,
+    color: bar.close >= bar.open ? "rgba(34,197,94,.45)" : "rgba(239,68,68,.45)",
+  };
+}
+
 export default function LiveCandleChart({
   symbol,
   streamUrl,
@@ -213,9 +225,11 @@ export default function LiveCandleChart({
   const superBearRef = useRef<ISeriesApi<"Line"> | null>(null);
   const barsRef = useRef(new Map<number, ChartBar>());
   const redrawRef = useRef<(bars: ChartBar[]) => void>(() => {});
+  const updateLiveBarRef = useRef<(bar: ChartBar, bars: ChartBar[]) => void>(() => {});
   const indicatorRedrawRef = useRef<(bars: ChartBar[]) => void>(() => {});
   const priceLinesRef = useRef<any[]>([]);
   const levelSignatureRef = useRef("");
+  const lastRenderedTimeRef = useRef<number | null>(null);
   const recentRangeRef = useRef<{ from: UTCTimestamp; to: UTCTimestamp } | null>(null);
   const initialViewSetRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
@@ -240,7 +254,10 @@ export default function LiveCandleChart({
   };
 
   useEffect(() => {
-    barsRef.current = new Map(initialBars.map((bar) => [bar.time, bar]));
+    barsRef.current = new Map(initialBars.map((bar) => {
+      const normalized = normalizeFiveMinuteBar(bar);
+      return [normalized.time, normalized];
+    }));
   }, [symbol, initialBars]);
 
   useEffect(() => {
@@ -275,14 +292,7 @@ export default function LiveCandleChart({
     superBullRef.current = superBull;
     superBearRef.current = superBear;
 
-    redrawRef.current = (bars) => {
-      candles.setData(bars.map(asCandle));
-      volume.setData(bars.map((bar) => ({
-        time: bar.time as UTCTimestamp,
-        value: bar.volume,
-        color: bar.close >= bar.open ? "rgba(34,197,94,.45)" : "rgba(239,68,68,.45)",
-      })));
-
+    const updateRecentRange = (bars: ChartBar[]) => {
       if (bars.length) {
         const latestDay = istDay(bars[bars.length - 1].time);
         const recentBars = timeframe === "1D" ? bars.slice(-20) : bars.filter((bar) => istDay(bar.time) === latestDay);
@@ -297,7 +307,26 @@ export default function LiveCandleChart({
           }
         }
       }
+    };
 
+    redrawRef.current = (bars) => {
+      candles.setData(bars.map(asCandle));
+      volume.setData(bars.map(asVolume));
+      lastRenderedTimeRef.current = bars.length ? bars[bars.length - 1].time : null;
+      updateRecentRange(bars);
+      indicatorRedrawRef.current(bars);
+    };
+
+    updateLiveBarRef.current = (bar, bars) => {
+      const lastRenderedTime = lastRenderedTimeRef.current;
+      if (lastRenderedTime !== null && bar.time < lastRenderedTime) {
+        redrawRef.current(bars);
+        return;
+      }
+      candles.update(asCandle(bar));
+      volume.update(asVolume(bar));
+      lastRenderedTimeRef.current = bar.time;
+      updateRecentRange(bars);
       indicatorRedrawRef.current(bars);
     };
 
@@ -331,6 +360,7 @@ export default function LiveCandleChart({
 
     return () => {
       redrawRef.current = () => {};
+      updateLiveBarRef.current = () => {};
       indicatorRedrawRef.current = () => {};
       chart.remove();
       chartRef.current = null;
@@ -343,6 +373,7 @@ export default function LiveCandleChart({
       levelSignatureRef.current = "";
       recentRangeRef.current = null;
       initialViewSetRef.current = false;
+      lastRenderedTimeRef.current = null;
     };
   }, [timeframe, symbol]);
 
@@ -352,6 +383,18 @@ export default function LiveCandleChart({
     let reconnectTimer: number | undefined;
     let stopped = false;
 
+    const storeBar = (bar: ChartBar) => {
+      const normalized = normalizeFiveMinuteBar(bar);
+      barsRef.current.set(normalized.time, normalized);
+      return normalized;
+    };
+    const updateLiveBar = (bar: ChartBar) => {
+      const normalized = storeBar(bar);
+      const bars = aggregateBars([...barsRef.current.values()], timeframe);
+      const affectedTime = bucketStart(normalized.time, timeframe);
+      const affectedBar = bars.find((candidate) => candidate.time === affectedTime);
+      if (affectedBar) updateLiveBarRef.current(affectedBar, bars);
+    };
     const redraw = () => redrawRef.current(aggregateBars([...barsRef.current.values()], timeframe));
     const connect = () => {
       socket = new WebSocket(streamUrl);
@@ -359,13 +402,12 @@ export default function LiveCandleChart({
       socket.onmessage = (event) => {
         const message = JSON.parse(event.data) as StreamMessage;
         if (message.type === "candle" && message.symbol === symbol) {
-          barsRef.current.set(message.time, message);
-          redraw();
+          updateLiveBar(message);
         }
         if (message.type === "snapshot") {
           const matching = message.bars.filter((bar) => bar.symbol === symbol);
           if (!matching.length) return;
-          matching.forEach((bar) => barsRef.current.set(bar.time, bar));
+          matching.forEach(storeBar);
           redraw();
         }
       };

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { buildChartUrl } from "@/utils/backend";
+import { buildTradingViewUrl } from "@/utils/backend";
 
 const ACCENT = "#a78bfa";
 const HEAD_BG = "rgb(39, 39, 42)";
@@ -183,7 +183,9 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
           return (
             <a
               key={r.sym}
-              href={buildChartUrl(r.sym)}
+              href={buildTradingViewUrl(r.sym)}
+              target="_blank"
+              rel="noopener noreferrer"
               className="block rounded-lg border border-white/10 p-3 transition hover:border-white/25"
               style={{ background: isLong ? LONG_BG : SHORT_BG }}
             >
@@ -358,7 +360,9 @@ function PoolTable({
                     style={{ background: r.side === "LONG" ? LONG_BG : SHORT_BG }}
                   >
                     <a
-                      href={buildChartUrl(r.sym)}
+                      href={buildTradingViewUrl(r.sym)}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="hover:underline"
                       style={{ color: ACCENT }}
                     >
