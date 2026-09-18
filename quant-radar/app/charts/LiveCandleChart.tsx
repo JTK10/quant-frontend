@@ -230,7 +230,7 @@ export default function LiveCandleChart({
   const priceLinesRef = useRef<any[]>([]);
   const levelSignatureRef = useRef("");
   const lastRenderedTimeRef = useRef<number | null>(null);
-  const recentRangeRef = useRef<{ from: UTCTimestamp; to: UTCTimestamp } | null>(null);
+  const recentRangeRef = useRef<{ from: number; to: number } | null>(null);
   const initialViewSetRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
   const [indicators, setIndicators] = useState<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false });
@@ -238,7 +238,7 @@ export default function LiveCandleChart({
 
   const resetView = () => {
     const range = recentRangeRef.current;
-    if (range) chartRef.current?.timeScale().setVisibleRange(range);
+    if (range) chartRef.current?.timeScale().setVisibleLogicalRange(range);
     else chartRef.current?.timeScale().fitContent();
     candleRef.current?.priceScale().applyOptions({ autoScale: true });
     setContextMenu(null);
@@ -297,12 +297,14 @@ export default function LiveCandleChart({
         const latestDay = istDay(bars[bars.length - 1].time);
         const recentBars = timeframe === "1D" ? bars.slice(-20) : bars.filter((bar) => istDay(bar.time) === latestDay);
         if (recentBars.length) {
+          const minimumBars = { "5m": 30, "15m": 20, "30m": 12, "1h": 8, "1D": 20 }[timeframe];
+          const visibleBars = Math.max(recentBars.length, minimumBars);
           recentRangeRef.current = {
-            from: recentBars[0].time as UTCTimestamp,
-            to: (recentBars[recentBars.length - 1].time + INTERVAL_SECONDS[timeframe]) as UTCTimestamp,
+            from: bars.length - visibleBars - 0.5,
+            to: bars.length + 0.5,
           };
           if (!initialViewSetRef.current) {
-            chart.timeScale().setVisibleRange(recentRangeRef.current);
+            chart.timeScale().setVisibleLogicalRange(recentRangeRef.current);
             initialViewSetRef.current = true;
           }
         }
