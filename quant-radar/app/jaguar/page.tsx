@@ -111,11 +111,14 @@ export default async function JaguarSignalPage({ searchParams }: { searchParams:
     const ocelot = rowAtOrBefore(ocelotHistory, side, row.sym, row.time);
     return {
       ...row,
-      tgt: neofelis?.tgt ?? null,
-      tgt_pct: neofelis?.tgt_pct ?? null,
-      bt: ocelot?.bt ?? null,
-      lv: ocelot?.lv ?? null,
-      ls: ocelot?.ls ?? null,
+      // Current Jaguar documents carry these fields themselves. Prefer the
+      // row-local values: the auxiliary boards are deliberately trimmed and
+      // must only be a compatibility fallback for older Jaguar documents.
+      tgt: row.tgt ?? neofelis?.tgt ?? null,
+      tgt_pct: row.tgt_pct ?? neofelis?.tgt_pct ?? null,
+      bt: row.bt ?? ocelot?.bt ?? null,
+      lv: row.lv ?? ocelot?.lv ?? null,
+      ls: row.ls ?? ocelot?.ls ?? null,
     };
   };
 

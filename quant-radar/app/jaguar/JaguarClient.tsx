@@ -172,6 +172,13 @@ function JaguarBoard({
             {processedRows.map((r) => {
               const opposingFlow = r.side.includes("BULL") ? r.ce_cr : r.pe_cr;
               const typeLabel = r.side.includes("BREAKOUT") ? "(B)" : r.side.includes("REJECT") ? "(R)" : "";
+              const jaguarLevel =
+                r.side === "TRUE_BULL_BREAKOUT" || r.side === "AGGRESSIVE_BEAR_REJECT"
+                  ? "PDH"
+                  : "PDL";
+              const brokeTime = r.bt ?? r.time;
+              const brokeSource = r.ls ?? `${jaguarLevel}${r.side.includes("REJECT") ? " R" : ""}`;
+              const hasOcelotBreak = Boolean(r.bt);
               
               return (
               <tr key={`${r.sym}-${r.time}`} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
@@ -193,32 +200,30 @@ function JaguarBoard({
                   )}
                 </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/45">
-                  {r.bt ? (
-                    <span
-                      className="inline-flex items-center gap-1"
-                      title={
-                        r.ls === "OR"
+                  <span
+                    className="inline-flex items-center gap-1"
+                    title={
+                      hasOcelotBreak
+                        ? r.ls === "OR"
                           ? `Opened through the prior-day level, so the first 3 candles became the level (${r.lv ?? "--"})`
                           : `Prior-day level still live at the open (${r.lv ?? "--"})`
+                        : r.side.includes("REJECT")
+                          ? `Jaguar rejection triggered at ${jaguarLevel}; no separate Ocelot break was recorded.`
+                          : `Jaguar breakout triggered at ${jaguarLevel}; no matching row survived the trimmed Ocelot board.`
+                    }
+                  >
+                    {brokeTime}
+                    <span
+                      className="rounded-sm px-1 text-[9px] tracking-wide"
+                      style={
+                        brokeSource === "OR"
+                          ? { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }
+                          : { background: `${tint}18`, color: tint }
                       }
                     >
-                      {r.bt}
-                      {r.ls && (
-                        <span
-                          className="rounded-sm px-1 text-[9px] tracking-wide"
-                          style={
-                            r.ls === "OR"
-                              ? { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }
-                              : { background: `${tint}18`, color: tint }
-                          }
-                        >
-                          {r.ls}
-                        </span>
-                      )}
+                      {brokeSource}
                     </span>
-                  ) : (
-                    "--"
-                  )}
+                  </span>
                 </td>
                 <td
                   className="px-3 py-1.5 text-right tabular-nums"
@@ -234,11 +239,11 @@ function JaguarBoard({
                   }}
                   title={
                     r.tgt === null || r.tgt === undefined
-                      ? "No readable Neofelis target at or before the Jaguar signal"
-                      : `Neofelis target strike: ${r.tgt}. Room from spot at the latest causal reading.`
+                      ? "No building option wall was found within Jaguar's 6% scan range."
+                      : `Jaguar target strike: ${r.tgt}. Room from spot at the latest published reading.`
                   }
                 >
-                  {r.tgt_pct === null || r.tgt_pct === undefined ? "--" : `${r.tgt_pct.toFixed(2)}%`}
+                  {r.tgt_pct === null || r.tgt_pct === undefined ? "NO WALL" : `${r.tgt_pct.toFixed(2)}%`}
                 </td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.pe_cr, 2)}</td>
                 <td className="px-3 py-1.5 text-right tabular-nums text-white/70">{fmt(r.ce_cr, 2)}</td>
