@@ -11,8 +11,9 @@ type Snap = { cut?: string; time?: string; bull?: Row[]; bear?: Row[] };
 const tint = { bull: "#22c55e", bear: "#ef4444" };
 const fmt = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "--" : value.toFixed(2);
 
-function Board({ side, rows, sort, setSort, targetOnly, setTargetOnly }: { side: Side; rows: Row[]; sort: { key: SortKey; strongFirst: boolean }; setSort: (key: SortKey) => void; targetOnly: boolean; setTargetOnly: (next: boolean) => void }) {
-  const ranked = rows.filter((row) => !targetOnly || (row.t ?? -Infinity) > 1.5).sort((a, b) => {
+function Board({ side, rows, sort, setSort, targetOnly, setTargetOnly, brokeOnly, setBrokeOnly }: { side: Side; rows: Row[]; sort: { key: SortKey; strongFirst: boolean }; setSort: (key: SortKey) => void; targetOnly: boolean; setTargetOnly: (next: boolean) => void; brokeOnly: boolean; setBrokeOnly: (next: boolean) => void }) {
+  const ranked = rows.filter((row) => !targetOnly || (row.t ?? -Infinity) > 1.5)
+    .filter((row) => !brokeOnly || Boolean(row.brk && row.bt && row.ls)).sort((a, b) => {
     if (sort.key === "move") {
       const value = side === "bull" ? (b.mv ?? -Infinity) - (a.mv ?? -Infinity) : (a.mv ?? Infinity) - (b.mv ?? Infinity);
       return sort.strongFirst ? value : -value;
@@ -32,6 +33,7 @@ function Board({ side, rows, sort, setSort, targetOnly, setTargetOnly }: { side:
         <h2 className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: tint[side] }}>{label}</h2>
         <span className="text-[11px] text-white/35">{ranked.length} names</span>
         <button onClick={() => setTargetOnly(!targetOnly)} className="ml-auto rounded border px-2 py-1 text-[10px] tracking-wider transition" style={{ borderColor: targetOnly ? tint[side] : "rgba(255,255,255,0.1)", color: targetOnly ? tint[side] : "rgba(255,255,255,0.5)", background: targetOnly ? `${tint[side]}11` : "transparent" }}>{targetOnly ? "TGT > 1.5%" : "ALL TGT"}</button>
+        <button onClick={() => setBrokeOnly(!brokeOnly)} className="rounded border px-2 py-1 text-[10px] tracking-wider transition" style={{ borderColor: brokeOnly ? tint[side] : "rgba(255,255,255,0.1)", color: brokeOnly ? tint[side] : "rgba(255,255,255,0.5)", background: brokeOnly ? `${tint[side]}11` : "transparent" }}>{brokeOnly ? "BROKE ONLY" : "ALL BREAKS"}</button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-white/[0.07] bg-white/[0.02]">
         <table className="w-full border-collapse text-[12.5px]">
@@ -64,6 +66,8 @@ export default function RustyClient({ snaps }: { snaps: Snap[] }) {
   const [bearSort, setBearSort] = useState<{ key: SortKey; strongFirst: boolean }>({ key: "move", strongFirst: true });
   const [bullTargetOnly, setBullTargetOnly] = useState(false);
   const [bearTargetOnly, setBearTargetOnly] = useState(false);
+  const [bullBrokeOnly, setBullBrokeOnly] = useState(false);
+  const [bearBrokeOnly, setBearBrokeOnly] = useState(false);
   const active = index === null ? cuts.length - 1 : Math.min(index, cuts.length - 1);
   const snap = cuts[active]?.[1];
   const changeSort = (side: Side, key: SortKey) => {
@@ -74,6 +78,6 @@ export default function RustyClient({ snaps }: { snaps: Snap[] }) {
   if (!cuts.length) return <div className="flex h-full items-center justify-center text-[14px] text-white/50">No RUSTY cuts published for this date yet.</div>;
   return <div className="flex h-full flex-col gap-3 px-4 pb-4 pt-3">
     <div className="flex flex-wrap items-center gap-3"><span className="text-[10px] uppercase tracking-[0.12em] text-white/35">Cut</span><input type="range" min={0} max={cuts.length - 1} value={active} onChange={(event) => setIndex(Number(event.target.value))} className="h-1 w-56 cursor-pointer appearance-none rounded-full bg-white/10 accent-orange-500" /><span className="min-w-[52px] font-mono text-[13px] font-semibold tabular-nums text-orange-400">{cuts[active]?.[0]}</span><span className="text-[11px] text-white/30">{active + 1} / {cuts.length}</span>{index !== null && active !== cuts.length - 1 && <button onClick={() => setIndex(null)} className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:bg-white/[0.05]">Jump to latest</button>}</div>
-    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row"><Board side="bull" rows={snap?.bull ?? []} sort={bullSort} setSort={(key) => changeSort("bull", key)} targetOnly={bullTargetOnly} setTargetOnly={setBullTargetOnly} /><Board side="bear" rows={snap?.bear ?? []} sort={bearSort} setSort={(key) => changeSort("bear", key)} targetOnly={bearTargetOnly} setTargetOnly={setBearTargetOnly} /></div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row"><Board side="bull" rows={snap?.bull ?? []} sort={bullSort} setSort={(key) => changeSort("bull", key)} targetOnly={bullTargetOnly} setTargetOnly={setBullTargetOnly} brokeOnly={bullBrokeOnly} setBrokeOnly={setBullBrokeOnly} /><Board side="bear" rows={snap?.bear ?? []} sort={bearSort} setSort={(key) => changeSort("bear", key)} targetOnly={bearTargetOnly} setTargetOnly={setBearTargetOnly} brokeOnly={bearBrokeOnly} setBrokeOnly={setBearBrokeOnly} /></div>
   </div>;
 }
