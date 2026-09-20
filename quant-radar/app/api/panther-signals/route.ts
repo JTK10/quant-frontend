@@ -258,6 +258,18 @@ async function buildPayload(
     );
   }
 
+  // RUSTY's selection inputs are proprietary.  Its public board needs only
+  // the selected symbols, their price move, and the Ocelot level-break state.
+  // Redact before serialization so neither page source nor the public route
+  // exposes OI values, OI ranks, or the selection calculation.
+  rows = rows.map((snapshot: any) => {
+    if (snapshot.source !== "rusty") return snapshot;
+    const visible = (side: unknown) => Array.isArray(side)
+      ? side.map((row: any) => ({ s: row.s, mv: row.mv, brk: row.brk, bt: row.bt, ls: row.ls }))
+      : [];
+    return { source: "rusty", cap: "RUSTY", cut: snapshot.cut, time: snapshot.time,
+             bull: visible(snapshot.bull), bear: visible(snapshot.bear) };
+  });
   return normalizePantherSignals(rows);
 }
 

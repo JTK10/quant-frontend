@@ -25,7 +25,7 @@ export default async function RustyPage({ searchParams }: { searchParams: DateSe
   const snaps = await getRustySnaps(dateStr);
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
-      <PageHeader title="RUSTY" subtitle="OI DECREASE · MOVE BOARD" badge="LIVE" dateStr={dateStr} accentColor="#f97316">
+      <PageHeader title="RUSTY" subtitle="INTRADAY MOVE BOARD" badge="LIVE" dateStr={dateStr} accentColor="#f97316">
         <DatePicker />
         <AutoRefresh interval={45000} />
       </PageHeader>
