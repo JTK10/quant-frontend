@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 
 type Side = "bull" | "bear";
-type SortKey = "move" | "score" | "rank";
-type Row = { s: string; mv?: number | null; brk?: boolean | null; bt?: string | null; ls?: string | null; v?: number | null; r?: number | null };
+type SortKey = "move" | "score" | "rank" | "moveRank";
+type Row = { s: string; mv?: number | null; brk?: boolean | null; bt?: string | null; ls?: string | null; v?: number | null; r?: number | null; w?: number | null };
 type Snap = { cut?: string; time?: string; bull?: Row[]; bear?: Row[] };
 
 const tint = { bull: "#22c55e", bear: "#ef4444" };
@@ -17,7 +17,9 @@ function Board({ side, rows, sort, setSort }: { side: Side; rows: Row[]; sort: {
       const value = side === "bull" ? (b.mv ?? -Infinity) - (a.mv ?? -Infinity) : (a.mv ?? Infinity) - (b.mv ?? Infinity);
       return sort.strongFirst ? value : -value;
     }
-    const value = sort.key === "score" ? (a.v ?? Infinity) - (b.v ?? Infinity) : (a.r ?? Infinity) - (b.r ?? Infinity);
+    const value = sort.key === "score" ? (a.v ?? Infinity) - (b.v ?? Infinity)
+      : sort.key === "moveRank" ? (a.w ?? Infinity) - (b.w ?? Infinity)
+      : (a.r ?? Infinity) - (b.r ?? Infinity);
     return sort.strongFirst ? value : -value;
   });
   const label = side === "bull" ? "BULLISH SIGNALS" : "BEARISH SIGNALS";
@@ -32,14 +34,15 @@ function Board({ side, rows, sort, setSort }: { side: Side; rows: Row[]; sort: {
         <table className="w-full border-collapse text-[12.5px]">
           <thead className="sticky top-0 z-10 bg-[#101013]"><tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
             <th className="px-3 py-2 text-left font-medium">#</th><th className="px-3 py-2 text-left font-medium">Symbol</th>
-            <th className="px-3 py-2 text-right font-medium">Broke</th><th className="px-3 py-2 text-right font-medium">{header("move", "Move %")}</th><th className="px-3 py-2 text-right font-medium">{header("score", "Score %")}</th><th className="px-3 py-2 text-right font-medium">{header("rank", "Rank")}</th>
+            <th className="px-3 py-2 text-right font-medium">Broke</th><th className="px-3 py-2 text-right font-medium">{header("move", "Move %")}</th><th className="px-3 py-2 text-right font-medium">{header("moveRank", "Move Rank")}</th><th className="px-3 py-2 text-right font-medium">{header("score", "Score %")}</th><th className="px-3 py-2 text-right font-medium">{header("rank", "Rank")}</th>
           </tr></thead>
-          <tbody>{ranked.length === 0 ? <tr><td colSpan={6} className="px-3 py-8 text-center text-[12px] text-white/30">No signals at this cut.</td></tr> : ranked.map((row, index) => (
+          <tbody>{ranked.length === 0 ? <tr><td colSpan={7} className="px-3 py-8 text-center text-[12px] text-white/30">No signals at this cut.</td></tr> : ranked.map((row, index) => (
             <tr key={row.s} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
               <td className="px-3 py-1.5 tabular-nums text-white/30">{index + 1}</td>
               <td className="px-3 py-1.5 font-medium"><a href={buildTradingViewUrl(row.s, row.s)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 decoration-dotted underline-offset-[3px] transition hover:decoration-white/70">{row.s}</a></td>
               <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.brk ? <span className="inline-flex items-center gap-1"><span>{row.bt ?? "--"}</span><span className="rounded-sm px-1 text-[9px] font-semibold tracking-wide" style={{ background: `${tint[side]}22`, color: tint[side] }}>{row.ls ?? "BRK"}</span></span> : "--"}</td>
               <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: (row.mv ?? 0) >= 0 ? "#22c55e" : "#ef4444" }}>{row.mv != null && row.mv > 0 ? "+" : ""}{fmt(row.mv)}</td>
+              <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.w ?? "--"}</td>
               <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: tint[side] }}>{fmt(row.v)}</td>
               <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.r ?? "--"}</td>
             </tr>))}</tbody>
