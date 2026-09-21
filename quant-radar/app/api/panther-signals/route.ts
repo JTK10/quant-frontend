@@ -265,8 +265,8 @@ async function buildPayload(
   rows = rows.map((snapshot: any) => {
     if (snapshot.source !== "rusty") return snapshot;
     const visible = (side: unknown) => Array.isArray(side)
-      ? side.map((row: any) => ({ s: row.s, mv: row.mv, brk: row.brk, bt: row.bt, ls: row.ls,
-                                   p: row.rusty_pct, rr: row.rusty_rank,
+      ? side.map((row: any, index: number) => ({ s: row.s, mv: row.mv, brk: row.brk, bt: row.bt, ls: row.ls,
+                                   p: row.rusty_pct, rr: row.rusty_rank, dr: row.rk ?? index + 1,
                                    pi: row.put_inc_rank, ci: row.call_inc_rank,
                                    w: row.mr }))
       : [];

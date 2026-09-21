@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 
 type Side = "bull" | "bear";
-type SortKey = "move" | "rustyPct" | "rustyRank" | "moveRank" | "putIncreaseRank" | "callIncreaseRank";
-type Row = { s: string; mv?: number | null; brk?: boolean | null; bt?: string | null; ls?: string | null; p?: number | null; rr?: number | null; pi?: number | null; ci?: number | null; w?: number | null };
+type SortKey = "move" | "rustyPct" | "rustyRank" | "decreaseRank" | "moveRank" | "putIncreaseRank" | "callIncreaseRank";
+type Row = { s: string; mv?: number | null; brk?: boolean | null; bt?: string | null; ls?: string | null; p?: number | null; rr?: number | null; dr?: number | null; pi?: number | null; ci?: number | null; w?: number | null };
 type Snap = { cut?: string; time?: string; bull?: Row[]; bear?: Row[] };
 
 const tint = { bull: "#22c55e", bear: "#ef4444" };
@@ -19,6 +19,7 @@ function Board({ side, rows, sort, setSort, brokeOnly, setBrokeOnly }: { side: S
     }
     const value = sort.key === "rustyPct" ? (a.p == null ? Infinity : Math.abs(a.p)) - (b.p == null ? Infinity : Math.abs(b.p))
       : sort.key === "rustyRank" ? (a.rr ?? Infinity) - (b.rr ?? Infinity)
+      : sort.key === "decreaseRank" ? (a.dr ?? Infinity) - (b.dr ?? Infinity)
       : sort.key === "moveRank" ? (a.w ?? Infinity) - (b.w ?? Infinity)
       : sort.key === "putIncreaseRank" ? (a.pi ?? Infinity) - (b.pi ?? Infinity)
       : sort.key === "callIncreaseRank" ? (a.ci ?? Infinity) - (b.ci ?? Infinity)
@@ -38,9 +39,9 @@ function Board({ side, rows, sort, setSort, brokeOnly, setBrokeOnly }: { side: S
         <table className="w-full border-collapse text-[12.5px]">
           <thead className="sticky top-0 z-10 bg-[#101013]"><tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
             <th className="px-3 py-2 text-left font-medium">#</th><th className="px-3 py-2 text-left font-medium">Symbol</th>
-            <th className="px-3 py-2 text-right font-medium">Broke</th><th className="px-3 py-2 text-right font-medium">{header("move", "Move %")}</th><th className="px-3 py-2 text-right font-medium">{header("moveRank", "Move Rank")}</th><th className="px-3 py-2 text-right font-medium">{header("rustyPct", "Rusty %")}</th><th className="px-3 py-2 text-right font-medium">{header("rustyRank", "Rusty Rank")}</th><th className="px-3 py-2 text-right font-medium">{header(side === "bull" ? "putIncreaseRank" : "callIncreaseRank", side === "bull" ? "Put ↑ Rank" : "Call ↑ Rank")}</th>
+            <th className="px-3 py-2 text-right font-medium">Broke</th><th className="px-3 py-2 text-right font-medium">{header("move", "Move %")}</th><th className="px-3 py-2 text-right font-medium">{header("moveRank", "Move Rank")}</th><th className="px-3 py-2 text-right font-medium">{header("rustyPct", "Rusty %")}</th><th className="px-3 py-2 text-right font-medium">{header("rustyRank", "Rusty Rank")}</th><th className="px-3 py-2 text-right font-medium">{header("decreaseRank", side === "bull" ? "Call ↓ Rank" : "Put ↓ Rank")}</th><th className="px-3 py-2 text-right font-medium">{header(side === "bull" ? "putIncreaseRank" : "callIncreaseRank", side === "bull" ? "Put ↑ Rank" : "Call ↑ Rank")}</th>
           </tr></thead>
-          <tbody>{ranked.length === 0 ? <tr><td colSpan={8} className="px-3 py-8 text-center text-[12px] text-white/30">No signals at this cut.</td></tr> : ranked.map((row, index) => (
+          <tbody>{ranked.length === 0 ? <tr><td colSpan={9} className="px-3 py-8 text-center text-[12px] text-white/30">No signals at this cut.</td></tr> : ranked.map((row, index) => (
             <tr key={row.s} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
               <td className="px-3 py-1.5 tabular-nums text-white/30">{index + 1}</td>
               <td className="px-3 py-1.5 font-medium"><a href={buildTradingViewUrl(row.s, row.s)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 decoration-dotted underline-offset-[3px] transition hover:decoration-white/70">{row.s}</a></td>
@@ -49,6 +50,7 @@ function Board({ side, rows, sort, setSort, brokeOnly, setBrokeOnly }: { side: S
               <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.w ?? "--"}</td>
               <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: (row.p ?? 0) >= 0 ? "#22c55e" : "#ef4444" }}>{row.p == null ? "--" : `${row.p > 0 ? "+" : ""}${fmt(row.p)}%`}</td>
               <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.rr ?? "--"}</td>
+              <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.dr ?? "--"}</td>
               <td className="px-3 py-1.5 text-right tabular-nums text-white/55">{side === "bull" ? (row.pi ?? "--") : (row.ci ?? "--")}</td>
             </tr>))}</tbody>
         </table>
