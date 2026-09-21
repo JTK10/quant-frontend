@@ -268,8 +268,7 @@ async function buildPayload(
       ? side.map((row: any) => ({ s: row.s, mv: row.mv, brk: row.brk, bt: row.bt, ls: row.ls,
                                    p: row.rusty_pct, rr: row.rusty_rank,
                                    pi: row.put_inc_rank, ci: row.call_inc_rank,
-                                   w: row.mr,
-                                   t: row.tgt_pct, o: row.opp_flow }))
+                                   w: row.mr }))
       : [];
     return { source: "rusty", cap: "RUSTY", cut: snapshot.cut, time: snapshot.time,
              bull: visible(snapshot.bull), bear: visible(snapshot.bear) };
