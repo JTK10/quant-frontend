@@ -258,15 +258,17 @@ async function buildPayload(
     );
   }
 
-  // RUSTY's selection inputs are proprietary.  Its public board needs only
-  // the selected symbols, their price move, and the Ocelot level-break state.
-  // Redact before serialization so neither page source nor the public route
-  // exposes OI values, OI ranks, or the selection calculation.
+  // RUSTY's selection inputs are proprietary. Its public board exposes only
+  // the named display metrics: pure OI change (Rusty %) and its rank, plus the
+  // requested opposite-leg increase rank for each side. Raw leg values and
+  // the selection calculation remain redacted before serialization.
   rows = rows.map((snapshot: any) => {
     if (snapshot.source !== "rusty") return snapshot;
     const visible = (side: unknown) => Array.isArray(side)
       ? side.map((row: any) => ({ s: row.s, mv: row.mv, brk: row.brk, bt: row.bt, ls: row.ls,
-                                   v: row.oi, r: row.rk, w: row.mr,
+                                   p: row.rusty_pct, rr: row.rusty_rank,
+                                   pi: row.put_inc_rank, ci: row.call_inc_rank,
+                                   w: row.mr,
                                    t: row.tgt_pct, o: row.opp_flow }))
       : [];
     return { source: "rusty", cap: "RUSTY", cut: snapshot.cut, time: snapshot.time,
