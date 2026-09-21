@@ -48,7 +48,7 @@ function Board({ side, rows, sort, setSort, brokeOnly, setBrokeOnly }: { side: S
               <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.brk ? <span className="inline-flex items-center gap-1"><span>{row.bt ?? "--"}</span><span className="rounded-sm px-1 text-[9px] font-semibold tracking-wide" style={{ background: `${tint[side]}22`, color: tint[side] }}>{row.ls ?? "BRK"}</span></span> : "--"}</td>
               <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: (row.mv ?? 0) >= 0 ? "#22c55e" : "#ef4444" }}>{row.mv != null && row.mv > 0 ? "+" : ""}{fmt(row.mv)}</td>
               <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.w ?? "--"}</td>
-              <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: (row.p ?? 0) >= 0 ? "#22c55e" : "#ef4444" }}>{row.p == null ? "--" : `${row.p > 0 ? "+" : ""}${fmt(row.p)}%`}</td>
+              <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: tint[side] }}>{row.p == null ? "--" : `${row.p > 0 ? "+" : ""}${fmt(row.p)}%`}</td>
               <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.rr ?? "--"}</td>
               <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.dr ?? "--"}</td>
               <td className="px-3 py-1.5 text-right tabular-nums text-white/55">{side === "bull" ? (row.pi ?? "--") : (row.ci ?? "--")}</td>
