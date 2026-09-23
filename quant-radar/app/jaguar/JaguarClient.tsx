@@ -40,6 +40,7 @@ function JaguarBoard({
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [filterCap, setFilterCap] = useState(false);
   const [filterType, setFilterType] = useState<'ALL' | 'B' | 'R'>('ALL');
+  const [filterOpp, setFilterOpp] = useState(false);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -58,6 +59,11 @@ function JaguarBoard({
       if (filterType === 'B') return r.side.includes('BREAKOUT');
       if (filterType === 'R') return r.side.includes('REJECT');
       return true;
+    })
+    .filter(r => {
+      if (!filterOpp) return true;
+      const opposingFlow = r.side.includes("BULL") ? r.ce_cr : r.pe_cr;
+      return opposingFlow >= -5 && opposingFlow <= 5;
     })
     .sort((a, b) => {
       const oppA = a.side.includes("BULL") ? a.ce_cr : a.pe_cr;
@@ -108,6 +114,17 @@ function JaguarBoard({
               REVERSAL
             </button>
           </div>
+          <button
+            onClick={() => setFilterOpp(!filterOpp)}
+            className="text-[10px] tracking-wider px-2 py-1 rounded border transition-colors"
+            style={{
+              borderColor: filterOpp ? tint : 'rgba(255,255,255,0.1)',
+              color: filterOpp ? tint : 'rgba(255,255,255,0.5)',
+              backgroundColor: filterOpp ? `${tint}11` : 'transparent'
+            }}
+          >
+            OPP
+          </button>
           <button
             onClick={() => setFilterCap(!filterCap)}
             className="text-[10px] tracking-wider px-2 py-1 rounded border transition-colors"
