@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
+import {
+  addChartWatchlistSymbol,
+  CHART_WATCHLIST_STORAGE_KEY,
+  CHART_WATCHLIST_UPDATED_EVENT,
+  readChartWatchlist,
+} from "@/utils/chartWatchlist";
 
 type JaguarRow = {
   sym: string;
@@ -41,6 +47,26 @@ function JaguarBoard({
   const [filterCap, setFilterCap] = useState(false);
   const [filterType, setFilterType] = useState<'ALL' | 'B' | 'R'>('ALL');
   const [filterOpp, setFilterOpp] = useState(false);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+
+  useEffect(() => {
+    const syncWatchlist = () => setWatchlist(readChartWatchlist());
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === CHART_WATCHLIST_STORAGE_KEY || event.key === null) syncWatchlist();
+    };
+    const initialSync = window.requestAnimationFrame(syncWatchlist);
+    window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT, syncWatchlist);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.cancelAnimationFrame(initialSync);
+      window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT, syncWatchlist);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
+  const addToWatchlist = (symbol: string) => {
+    setWatchlist(addChartWatchlistSymbol(symbol));
+  };
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
@@ -210,6 +236,20 @@ function JaguarBoard({
                   >
                     {r.sym}
                   </a>
+                  <button
+                    type="button"
+                    onClick={() => addToWatchlist(r.sym)}
+                    disabled={watchlist.includes(r.sym)}
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded border text-[14px] leading-none transition-colors ${
+                      watchlist.includes(r.sym)
+                        ? "border-emerald-400/30 text-emerald-400 cursor-default"
+                        : "border-white/15 text-white/55 hover:border-emerald-400/60 hover:bg-emerald-400/10 hover:text-emerald-300"
+                    }`}
+                    title={watchlist.includes(r.sym) ? `${r.sym} is in the Charts watchlist` : `Add ${r.sym} to the Charts watchlist`}
+                    aria-label={watchlist.includes(r.sym) ? `${r.sym} is in the Charts watchlist` : `Add ${r.sym} to the Charts watchlist`}
+                  >
+                    {watchlist.includes(r.sym) ? "✓" : "+"}
+                  </button>
                   {typeLabel && (
                     <span className="text-[11px] font-black text-white px-1.5 py-0.5 rounded-sm bg-white/10 ml-1">
                       {typeLabel}

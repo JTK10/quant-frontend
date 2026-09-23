@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { findChartSymbols, resolveChartSymbol } from "./chartSymbols";
 import LiveCandleChart, { type Timeframe } from "./LiveCandleChart";
+import {
+  CHART_WATCHLIST_STORAGE_KEY,
+  CHART_WATCHLIST_UPDATED_EVENT,
+  getStoredChartWatchlist,
+  readChartWatchlist,
+  writeChartWatchlist,
+} from "@/utils/chartWatchlist";
 
 const TIMEFRAMES: Timeframe[] = ["5m", "15m", "30m", "1h", "1D"];
 const DEFAULT_SYMBOL = "RELIANCE";
@@ -38,6 +45,23 @@ export default function ChartsClient({ streamUrl, initialSymbol }: ChartsClientP
   const selected = panels[activePanel] ?? panels[0];
 
   useEffect(() => {
+    const stored = getStoredChartWatchlist();
+    const handleUpdate = () => setWatchlist(readChartWatchlist(PANEL_DEFAULTS));
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === CHART_WATCHLIST_STORAGE_KEY || event.key === null) handleUpdate();
+    };
+    window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT, handleUpdate);
+    window.addEventListener("storage", handleStorage);
+    const initialSync = window.requestAnimationFrame(handleUpdate);
+    if (stored === null) writeChartWatchlist(PANEL_DEFAULTS);
+    return () => {
+      window.cancelAnimationFrame(initialSync);
+      window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT, handleUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
+  useEffect(() => {
     const next = resolveChartSymbol(initialSymbol ?? "")?.symbol ?? DEFAULT_SYMBOL;
     setPanels((current) => current.map((panel, index) => index === 0 ? { ...panel, symbol: next } : panel));
     setActivePanel(0);
@@ -61,14 +85,20 @@ export default function ChartsClient({ streamUrl, initialSymbol }: ChartsClientP
   };
 
   const addToWatchlist = (symbol: string) => {
-    if (!watchlist.includes(symbol)) setWatchlist([...watchlist, symbol]);
+    if (!watchlist.includes(symbol)) {
+      const next = [...watchlist, symbol];
+      setWatchlist(next);
+      writeChartWatchlist(next);
+    }
     setWlDraft("");
     setIsAddingToWl(false);
   };
 
   const removeFromWatchlist = (e: React.MouseEvent, symbol: string) => {
     e.stopPropagation();
-    setWatchlist(watchlist.filter((s) => s !== symbol));
+    const next = watchlist.filter((s) => s !== symbol);
+    setWatchlist(next);
+    writeChartWatchlist(next);
   };
 
   const chooseLayout = (next: Layout) => {
@@ -203,6 +233,18 @@ export default function ChartsClient({ streamUrl, initialSymbol }: ChartsClientP
              <div className="px-4 py-3 border-b border-[#2A2E39] font-semibold text-[14px] flex justify-between items-center relative">
                Watchlist
                <div className="flex gap-2 items-center">
+                 <button
+                   type="button"
+                   onClick={() => {
+                     setWatchlist([]);
+                     writeChartWatchlist([]);
+                   }}
+                   disabled={watchlist.length === 0}
+                   className="text-[10px] font-medium text-[#787B86] hover:text-[#EF5350] disabled:cursor-default disabled:opacity-40"
+                   title="Remove every symbol from the Charts watchlist"
+                 >
+                   Clear all
+                 </button>
                  <svg onClick={() => setIsAddingToWl(!isAddingToWl)} viewBox="0 0 24 24" className="w-[18px] h-[18px] fill-[#787B86] cursor-pointer hover:fill-white"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                  <svg onClick={() => setIsRightPanelOpen(false)} viewBox="0 0 24 24" className="w-[18px] h-[18px] fill-[#787B86] cursor-pointer hover:fill-white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                </div>
