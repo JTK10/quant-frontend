@@ -198,7 +198,7 @@ function asVolume(bar: ChartBar) {
   return {
     time: bar.time as UTCTimestamp,
     value: bar.volume,
-    color: bar.close >= bar.open ? "rgba(34,197,94,.45)" : "rgba(239,68,68,.45)",
+    color: bar.close >= bar.open ? "rgba(8, 153, 129, 0.5)" : "rgba(242, 54, 69, 0.5)",
   };
 }
 
@@ -277,8 +277,8 @@ export default function LiveCandleChart({
       localization: { locale: "en-IN", timeFormatter: formatIstTime },
     });
     const candles = chart.addSeries(CandlestickSeries, {
-      upColor: "#22c55e", downColor: "#ef4444", borderVisible: false,
-      wickUpColor: "#22c55e", wickDownColor: "#ef4444",
+      upColor: "#089981", downColor: "#F23645", borderVisible: false,
+      wickUpColor: "#089981", wickDownColor: "#F23645",
     });
     const volume = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "" });
     volume.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
