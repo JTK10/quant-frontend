@@ -35,7 +35,7 @@ function sgn(v: any, d = 2): string {
   return n === null ? "—" : (n >= 0 ? "+" : "") + n.toFixed(d);
 }
 
-export default function LynxClient({ snaps }: { snaps: any[] }) {
+export default function LynxClient({ snaps, ocelotSnaps }: { snaps: any[]; ocelotSnaps: any[] }) {
   // Sort on ts first: it is numeric and always set by the publisher, whereas a
   // missing `cut` silently degrades a string sort into a no-op that leaves the
   // docs in whatever order the API returned (newest-first from ORDS), which
@@ -64,7 +64,40 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
     });
   }, [snaps]);
   const latest = ordered.length ? ordered[ordered.length - 1] : null;
-  const rows: any[] = latest?.rows || [];
+
+  // Use the newest VM2 cut available at the Lynx cut. A later Ocelot reading
+  // would put future option flow beside an earlier Lynx ranking on past dates.
+  const flow = useMemo(() => {
+    const cut = String(latest?.cut ?? "");
+    const source = ocelotSnaps
+      .filter((s) => String(s?.cut ?? s?.time ?? "") <= cut)
+      .sort((a, b) =>
+        String(b?.cut ?? b?.time ?? "").localeCompare(String(a?.cut ?? a?.time ?? "")) ||
+        (Number(b?.ts) || 0) - (Number(a?.ts) || 0)
+      )[0];
+    const metrics = new Map<string, any>();
+    if (source?.metrics && typeof source.metrics === "object") {
+      for (const [symbol, values] of Object.entries(source.metrics)) {
+        metrics.set(symbol, values);
+      }
+    } else if (source) {
+      // Older VM2 snapshots only contain the visible Ocelot board.
+      for (const row of [...(source.bull ?? []), ...(source.bear ?? [])]) {
+        if (row?.s) metrics.set(String(row.s), row);
+      }
+    }
+    return { cut: source?.cut ?? null, metrics };
+  }, [latest?.cut, ocelotSnaps]);
+
+  const withFlow = (r: any) => {
+    const metric = flow.metrics.get(String(r.sym)) ?? {};
+    return {
+      ...r,
+      cr: num(metric.cr),
+      opp_flow: num(r.side === "LONG" ? metric.ce_cr : metric.pe_cr),
+    };
+  };
+  const rows: any[] = (latest?.rows || []).map(withFlow);
 
   // The gated shortlist, split in two. `pool` carries every name the gate has
   // admitted this session with its detail columns; `rows` (top 3 only) remains
@@ -76,10 +109,10 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
   // available, roughly fifteen minutes before the first ranked board exists.
   // Listed together the early names read as failed picks, which is the
   // opposite of what they are.
-  const pool = useMemo(() => {
+  const pool = (() => {
     const src: any[] =
       (latest?.pool && latest.pool.length ? latest.pool : latest?.rows) || [];
-    const all = src.map((r: any) => ({ ...r, n: num(r.n_top3) ?? 0 }));
+    const all = src.map((r: any) => ({ ...withFlow(r), n: num(r.n_top3) ?? 0 }));
     const byRank = (a: any, b: any) =>
       b.n - a.n ||
       (num(a.best_rank) ?? 99) - (num(b.best_rank) ?? 99) ||
@@ -91,7 +124,7 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
       ranked: all.filter((r) => r.n > 0).sort(byRank),
       early: all.filter((r) => r.n === 0).sort(byFirst),
     };
-  }, [latest]);
+  })();
 
   if (!latest) {
     return (
@@ -159,6 +192,9 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
         <span className="rounded px-2 py-1" style={{ background: HEAD_BG, color: HEAD_FG }}>
           LEVELS FROM <span className="text-white">{latest.config_session}</span>
         </span>
+        <span className="rounded px-2 py-1" style={{ background: HEAD_BG, color: HEAD_FG }}>
+          VM2 FLOW CUT <span className="text-white">{flow.cut ?? "—"}</span>
+        </span>
       </div>
 
       {/* A doc exists but no board yet. This is the normal state from 09:30
@@ -215,6 +251,8 @@ export default function LynxClient({ snaps }: { snaps: any[] }) {
                 <Stat label="PAST PD" value={`${sgn(r.pd_dist, 2)}%`} accent />
                 <Stat label="MOVE" value={`${sgn(r.mv, 2)}%`} />
                 <Stat label="RVOL" value={fmt(r.rvol, 2)} />
+                <Stat label="OCELOT ₹ CR" value={fmt(r.cr, 0)} />
+                <Stat label="OPP FLOW ₹ CR" value={sgn(r.opp_flow, 2)} />
                 <Stat label="C3 × ATR" value={fmt(r.c3_x, 2)} />
                 <Stat label="ATR3" value={`${fmt(r.atr3, 2)}%`} />
                 <Stat label="CUTS SEEN" value={`${r.n_cuts ?? "—"}`} />
@@ -263,6 +301,8 @@ const COLS: {
   { key: "mv", label: "MOVE%", num: true },
   { key: "pd_dist", label: "PAST PD%", num: true },
   { key: "rvol", label: "RVOL", num: true },
+  { key: "cr", label: "₹ CR", num: true },
+  { key: "opp_flow", label: "OPP FLOW", num: true },
   { key: "dpoc", label: "dPOC%", num: true },
   { key: "vol_ahead", label: "AHEAD", num: true },
   { key: "atr3", label: "ATR3", num: true },
@@ -376,6 +416,8 @@ function PoolTable({
                   </td>
                   <td className="px-2 py-1.5 text-right">{fmt(r.pd_dist, 2)}</td>
                   <td className="px-2 py-1.5 text-right">{fmt(r.rvol, 2)}</td>
+                  <td className="px-2 py-1.5 text-right" title="Ocelot option-chain notional, ₹ crore.">{fmt(r.cr, 0)}</td>
+                  <td className="px-2 py-1.5 text-right" title="Jaguar-style opposing flow since 09:15: CE for long, PE for short, ₹ crore.">{sgn(r.opp_flow, 2)}</td>
                   <td className="px-2 py-1.5 text-right">{sgn(r.dpoc, 2)}</td>
                   <td
                     className="px-2 py-1.5 text-right"

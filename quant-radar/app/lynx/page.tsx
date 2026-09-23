@@ -35,9 +35,39 @@ async function getLynxSnaps(dateStr: string) {
   }
 }
 
+async function getOcelotMetrics(dateStr: string) {
+  try {
+    // VM2 publishes the complete per-symbol metrics with each Ocelot cut.
+    // Trim the visible boards; Lynx primarily needs the compact lookup.
+    const url = await getInternalApiUrl(
+      `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=ocelot&topN=25&rankBy=d`
+    );
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Ocelot route failed: ${response.status}`);
+    const data = await response.json();
+    return (data as any[]).filter((s) => s.source === "ocelot");
+  } catch (err) {
+    console.error("Error fetching Ocelot metrics for Lynx:", err);
+    return [];
+  }
+}
+
 export default async function LynxPage({ searchParams }: { searchParams: DateSearchParams }) {
   const dateStr = await resolveDate(searchParams);
-  const snaps = await getLynxSnaps(dateStr);
+  const [snaps, ocelotSnaps] = await Promise.all([
+    getLynxSnaps(dateStr),
+    getOcelotMetrics(dateStr),
+  ]);
+  const latestLynx = snaps.reduce(
+    (best: any, snap: any) => !best || Number(snap.ts) > Number(best.ts) ? snap : best,
+    null as any
+  );
+  const matchedOcelot = ocelotSnaps
+    .filter((snap: any) => String(snap.cut ?? "") <= String(latestLynx?.cut ?? ""))
+    .sort((a: any, b: any) =>
+      String(b.cut ?? "").localeCompare(String(a.cut ?? "")) || Number(b.ts) - Number(a.ts)
+    )
+    .slice(0, 1);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
@@ -53,7 +83,7 @@ export default async function LynxPage({ searchParams }: { searchParams: DateSea
       </PageHeader>
 
       <div className="flex-1 overflow-hidden relative bg-gradient-to-b from-[#0A0A0B] to-[#121214]">
-        <LynxClient snaps={snaps} />
+        <LynxClient snaps={snaps} ocelotSnaps={matchedOcelot} />
       </div>
     </div>
   );
