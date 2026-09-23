@@ -63,7 +63,7 @@ function JaguarBoard({
     .filter(r => {
       if (!filterOpp) return true;
       const opposingFlow = r.side.includes("BULL") ? r.ce_cr : r.pe_cr;
-      return opposingFlow >= -5 && opposingFlow <= 5;
+      return opposingFlow >= -10 && opposingFlow <= 10;
     })
     .sort((a, b) => {
       const oppA = a.side.includes("BULL") ? a.ce_cr : a.pe_cr;
