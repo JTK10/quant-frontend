@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
 
 type Side = "bull" | "bear";
-type SortKey = "move" | "rustyPct" | "rustyRank" | "decreaseRank" | "moveRank" | "putIncreaseRank" | "callIncreaseRank" | "ce" | "pe" | "candleBody";
+type SortKey = "move" | "rustyPct" | "rustyRank" | "moveRank" | "ce" | "pe" | "candleBody";
 type Row = {
   s: string;
   mv?: number | null;
@@ -85,10 +85,7 @@ function Board({
     }
     const value = sort.key === "rustyPct" ? (a.p == null ? Infinity : Math.abs(a.p)) - (b.p == null ? Infinity : Math.abs(b.p))
       : sort.key === "rustyRank" ? (a.rr ?? Infinity) - (b.rr ?? Infinity)
-      : sort.key === "decreaseRank" ? (a.dr ?? Infinity) - (b.dr ?? Infinity)
       : sort.key === "moveRank" ? (a.w ?? Infinity) - (b.w ?? Infinity)
-      : sort.key === "putIncreaseRank" ? (a.pi ?? Infinity) - (b.pi ?? Infinity)
-      : sort.key === "callIncreaseRank" ? (a.ci ?? Infinity) - (b.ci ?? Infinity)
       : sort.key === "ce" ? (b.ce ?? -Infinity) - (a.ce ?? -Infinity)
       : sort.key === "pe" ? (b.pe ?? -Infinity) - (a.pe ?? -Infinity)
       : 0;
@@ -166,13 +163,11 @@ function Board({
               <th className="px-3 py-2 text-right font-medium">{header("move", "Move %")}</th>
               <th className="px-3 py-2 text-right font-medium">OI vs Baseline (CE / PE)</th>
               <th className="px-3 py-2 text-right font-medium">{header("rustyPct", "Rusty %")}</th>
-              <th className="px-3 py-2 text-right font-medium">{header("decreaseRank", side === "bull" ? "Call ↓" : "Put ↓")}</th>
-              <th className="px-3 py-2 text-right font-medium">{header(side === "bull" ? "putIncreaseRank" : "callIncreaseRank", side === "bull" ? "Put ↑" : "Call ↑")}</th>
             </tr>
           </thead>
           <tbody>
             {ranked.length === 0 ? (
-              <tr><td colSpan={10} className="px-3 py-8 text-center text-[12px] text-white/30">No signals matching filter.</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-[12px] text-white/30">No signals matching filter.</td></tr>
             ) : ranked.map((row, index) => (
               <tr key={row.s} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
                 <td className="px-3 py-1.5 tabular-nums text-white/30">{index + 1}</td>
@@ -226,8 +221,6 @@ function Board({
                   <span className={(row.pe_pct ?? row.pe ?? 0) > 0 ? "text-emerald-400" : (row.pe_pct ?? row.pe ?? 0) < 0 ? "text-pink-400" : "text-white/40"}>P:{(row.pe_pct ?? row.pe) != null ? ((row.pe_pct ?? row.pe)! > 0 ? `+${fmt(row.pe_pct ?? row.pe)}%` : `${fmt(row.pe_pct ?? row.pe)}%`) : "--"}</span>
                 </td>
                 <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: tint[side] }}>{row.p == null ? "--" : `${row.p > 0 ? "+" : ""}${fmt(row.p)}%`}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.dr ?? "--"}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-white/55">{side === "bull" ? (row.pi ?? "--") : (row.ci ?? "--")}</td>
               </tr>
             ))}
           </tbody>
