@@ -54,6 +54,7 @@ function Board({
   highOnly, setHighOnly,
   entryOnly, setEntryOnly,
   maruOnly, setMaruOnly,
+  classification, setClassification, classificationOptions,
 }: {
   side: Side;
   rows: Row[];
@@ -67,8 +68,12 @@ function Board({
   setEntryOnly: (next: boolean) => void;
   maruOnly: boolean;
   setMaruOnly: (next: boolean) => void;
+  classification: string;
+  setClassification: (next: string) => void;
+  classificationOptions: Array<[string, string]>;
 }) {
   const ranked = rows.filter((row) => {
+    if (classification && row.flow_type !== classification) return false;
     if (entryOnly && !row.entry_confirmed) return false;
     if (maruOnly && !row.is_maru) return false;
     if (highOnly && row.conviction !== "HIGH") return false;
@@ -105,6 +110,15 @@ function Board({
         <h2 className="shrink-0 text-[13px] font-semibold tracking-[0.14em]" style={{ color: tint[side] }}>{label}</h2>
         <span className="shrink-0 text-[11px] text-white/35">{ranked.length} names</span>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <select
+            aria-label={`${label} classification`}
+            value={classification}
+            onChange={(event) => setClassification(event.target.value)}
+            className="max-w-[220px] rounded border border-white/10 bg-[#16161a] px-2 py-1 text-[10px] text-white/75"
+          >
+            <option value="">All classifications</option>
+            {classificationOptions.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+          </select>
           <button
             onClick={() => setEntryOnly(!entryOnly)}
             className="rounded border px-2 py-0.5 text-[10px] tracking-wider transition font-bold"
@@ -232,6 +246,20 @@ function Board({
 
 export default function RustyClient({ snaps }: { snaps: Snap[] }) {
   const cuts = useMemo(() => Array.from(new Map(snaps.map((snap) => [String(snap.cut ?? snap.time ?? ""), snap])).entries()).filter(([time]) => time).sort((a, b) => a[0].localeCompare(b[0])), [snaps]);
+  const classificationOptions = useMemo(() => {
+    const options = { bull: new Map<string, string>(), bear: new Map<string, string>() };
+    for (const [, snapshot] of cuts) {
+      for (const side of ["bull", "bear"] as const) {
+        for (const row of snapshot[side] ?? []) {
+          if (row.flow_type) options[side].set(row.flow_type, row.flow_label ?? row.flow_type);
+        }
+      }
+    }
+    return {
+      bull: Array.from(options.bull.entries()).sort((a, b) => a[1].localeCompare(b[1])),
+      bear: Array.from(options.bear.entries()).sort((a, b) => a[1].localeCompare(b[1])),
+    };
+  }, [cuts]);
   const [index, setIndex] = useState<number | null>(null);
   const [bullSort, setBullSort] = useState<{ key: SortKey; strongFirst: boolean }>({ key: "move", strongFirst: true });
   const [bearSort, setBearSort] = useState<{ key: SortKey; strongFirst: boolean }>({ key: "move", strongFirst: true });
@@ -243,6 +271,8 @@ export default function RustyClient({ snaps }: { snaps: Snap[] }) {
   const [bearEntryOnly, setBearEntryOnly] = useState(false);
   const [bullMaruOnly, setBullMaruOnly] = useState(false);
   const [bearMaruOnly, setBearMaruOnly] = useState(false);
+  const [bullClassification, setBullClassification] = useState("");
+  const [bearClassification, setBearClassification] = useState("");
 
   const active = index === null ? cuts.length - 1 : Math.min(index, cuts.length - 1);
   const snap = cuts[active]?.[1];
@@ -289,6 +319,9 @@ export default function RustyClient({ snaps }: { snaps: Snap[] }) {
           setEntryOnly={setBullEntryOnly}
           maruOnly={bullMaruOnly}
           setMaruOnly={setBullMaruOnly}
+          classification={bullClassification}
+          setClassification={setBullClassification}
+          classificationOptions={classificationOptions.bull}
         />
         <Board
           side="bear"
@@ -303,6 +336,9 @@ export default function RustyClient({ snaps }: { snaps: Snap[] }) {
           setEntryOnly={setBearEntryOnly}
           maruOnly={bearMaruOnly}
           setMaruOnly={setBearMaruOnly}
+          classification={bearClassification}
+          setClassification={setBearClassification}
+          classificationOptions={classificationOptions.bear}
         />
       </div>
     </div>
