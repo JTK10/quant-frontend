@@ -100,11 +100,11 @@ function Board({
   );
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-baseline gap-2 px-1 pb-2">
-        <h2 className="text-[13px] font-semibold tracking-[0.14em]" style={{ color: tint[side] }}>{label}</h2>
-        <span className="text-[11px] text-white/35">{ranked.length} names</span>
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+    <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+      <div className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap px-1 pb-2">
+        <h2 className="shrink-0 text-[13px] font-semibold tracking-[0.14em]" style={{ color: tint[side] }}>{label}</h2>
+        <span className="shrink-0 text-[11px] text-white/35">{ranked.length} names</span>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <button
             onClick={() => setEntryOnly(!entryOnly)}
             className="rounded border px-2 py-0.5 text-[10px] tracking-wider transition font-bold"
@@ -151,8 +151,8 @@ function Board({
           </button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-white/[0.07] bg-white/[0.02]">
-        <table className="w-full border-collapse text-[12.5px]">
+      <div className="min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-white/[0.07] bg-white/[0.02]">
+        <table className="w-full min-w-[980px] border-collapse text-[12.5px]">
           <thead className="sticky top-0 z-10 bg-[#101013]">
             <tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
               <th className="px-3 py-2 text-left font-medium">#</th>
@@ -275,7 +275,7 @@ export default function RustyClient({ snaps }: { snaps: Snap[] }) {
           </button>
         )}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+      <div className="grid min-h-0 min-w-0 flex-1 grid-rows-2 gap-3 overflow-hidden">
         <Board
           side="bull"
           rows={snap?.bull ?? []}
