@@ -15,10 +15,11 @@ at most ten calendar days. Current and historical expiry are labelled. Expired
 historical contracts remain in the details panel but are not projected onto
 today's chart. Partial snapshots do not produce indicator lines.
 
-Solid intraday lines begin at their capture cut. Larger intraday timeframes round
-observation times up, preventing earlier candle starts from showing future OI.
-Daily charts show previous-session levels only. These snapshots are stamped by
-scheduled capture cut, not an exact per-stock exchange update timestamp.
+Charts display previous-session levels only, as solid 3px horizontal lines:
+purple for PE support and orange for CE resistance. Levels use the last captured
+snapshot of each prior session and begin on the selected chart session.
+Intraday overlays and the intraday OI control were removed at the user's request.
+Captured snapshots remain the source for subsequent sessions' historical levels.
 
 `export_chart_oi.py` copies a stable DB/WAL to a temporary snapshot and exports
 four available sessions with health flags. It reads no secrets and performs no

@@ -8,7 +8,6 @@ import {
   HistogramSeries,
   LineSeries,
   LineStyle,
-  LineType,
   type CandlestickData,
   type IChartApi,
   type ISeriesApi,
@@ -211,7 +210,6 @@ export default function LiveCandleChart({
   initialBars = EMPTY_BARS,
   compact = false,
   oiData = null,
-  showOI = true,
   showPreviousOI = true,
   sessionDate,
   onQuote,
@@ -222,7 +220,6 @@ export default function LiveCandleChart({
   initialBars?: ChartBar[];
   compact?: boolean;
   oiData?: OIData | null;
-  showOI?: boolean;
   showPreviousOI?: boolean;
   sessionDate?: string;
   onQuote?: (symbol: string, value: number) => void;
@@ -411,34 +408,18 @@ export default function LiveCandleChart({
     const current = bars.filter(b => istDay(b.time) === oiData.date);
     if (!current.length) return;
     const last = current[current.length - 1].time;
-    if (showOI && timeframe !== "1D") {
-      for (const side of ["support", "resistance"] as const) for (let rank = 0; rank < 2; rank++) {
-        const line = chart.addSeries(LineSeries, { color: side === "support" ? (rank ? "#3a8f84" : "#47c7af") : (rank ? "#a4506a" : "#f37a8a"), lineWidth: 1, lineType: LineType.WithSteps, title: `OI ${side === "support" ? "S" : "R"}${rank + 1}`, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false });
-        const points = new Map<number, { time: UTCTimestamp; value?: number }>();
-        for (const snap of oiData.intraday) {
-          // Round UP for larger candles: a 09:35 observation cannot be known
-          // at the 09:30 start of a 15-minute candle.
-          const time = Math.ceil(snap.time / INTERVAL_SECONDS[timeframe]) * INTERVAL_SECONDS[timeframe];
-          if (time > last) continue;
-          const wall = snap[side][rank];
-          points.set(time, { time: time as UTCTimestamp, ...(wall && !snap.degraded ? { value: wall[0] } : {}) });
-        }
-        line.setData([...points.values()].sort((a,b) => Number(a.time) - Number(b.time)));
-        series.push(line);
-      }
-    }
     if (showPreviousOI) oiData.previous.forEach((snap, dayIndex) => {
       if (snap.degraded || snap.expiry < oiData.date) return;
       for (const side of ["support", "resistance"] as const) {
         const wall = snap[side][0];
         if (!wall) continue;
-        const line = chart.addSeries(LineSeries, { color: side === "support" ? ["#a794e8", "#8075ab", "#625c82"][dayIndex] : ["#daa565", "#a3825f", "#7b674e"][dayIndex], lineStyle: LineStyle.Dashed, lineWidth: 1, title: `${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}`, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+        const line = chart.addSeries(LineSeries, { color: side === "support" ? ["#b775ff", "#a25ee8", "#9954df"][dayIndex] : ["#ffab32", "#f79b20", "#ef8d13"][dayIndex], lineStyle: LineStyle.Solid, lineWidth: 3, title: `${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}`, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
         line.setData(current.length > 1 ? [{ time: current[0].time as UTCTimestamp, value: wall[0] }, { time: last as UTCTimestamp, value: wall[0] }] : [{ time: last as UTCTimestamp, value: wall[0] }]);
         series.push(line);
       }
     });
     return () => { if (chartRef.current === chart) series.forEach(s => chart.removeSeries(s)); };
-  }, [oiData, showOI, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision]);
+  }, [oiData, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision]);
 
   useEffect(() => {
     if (!streamUrl) return;
@@ -502,7 +483,7 @@ export default function LiveCandleChart({
       onClick={() => contextMenu && setContextMenu(null)}
     >
       <div ref={hostRef} className="h-full w-full" aria-label={`${symbol} live price chart`} />
-      <div className="pointer-events-none absolute left-2 bottom-8 z-10 text-[9px] text-slate-400">{connection}{!hasBars ? " · No candles received for this session" : ""}{timeframe === "1D" && showOI ? " · Intraday OI shown on intraday timeframes" : ""}</div>
+      <div className="pointer-events-none absolute left-2 bottom-8 z-10 text-[9px] text-slate-400">{connection}{!hasBars ? " · No candles received for this session" : ""}</div>
       <div className="absolute right-2 top-2 z-10 flex overflow-hidden rounded border text-xs shadow-lg" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>
         <button type="button" onClick={(event) => { event.stopPropagation(); zoom(1.45); }} className="px-2 py-1 hover:bg-white/10">−</button><button type="button" onClick={(event) => { event.stopPropagation(); resetView(); }} className="border-x px-2 py-1 font-mono text-[10px] hover:bg-white/10" style={{ borderColor: "var(--color-border)" }}>RESET</button><button type="button" onClick={(event) => { event.stopPropagation(); zoom(0.7); }} className="px-2 py-1 hover:bg-white/10">+</button>
       </div>
