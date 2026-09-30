@@ -49,9 +49,13 @@ async def publish_chart_oi(client, cut_ts, chain_rows, degraded, cfg, get_token)
            "date": cut_ts.strftime("%Y-%m-%d"), "degraded": bool(degraded),
            "oi_levels": build_levels(chain_rows)}
     token = await get_token(client, cfg)
-    response = await client.post(cfg["base"] + cfg["path"],
-                                 content=json.dumps(doc, allow_nan=False),
-                                 headers={"Authorization": "Bearer " + token,
-                                          "Content-Type": "application/json"}, timeout=8)
-    response.raise_for_status()
+    documents = [doc]
+    if doc["cut"] == "15:25":
+        documents.append({**doc, "source": "chart_oi_close", "cap": "CHART_OI_CLOSE"})
+    for payload in documents:
+        response = await client.post(cfg["base"] + cfg["path"],
+                                     content=json.dumps(payload, allow_nan=False),
+                                     headers={"Authorization": "Bearer " + token,
+                                              "Content-Type": "application/json"}, timeout=8)
+        response.raise_for_status()
     return True

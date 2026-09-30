@@ -21,6 +21,13 @@ snapshot of each prior session and begin on the selected chart session.
 Intraday overlays and the intraday OI control were removed at the user's request.
 Captured snapshots remain the source for subsequent sessions' historical levels.
 
+For fast loading, `chart_oi_close` publishes one compact snapshot at 15:25.
+The API fetches three previous weekdays concurrently, skips today's history,
+and caches completed sessions for five minutes across symbols. Missing closing
+summaries fall back to the captured history, including sessions where the final
+cut failed. The browser also reuses completed results for five minutes.
+Use `backfill_chart_oi.py --closing-only` to create summaries from a verified export.
+
 `export_chart_oi.py` copies a stable DB/WAL to a temporary snapshot and exports
 four available sessions with health flags. It reads no secrets and performs no
 publishing. `backfill_chart_oi.py` publishes only `chart_oi` documents through
