@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CandlestickSeries,
   ColorType,
@@ -8,12 +8,14 @@ import {
   HistogramSeries,
   LineSeries,
   LineStyle,
+  LineType,
   type CandlestickData,
   type IChartApi,
   type ISeriesApi,
   type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
+import type { OIData } from "./oiTypes";
 
 export type Timeframe = "5m" | "15m" | "30m" | "1h" | "1D";
 
@@ -208,12 +210,22 @@ export default function LiveCandleChart({
   timeframe,
   initialBars = EMPTY_BARS,
   compact = false,
+  oiData = null,
+  showOI = true,
+  showPreviousOI = true,
+  sessionDate,
+  onQuote,
 }: {
   symbol: string;
   streamUrl: string;
   timeframe: Timeframe;
   initialBars?: ChartBar[];
   compact?: boolean;
+  oiData?: OIData | null;
+  showOI?: boolean;
+  showPreviousOI?: boolean;
+  sessionDate?: string;
+  onQuote?: (symbol: string, value: number) => void;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -235,6 +247,12 @@ export default function LiveCandleChart({
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
   const [indicators, setIndicators] = useState<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false });
   const indicatorsRef = useRef<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false });
+  const [connection, setConnection] = useState("Connecting");
+  const [barRevision, setBarRevision] = useState(0);
+  const [hasBars, setHasBars] = useState(false);
+  const quoteRef = useRef(onQuote);
+  useEffect(() => { quoteRef.current = onQuote; }, [onQuote]);
+  const sessionBars = useCallback((bars: ChartBar[]) => sessionDate ? bars.filter(b => istDay(b.time) <= sessionDate) : bars, [sessionDate]);
 
   const resetView = () => {
     const range = recentRangeRef.current;
@@ -270,8 +288,8 @@ export default function LiveCandleChart({
     if (!root) return;
     const chart = createChart(root, {
       autoSize: true,
-      layout: { background: { type: ColorType.Solid, color: "#0b1220" }, textColor: "#b8c2d1" },
-      grid: { vertLines: { color: "#172033" }, horzLines: { color: "#172033" } },
+      layout: { background: { type: ColorType.Solid, color: "#10141e" }, textColor: "#8c9ab2", fontSize: 10, attributionLogo: true },
+      grid: { vertLines: { color: "#1c2230" }, horzLines: { color: "#1c2230" } },
       rightPriceScale: { borderColor: "#25334b", autoScale: true },
       timeScale: { borderColor: "#25334b", timeVisible: true, secondsVisible: false, tickMarkFormatter: formatIstTick },
       localization: { locale: "en-IN", timeFormatter: formatIstTime },
@@ -317,6 +335,9 @@ export default function LiveCandleChart({
       lastRenderedTimeRef.current = bars.length ? bars[bars.length - 1].time : null;
       updateRecentRange(bars);
       indicatorRedrawRef.current(bars);
+      setHasBars(bars.some(b => !sessionDate || istDay(b.time) === sessionDate));
+      if (bars.length) quoteRef.current?.(symbol, bars[bars.length - 1].close);
+      setBarRevision(n => n + 1);
     };
 
     updateLiveBarRef.current = (bar, bars) => {
@@ -330,6 +351,9 @@ export default function LiveCandleChart({
       lastRenderedTimeRef.current = bar.time;
       updateRecentRange(bars);
       indicatorRedrawRef.current(bars);
+      quoteRef.current?.(symbol, bar.close);
+      setHasBars(true);
+      if (lastRenderedTime !== bar.time) setBarRevision(n => n + 1);
     };
 
     indicatorRedrawRef.current = (bars) => {
@@ -357,7 +381,7 @@ export default function LiveCandleChart({
     };
 
     initialViewSetRef.current = false;
-    const bars = aggregateBars([...barsRef.current.values()], timeframe);
+    const bars = aggregateBars(sessionBars([...barsRef.current.values()]), timeframe);
     redrawRef.current(bars);
 
     return () => {
@@ -377,7 +401,44 @@ export default function LiveCandleChart({
       initialViewSetRef.current = false;
       lastRenderedTimeRef.current = null;
     };
-  }, [timeframe, symbol]);
+  }, [timeframe, symbol, sessionDate, sessionBars]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart || !oiData) return;
+    const series: ISeriesApi<"Line">[] = [];
+    const bars = aggregateBars(sessionBars([...barsRef.current.values()]), timeframe);
+    const current = bars.filter(b => istDay(b.time) === oiData.date);
+    if (!current.length) return;
+    const last = current[current.length - 1].time;
+    if (showOI && timeframe !== "1D") {
+      for (const side of ["support", "resistance"] as const) for (let rank = 0; rank < 2; rank++) {
+        const line = chart.addSeries(LineSeries, { color: side === "support" ? (rank ? "#3a8f84" : "#47c7af") : (rank ? "#a4506a" : "#f37a8a"), lineWidth: 1, lineType: LineType.WithSteps, title: `OI ${side === "support" ? "S" : "R"}${rank + 1}`, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false });
+        const points = new Map<number, { time: UTCTimestamp; value?: number }>();
+        for (const snap of oiData.intraday) {
+          // Round UP for larger candles: a 09:35 observation cannot be known
+          // at the 09:30 start of a 15-minute candle.
+          const time = Math.ceil(snap.time / INTERVAL_SECONDS[timeframe]) * INTERVAL_SECONDS[timeframe];
+          if (time > last) continue;
+          const wall = snap[side][rank];
+          points.set(time, { time: time as UTCTimestamp, ...(wall && !snap.degraded ? { value: wall[0] } : {}) });
+        }
+        line.setData([...points.values()].sort((a,b) => Number(a.time) - Number(b.time)));
+        series.push(line);
+      }
+    }
+    if (showPreviousOI) oiData.previous.forEach((snap, dayIndex) => {
+      if (snap.degraded || snap.expiry < oiData.date) return;
+      for (const side of ["support", "resistance"] as const) {
+        const wall = snap[side][0];
+        if (!wall) continue;
+        const line = chart.addSeries(LineSeries, { color: side === "support" ? ["#a794e8", "#8075ab", "#625c82"][dayIndex] : ["#daa565", "#a3825f", "#7b674e"][dayIndex], lineStyle: LineStyle.Dashed, lineWidth: 1, title: `${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}`, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
+        line.setData(current.length > 1 ? [{ time: current[0].time as UTCTimestamp, value: wall[0] }, { time: last as UTCTimestamp, value: wall[0] }] : [{ time: last as UTCTimestamp, value: wall[0] }]);
+        series.push(line);
+      }
+    });
+    return () => { if (chartRef.current === chart) series.forEach(s => chart.removeSeries(s)); };
+  }, [oiData, showOI, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision]);
 
   useEffect(() => {
     if (!streamUrl) return;
@@ -392,17 +453,19 @@ export default function LiveCandleChart({
     };
     const updateLiveBar = (bar: ChartBar) => {
       const normalized = storeBar(bar);
-      const bars = aggregateBars([...barsRef.current.values()], timeframe);
+      const bars = aggregateBars(sessionBars([...barsRef.current.values()]), timeframe);
       const affectedTime = bucketStart(normalized.time, timeframe);
       const affectedBar = bars.find((candidate) => candidate.time === affectedTime);
       if (affectedBar) updateLiveBarRef.current(affectedBar, bars);
     };
-    const redraw = () => redrawRef.current(aggregateBars([...barsRef.current.values()], timeframe));
+    const redraw = () => redrawRef.current(aggregateBars(sessionBars([...barsRef.current.values()]), timeframe));
     const connect = () => {
       socket = new WebSocket(streamUrl);
-      socket.onopen = () => socket?.send(JSON.stringify({ type: "subscribe", symbols: [symbol] }));
+      setConnection("Connecting");
+      socket.onopen = () => { setConnection("Connected"); socket?.send(JSON.stringify({ type: "subscribe", symbols: [symbol] })); };
       socket.onmessage = (event) => {
-        const message = JSON.parse(event.data) as StreamMessage;
+        let message: StreamMessage;
+        try { message = JSON.parse(event.data) as StreamMessage; } catch { return; }
         if (message.type === "candle" && message.symbol === symbol) {
           updateLiveBar(message);
         }
@@ -414,6 +477,7 @@ export default function LiveCandleChart({
         }
       };
       socket.onclose = () => {
+        if (!stopped) setConnection("Reconnecting");
         if (!stopped) reconnectTimer = window.setTimeout(connect, 2000);
       };
     };
@@ -424,12 +488,12 @@ export default function LiveCandleChart({
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       socket?.close();
     };
-  }, [streamUrl, symbol, timeframe]);
+  }, [streamUrl, symbol, timeframe, sessionDate, sessionBars]);
 
   return (
     <div
       ref={frameRef}
-      className={`relative h-[420px] w-full select-none ${compact ? "lg:h-[330px]" : "lg:h-[520px]"}`}
+      className={`live-candle-frame relative h-[420px] w-full select-none ${compact ? "lg:h-[330px]" : "lg:h-[520px]"}`}
       onContextMenu={(event) => {
         event.preventDefault();
         const bounds = frameRef.current?.getBoundingClientRect();
@@ -438,6 +502,7 @@ export default function LiveCandleChart({
       onClick={() => contextMenu && setContextMenu(null)}
     >
       <div ref={hostRef} className="h-full w-full" aria-label={`${symbol} live price chart`} />
+      <div className="pointer-events-none absolute left-2 bottom-8 z-10 text-[9px] text-slate-400">{connection}{!hasBars ? " · No candles received for this session" : ""}{timeframe === "1D" && showOI ? " · Intraday OI shown on intraday timeframes" : ""}</div>
       <div className="absolute right-2 top-2 z-10 flex overflow-hidden rounded border text-xs shadow-lg" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>
         <button type="button" onClick={(event) => { event.stopPropagation(); zoom(1.45); }} className="px-2 py-1 hover:bg-white/10">−</button><button type="button" onClick={(event) => { event.stopPropagation(); resetView(); }} className="border-x px-2 py-1 font-mono text-[10px] hover:bg-white/10" style={{ borderColor: "var(--color-border)" }}>RESET</button><button type="button" onClick={(event) => { event.stopPropagation(); zoom(0.7); }} className="px-2 py-1 hover:bg-white/10">+</button>
       </div>
