@@ -1,346 +1,69 @@
 "use client";
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { buildTradingViewUrl } from "@/utils/backend";
+import { addChartWatchlistSymbol, CHART_WATCHLIST_STORAGE_KEY, CHART_WATCHLIST_UPDATED_EVENT, readChartWatchlist } from "@/utils/chartWatchlist";
+import sectorData from "./sectors.json";
+import "./rusty.css";
 
 type Side = "bull" | "bear";
-type SortKey = "move" | "rustyPct" | "rustyRank" | "moveRank" | "ce" | "pe" | "candleBody";
-type Row = {
-  s: string;
-  mv?: number | null;
-  brk?: boolean | null;
-  bt?: string | null;
-  ls?: string | null;
-  p?: number | null;
-  rr?: number | null;
-  dr?: number | null;
-  pi?: number | null;
-  ci?: number | null;
-  w?: number | null;
-  ce?: number | null;
-  pe?: number | null;
-  ce_pct?: number | null;
-  pe_pct?: number | null;
-  oi_bias?: number | null;
-  flow_type?: string | null;
-  flow_label?: string | null;
-  badge_color?: string | null;
-  badge_bg?: string | null;
-  conviction?: string | null;
-  is_new_discovery?: boolean | null;
-  // 5M Candle Quality Metrics
-  c_time?: string | null;
-  c_open?: number | null;
-  c_close?: number | null;
-  c_high?: number | null;
-  c_low?: number | null;
-  c_body?: number | null;
-  c_uw?: number | null;
-  c_lw?: number | null;
-  c_mv?: number | null;
-  is_maru?: boolean | null;
-  is_solid?: boolean | null;
-  candle_tier?: string | null;
-  entry_confirmed?: boolean | null;
-};
+type Row = { s: string; mv?: number | null; p?: number | null; ce_pct?: number | null; pe_pct?: number | null; brk?: boolean | null; bt?: string | null; ls?: string | null; flow_type?: string | null; flow_label?: string | null; badge_color?: string | null; badge_bg?: string | null; conviction?: string | null; entry_confirmed?: boolean | null; is_new_discovery?: boolean | null; c_time?: string | null; c_open?: number | null; c_close?: number | null; c_high?: number | null; c_low?: number | null; c_body?: number | null; c_uw?: number | null; c_lw?: number | null; is_maru?: boolean | null; is_solid?: boolean | null };
 type Snap = { cut?: string; time?: string; bull?: Row[]; bear?: Row[] };
-
-const tint = { bull: "#22c55e", bear: "#ef4444" };
-const fmt = (value: number | null | undefined) => value == null || !Number.isFinite(value) ? "--" : value.toFixed(2);
-
-function Board({
-  side, rows, sort, setSort,
-  brokeOnly, setBrokeOnly,
-  highOnly, setHighOnly,
-  entryOnly, setEntryOnly,
-  maruOnly, setMaruOnly,
-  classification, setClassification, classificationOptions,
-}: {
-  side: Side;
-  rows: Row[];
-  sort: { key: SortKey; strongFirst: boolean };
-  setSort: (key: SortKey) => void;
-  brokeOnly: boolean;
-  setBrokeOnly: (next: boolean) => void;
-  highOnly: boolean;
-  setHighOnly: (next: boolean) => void;
-  entryOnly: boolean;
-  setEntryOnly: (next: boolean) => void;
-  maruOnly: boolean;
-  setMaruOnly: (next: boolean) => void;
-  classification: string;
-  setClassification: (next: string) => void;
-  classificationOptions: Array<[string, string]>;
-}) {
-  const ranked = rows.filter((row) => {
-    if (classification && row.flow_type !== classification) return false;
-    if (entryOnly && !row.entry_confirmed) return false;
-    if (maruOnly && !row.is_maru) return false;
-    if (highOnly && row.conviction !== "HIGH") return false;
-    if (brokeOnly && !Boolean(row.brk && row.bt && row.ls)) return false;
-    return true;
-  }).sort((a, b) => {
-    if (sort.key === "move") {
-      const value = side === "bull" ? (b.mv ?? -Infinity) - (a.mv ?? -Infinity) : (a.mv ?? Infinity) - (b.mv ?? Infinity);
-      return sort.strongFirst ? value : -value;
-    }
-    if (sort.key === "candleBody") {
-      const value = (b.c_body ?? -Infinity) - (a.c_body ?? -Infinity);
-      return sort.strongFirst ? value : -value;
-    }
-    const value = sort.key === "rustyPct" ? (a.p == null ? Infinity : Math.abs(a.p)) - (b.p == null ? Infinity : Math.abs(b.p))
-      : sort.key === "rustyRank" ? (a.rr ?? Infinity) - (b.rr ?? Infinity)
-      : sort.key === "moveRank" ? (a.w ?? Infinity) - (b.w ?? Infinity)
-      : sort.key === "ce" ? (b.ce ?? -Infinity) - (a.ce ?? -Infinity)
-      : sort.key === "pe" ? (b.pe ?? -Infinity) - (a.pe ?? -Infinity)
-      : 0;
-    return sort.strongFirst ? value : -value;
-  });
-
-  const label = side === "bull" ? "BULLISH SIGNALS" : "BEARISH SIGNALS";
-  const header = (key: SortKey, label: string) => (
-    <button onClick={() => setSort(key)} className="inline-flex items-center gap-1 uppercase tracking-[0.1em] transition hover:text-white" style={{ color: sort.key === key ? tint[side] : undefined }}>
-      {label}<span style={{ opacity: sort.key === key ? 1 : 0.3 }}>{sort.key === key ? (sort.strongFirst ? "▲" : "▼") : "↕"}</span>
-    </button>
-  );
-
-  return (
-    <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-      <div className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap px-1 pb-2">
-        <h2 className="shrink-0 text-[13px] font-semibold tracking-[0.14em]" style={{ color: tint[side] }}>{label}</h2>
-        <span className="shrink-0 text-[11px] text-white/35">{ranked.length} names</span>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          <select
-            aria-label={`${label} classification`}
-            value={classification}
-            onChange={(event) => setClassification(event.target.value)}
-            className="max-w-[220px] rounded border border-white/10 bg-[#16161a] px-2 py-1 text-[10px] text-white/75"
-          >
-            <option value="">All classifications</option>
-            {classificationOptions.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
-          </select>
-          <button
-            onClick={() => setEntryOnly(!entryOnly)}
-            className="rounded border px-2 py-0.5 text-[10px] tracking-wider transition font-bold"
-            style={{
-              borderColor: entryOnly ? "#f97316" : "rgba(255,255,255,0.1)",
-              color: entryOnly ? "#fff" : "rgba(255,255,255,0.5)",
-              background: entryOnly ? "linear-gradient(135deg, #f97316, #ef4444)" : "transparent"
-            }}
-          >
-            🎯 ENTRIES ONLY
-          </button>
-          <button
-            onClick={() => setMaruOnly(!maruOnly)}
-            className="rounded border px-2 py-0.5 text-[10px] tracking-wider transition"
-            style={{
-              borderColor: maruOnly ? "#a855f7" : "rgba(255,255,255,0.1)",
-              color: maruOnly ? "#a855f7" : "rgba(255,255,255,0.5)",
-              background: maruOnly ? "rgba(168,85,247,0.15)" : "transparent"
-            }}
-          >
-            🔥 MARUBOZUS
-          </button>
-          <button
-            onClick={() => setHighOnly(!highOnly)}
-            className="rounded border px-2 py-0.5 text-[10px] tracking-wider transition"
-            style={{
-              borderColor: highOnly ? "#38bdf8" : "rgba(255,255,255,0.1)",
-              color: highOnly ? "#38bdf8" : "rgba(255,255,255,0.5)",
-              background: highOnly ? "rgba(56,189,248,0.12)" : "transparent"
-            }}
-          >
-            STRONG OI
-          </button>
-          <button
-            onClick={() => setBrokeOnly(!brokeOnly)}
-            className="rounded border px-2 py-0.5 text-[10px] tracking-wider transition"
-            style={{
-              borderColor: brokeOnly ? tint[side] : "rgba(255,255,255,0.1)",
-              color: brokeOnly ? tint[side] : "rgba(255,255,255,0.5)",
-              background: brokeOnly ? `${tint[side]}11` : "transparent"
-            }}
-          >
-            {brokeOnly ? "BROKE ONLY" : "ALL BREAKS"}
-          </button>
-        </div>
-      </div>
-      <div className="min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border border-white/[0.07] bg-white/[0.02]">
-        <table className="w-full min-w-[980px] border-collapse text-[12.5px]">
-          <thead className="sticky top-0 z-10 bg-[#101013]">
-            <tr className="text-[10px] uppercase tracking-[0.1em] text-white/40">
-              <th className="px-3 py-2 text-left font-medium">#</th>
-              <th className="px-3 py-2 text-left font-medium">Symbol</th>
-              <th className="px-3 py-2 text-left font-medium">{header("candleBody", "🕯️ 5M Candle")}</th>
-              <th className="px-3 py-2 text-left font-medium">Classification</th>
-              <th className="px-3 py-2 text-right font-medium">Broke</th>
-              <th className="px-3 py-2 text-right font-medium">{header("move", "Move %")}</th>
-              <th className="px-3 py-2 text-right font-medium">OI vs Baseline (CE / PE)</th>
-              <th className="px-3 py-2 text-right font-medium">{header("rustyPct", "Rusty %")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ranked.length === 0 ? (
-              <tr><td colSpan={8} className="px-3 py-8 text-center text-[12px] text-white/30">No signals matching filter.</td></tr>
-            ) : ranked.map((row, index) => (
-              <tr key={row.s} className="border-t border-white/[0.05] hover:bg-white/[0.03]">
-                <td className="px-3 py-1.5 tabular-nums text-white/30">{index + 1}</td>
-                <td className="px-3 py-1.5 font-medium whitespace-nowrap">
-                  <a href={buildTradingViewUrl(row.s, row.s)} target="_blank" rel="noopener noreferrer" className="underline decoration-white/20 decoration-dotted underline-offset-[3px] transition hover:decoration-white/70">{row.s}</a>
-                  {row.entry_confirmed && (
-                    <span className="ml-1.5 rounded px-1.5 py-0.5 text-[9px] font-extrabold text-white shadow-[0_0_8px_rgba(249,115,22,0.6)]" style={{ background: "linear-gradient(135deg, #f97316, #ef4444)" }}>
-                      🎯 ENTRY
-                    </span>
-                  )}
-                  {row.is_new_discovery && <span className="ml-1.5 rounded bg-emerald-500/20 px-1 py-0.2 text-[9px] font-bold text-emerald-400">NEW</span>}
-                </td>
-                <td className="px-3 py-1.5 text-left whitespace-nowrap">
-                  <div>
-                    {row.is_maru ? (
-                      <span className="inline-block rounded px-1.5 py-0.5 text-[9.5px] font-bold shadow-[0_0_8px_rgba(244,63,94,0.3)]" style={{ color: side === "bull" ? "#10b981" : "#f43f5e", background: side === "bull" ? "rgba(16,185,129,0.2)" : "rgba(244,63,94,0.2)", border: `1px solid ${side === "bull" ? "rgba(16,185,129,0.5)" : "rgba(244,63,94,0.5)"}` }}>
-                        🔥 MARUBOZU ({row.c_body?.toFixed(0)}%)
-                      </span>
-                    ) : row.is_solid ? (
-                      <span className="inline-block rounded px-1.5 py-0.5 text-[9px] font-semibold text-amber-400 bg-amber-400/15 border border-amber-400/30">
-                        ⚡ SOLID ({row.c_body?.toFixed(0)}%)
-                      </span>
-                    ) : row.c_body != null ? (
-                      <span className="text-[10px] text-white/40">
-                        Wicky ({row.c_body?.toFixed(0)}%)
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-white/20">--</span>
-                    )}
-                  </div>
-                  {row.c_open != null && row.c_close != null && (
-                    <div className="font-mono text-[9px] text-white/40 mt-0.5">
-                      {row.c_time ? `${row.c_time} ` : ""}O:{fmt(row.c_open)} C:{fmt(row.c_close)}
-                    </div>
-                  )}
-                </td>
-                <td className="px-3 py-1.5 text-left">
-                  {row.flow_label ? (
-                    <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ color: row.badge_color ?? "#94a3b8", background: row.badge_bg ?? "rgba(148,163,184,0.12)" }}>
-                      {row.flow_label}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-white/30">--</span>
-                  )}
-                </td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-white/45">{row.brk ? <span className="inline-flex items-center gap-1"><span>{row.bt ?? "--"}</span><span className="rounded-sm px-1 text-[9px] font-semibold tracking-wide" style={{ background: `${tint[side]}22`, color: tint[side] }}>{row.ls ?? "BRK"}</span></span> : "--"}</td>
-                <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: (row.mv ?? 0) >= 0 ? "#22c55e" : "#ef4444" }}>{row.mv != null && row.mv > 0 ? "+" : ""}{fmt(row.mv)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums text-[11px]">
-                  <span className={(row.ce_pct ?? row.ce ?? 0) > 0 ? "text-rose-400" : (row.ce_pct ?? row.ce ?? 0) < 0 ? "text-cyan-400" : "text-white/40"}>C:{(row.ce_pct ?? row.ce) != null ? ((row.ce_pct ?? row.ce)! > 0 ? `+${fmt(row.ce_pct ?? row.ce)}%` : `${fmt(row.ce_pct ?? row.ce)}%`) : "--"}</span>
-                  <span className="mx-1 text-white/20">|</span>
-                  <span className={(row.pe_pct ?? row.pe ?? 0) > 0 ? "text-emerald-400" : (row.pe_pct ?? row.pe ?? 0) < 0 ? "text-pink-400" : "text-white/40"}>P:{(row.pe_pct ?? row.pe) != null ? ((row.pe_pct ?? row.pe)! > 0 ? `+${fmt(row.pe_pct ?? row.pe)}%` : `${fmt(row.pe_pct ?? row.pe)}%`) : "--"}</span>
-                </td>
-                <td className="px-3 py-1.5 text-right font-semibold tabular-nums" style={{ color: tint[side] }}>{row.p == null ? "--" : `${row.p > 0 ? "+" : ""}${fmt(row.p)}%`}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
+type Sort = "mv" | "p" | "ce_pct" | "pe_pct" | "c_body";
+type Filters = { classification: string; sector: string; entry: boolean; strong: boolean; break: boolean; maru: boolean; sort: Sort; descending: boolean };
+const defaults: Filters = { classification: "", sector: "", entry: false, strong: false, break: false, maru: false, sort: "mv", descending: true };
+const sectorMap: Record<string, string[]> = sectorData;
+const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+const fmt = (v?: number | null) => finite(v) ? v.toFixed(2) : "—";
+const pct = (v?: number | null) => finite(v) ? `${v > 0 ? "+" : ""}${v.toFixed(2)}%` : "—";
+const median = (values: (number | null | undefined)[]) => { const a = values.filter(finite).sort((a,b) => a-b); return !a.length ? null : a.length % 2 ? a[(a.length-1)/2] : (a[a.length/2-1]+a[a.length/2])/2; };
+const pp = (v: number | null) => finite(v) ? `${v > 0 ? "+" : ""}${v.toFixed(1)} pp` : "—";
+function Candle({ row, large=false }: { row: Row; large?: boolean }) {
+  if (![row.c_open,row.c_close,row.c_high,row.c_low].every(finite)) return null;
+  const open=row.c_open!, close=row.c_close!, high=row.c_high!, low=row.c_low!, range=high-low;
+  const y=(v:number) => range>0 ? 24-(v-low)/range*22 : 13, color=close>=open?'#63d6ad':'#ff8592';
+  return <svg className={large?'large-candle':'candle-glyph'} viewBox="0 0 12 26" aria-label={`${close>=open?'Rising':'Falling'} cash candle`}><path d={`M6 ${y(high)}V${y(low)}`} stroke={color} strokeWidth="0.6"/><rect x="2" y={Math.min(y(open),y(close))} width="8" height={Math.max(.5,Math.abs(y(open)-y(close)))} rx=".5" fill={color}/></svg>;
 }
 
-export default function RustyClient({ snaps }: { snaps: Snap[] }) {
-  const cuts = useMemo(() => Array.from(new Map(snaps.map((snap) => [String(snap.cut ?? snap.time ?? ""), snap])).entries()).filter(([time]) => time).sort((a, b) => a[0].localeCompare(b[0])), [snaps]);
-  const classificationOptions = useMemo(() => {
-    const options = { bull: new Map<string, string>(), bear: new Map<string, string>() };
-    for (const [, snapshot] of cuts) {
-      for (const side of ["bull", "bear"] as const) {
-        for (const row of snapshot[side] ?? []) {
-          if (row.flow_type) options[side].set(row.flow_type, row.flow_label ?? row.flow_type);
-        }
-      }
-    }
-    return {
-      bull: Array.from(options.bull.entries()).sort((a, b) => a[1].localeCompare(b[1])),
-      bear: Array.from(options.bear.entries()).sort((a, b) => a[1].localeCompare(b[1])),
-    };
-  }, [cuts]);
-  const [index, setIndex] = useState<number | null>(null);
-  const [bullSort, setBullSort] = useState<{ key: SortKey; strongFirst: boolean }>({ key: "move", strongFirst: true });
-  const [bearSort, setBearSort] = useState<{ key: SortKey; strongFirst: boolean }>({ key: "move", strongFirst: true });
-  const [bullBrokeOnly, setBullBrokeOnly] = useState(false);
-  const [bearBrokeOnly, setBearBrokeOnly] = useState(false);
-  const [bullHighOnly, setBullHighOnly] = useState(false);
-  const [bearHighOnly, setBearHighOnly] = useState(false);
-  const [bullEntryOnly, setBullEntryOnly] = useState(false);
-  const [bearEntryOnly, setBearEntryOnly] = useState(false);
-  const [bullMaruOnly, setBullMaruOnly] = useState(false);
-  const [bearMaruOnly, setBearMaruOnly] = useState(false);
-  const [bullClassification, setBullClassification] = useState("");
-  const [bearClassification, setBearClassification] = useState("");
-
-  const active = index === null ? cuts.length - 1 : Math.min(index, cuts.length - 1);
-  const snap = cuts[active]?.[1];
-
-  const changeSort = (side: Side, key: SortKey) => {
-    const current = side === "bull" ? bullSort : bearSort;
-    const next = { key, strongFirst: current.key === key ? !current.strongFirst : true };
-    side === "bull" ? setBullSort(next) : setBearSort(next);
+export default function RustyClient({ snaps, dateStr, controls }: { snaps: Snap[]; dateStr: string; controls?: ReactNode }) {
+  const cuts=useMemo(() => [...new Map(snaps.map(s=>[s.cut||s.time||'',s])).entries()].filter(([c])=>c).sort((a,b)=>a[0].localeCompare(b[0])),[snaps]);
+  const [selectedCut,setSelectedCut]=useState<string|null>(null);
+  const active=selectedCut===null?cuts.length-1:Math.max(0,cuts.findIndex(([c])=>c===selectedCut)), snap=cuts[active]?.[1];
+  const [search,setSearch]=useState('');
+  const [filters,setFilters]=useState<Record<Side,Filters>>({bull:{...defaults},bear:{...defaults}});
+  const [watchlist,setWatchlist]=useState<string[]>([]);
+  const [detail,setDetail]=useState<{row:Row;side:Side;cut:string}|'sectors'|null>(null);
+  const dialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{const sync=()=>setWatchlist(readChartWatchlist());const storage=(e:StorageEvent)=>{if(e.key===CHART_WATCHLIST_STORAGE_KEY||e.key===null)sync()};const frame=requestAnimationFrame(sync);window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.addEventListener('storage',storage);return()=>{cancelAnimationFrame(frame);window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.removeEventListener('storage',storage)}},[]);
+  useEffect(()=>{if(detail)dialog.current?.showModal();else dialog.current?.close()},[detail]);
+  const options=useMemo(()=>{const out={bull:new Map<string,string>(),bear:new Map<string,string>()};for(const [,s]of cuts)for(const side of ['bull','bear']as const)for(const r of s[side]||[])if(r.flow_type)out[side].set(r.flow_type,r.flow_label||r.flow_type);return{bull:[...out.bull].sort((a,b)=>a[1].localeCompare(b[1])),bear:[...out.bear].sort((a,b)=>a[1].localeCompare(b[1]))}},[cuts]);
+  const sectors=useMemo(()=>{const unique=new Map<string,Row>();for(const side of ['bull','bear']as const)for(const r of snap?.[side]||[])unique.set(r.s,r);return Object.entries(sectorMap).map(([sector,members])=>{const rows=members.map(s=>unique.get(s)).filter((r):r is Row=>!!r),prices=rows.filter(r=>finite(r.mv));const up=prices.filter(r=>r.mv!>0).length,down=prices.filter(r=>r.mv!<0).length,oi=rows.filter(r=>finite(r.ce_pct)&&finite(r.pe_pct));return{sector,rows,n:rows.length,total:members.length,priceN:prices.length,oiN:oi.length,up,down,flat:prices.length-up-down,move:median(prices.map(r=>r.mv)),tilt:median(oi.map(r=>r.pe_pct!-r.ce_pct!)),breadth:prices.length?(up-down)/prices.length*100:null}}).filter(s=>s.n).sort((a,b)=>Math.abs(b.move||0)-Math.abs(a.move||0))},[snap]);
+  const update=(side:Side,patch:Partial<Filters>)=>setFilters(current=>({...current,[side]:{...current[side],...patch}}));
+  const board=(side:Side)=>{
+    const f=filters[side],source=snap?.[side]||[];
+    const rows=source.filter(r=>(!search||r.s.toUpperCase().includes(search.trim().toUpperCase()))&&(!f.classification||r.flow_type===f.classification)&&(!f.sector||sectorMap[f.sector]?.includes(r.s))&&(!f.entry||r.entry_confirmed)&&(!f.strong||r.conviction==='HIGH')&&(!f.break||r.brk)&&(!f.maru||r.is_maru)).sort((a,b)=>{const va=a[f.sort],vb=b[f.sort];if(!finite(va))return finite(vb)?1:0;if(!finite(vb))return-1;const delta=f.sort==='p'?Math.abs(vb)-Math.abs(va):f.sort==='mv'&&side==='bear'?va-vb:vb-va;return f.descending?delta:-delta});
+    const sort=(key:Sort,label:string)=><button className={`sort ${f.sort===key?'selected':''}`} onClick={()=>update(side,{sort:key,descending:f.sort===key?!f.descending:true})}>{label}{f.sort===key?f.descending?' ↓':' ↑':''}</button>;
+    return <section className={`panel ${side}`} key={side} aria-label={`${side==='bull'?'Bull':'Bear'} board`}>
+      <div className="panel-head"><span className="side-dot"/><h2>{side==='bull'?'BULLISH':'BEARISH'}</h2><span className="count">{rows.length} / {source.length} stocks</span>
+        <div className="board-controls"><select className="board-classification" aria-label={`${side==='bull'?'Bull':'Bear'} classification`} value={f.classification} onChange={e=>update(side,{classification:e.target.value})}><option value="">All classifications</option>{options[side].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select><select className="board-sector" aria-label={`${side==='bull'?'Bull':'Bear'} sector`} value={f.sector} onChange={e=>update(side,{sector:e.target.value})}><option value="">All sectors</option>{Object.keys(sectorMap).sort().map(s=><option key={s}>{s}</option>)}</select></div>
+        <div className="filter-group">{([['entry','Entries'],['strong','Strong OI'],['break','Breakouts'],['maru','Marubozu']]as const).map(([key,label])=><button key={key} className={`chip ${f[key]?'active':''}`} aria-pressed={f[key]} onClick={()=>update(side,{[key]:!f[key]})}>{label}</button>)}</div>
+      </div>
+      <div className="scroll"><table><thead><tr><th className="symbol">STOCK / CLASSIFICATION</th><th className="candle">{sort('c_body','Candle')}</th><th className="num move-col">{sort('mv','Move')}</th><th className="num oi-col"><div className="dual-sort">{sort('ce_pct','CE')}{sort('pe_pct','PE')}</div>OI CHANGE</th><th className="num rusty-col">{sort('p','Rusty')}</th></tr></thead><tbody>{rows.length?rows.map(r=><tr className="stock" key={r.s} onClick={()=>setDetail({row:r,side,cut:cuts[active][0]})}>
+        <td><div className="symbol-inner"><button className="stock-name" onClick={()=>setDetail({row:r,side,cut:cuts[active][0]})}>{r.s}</button><button className={`watch-add ${watchlist.includes(r.s)?'added':''}`} disabled={watchlist.includes(r.s)} title={watchlist.includes(r.s)?`${r.s} is in the Charts watchlist`:`Add ${r.s} to the Charts watchlist`} aria-label={watchlist.includes(r.s)?`${r.s} is in the Charts watchlist`:`Add ${r.s} to the Charts watchlist`} onClick={e=>{e.stopPropagation();setWatchlist(addChartWatchlistSymbol(r.s))}}>{watchlist.includes(r.s)?'✓':'+'}</button>{r.entry_confirmed&&<span className="entry">ENTRY</span>}{r.is_new_discovery&&<span className="new">NEW</span>}</div><span className="flow-label" title={r.flow_label||'Unavailable'} style={{color:r.badge_color||'#8290a3',background:r.badge_bg||'#1c2737'}}>{r.flow_label||'Unavailable'}</span></td>
+        <td><div className="candle-inline"><Candle row={r}/><div><div className="candle-main">{finite(r.c_body)?`${Math.round(r.c_body)}%`:'—'}</div><div className="candle-meta">{r.is_maru?'Marubozu':r.is_solid?'Solid':finite(r.c_body)?'Wicky':''}</div><div className="candle-meta">{r.c_time}</div></div></div></td><td className={`num ${(r.mv||0)>=0?'positive':'negative'}`}>{pct(r.mv)}</td><td className="num"><div className="oi-stack"><span className={(r.ce_pct||0)>=0?'oi-up':'oi-down'}><small>CE</small>{pct(r.ce_pct)}</span><span className={(r.pe_pct||0)>=0?'oi-up':'oi-down'}><small>PE</small>{pct(r.pe_pct)}</span></div></td><td className="num">{pct(r.p)}<span className="break">{r.brk?[r.bt,r.ls].filter(Boolean).join(' · ')||'BRK':'—'}</span></td>
+      </tr>):<tr><td colSpan={5} className="empty">No stocks match these filters.</td></tr>}</tbody></table></div>
+    </section>;
   };
-
-  if (!cuts.length) return <div className="flex h-full items-center justify-center text-[14px] text-white/50">No RUSTY cuts published for this date yet.</div>;
-
-  return (
-    <div className="flex h-full flex-col gap-3 px-4 pb-4 pt-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="text-[10px] uppercase tracking-[0.12em] text-white/35">Cut</span>
-        <input
-          type="range"
-          min={0}
-          max={cuts.length - 1}
-          value={active}
-          onChange={(event) => setIndex(Number(event.target.value))}
-          className="h-1 w-56 cursor-pointer appearance-none rounded-full bg-white/10 accent-orange-500"
-        />
-        <span className="min-w-[52px] font-mono text-[13px] font-semibold tabular-nums text-orange-400">{cuts[active]?.[0]}</span>
-        <span className="text-[11px] text-white/30">{active + 1} / {cuts.length}</span>
-        {index !== null && active !== cuts.length - 1 && (
-          <button onClick={() => setIndex(null)} className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-white/60 hover:bg-white/[0.05]">
-            Jump to latest
-          </button>
-        )}
-      </div>
-      <div className="grid min-h-0 min-w-0 flex-1 grid-rows-2 gap-3 overflow-hidden">
-        <Board
-          side="bull"
-          rows={snap?.bull ?? []}
-          sort={bullSort}
-          setSort={(key) => changeSort("bull", key)}
-          brokeOnly={bullBrokeOnly}
-          setBrokeOnly={setBullBrokeOnly}
-          highOnly={bullHighOnly}
-          setHighOnly={setBullHighOnly}
-          entryOnly={bullEntryOnly}
-          setEntryOnly={setBullEntryOnly}
-          maruOnly={bullMaruOnly}
-          setMaruOnly={setBullMaruOnly}
-          classification={bullClassification}
-          setClassification={setBullClassification}
-          classificationOptions={classificationOptions.bull}
-        />
-        <Board
-          side="bear"
-          rows={snap?.bear ?? []}
-          sort={bearSort}
-          setSort={(key) => changeSort("bear", key)}
-          brokeOnly={bearBrokeOnly}
-          setBrokeOnly={setBearBrokeOnly}
-          highOnly={bearHighOnly}
-          setHighOnly={setBearHighOnly}
-          entryOnly={bearEntryOnly}
-          setEntryOnly={setBearEntryOnly}
-          maruOnly={bearMaruOnly}
-          setMaruOnly={setBearMaruOnly}
-          classification={bearClassification}
-          setClassification={setBearClassification}
-          classificationOptions={classificationOptions.bear}
-        />
-      </div>
-    </div>
-  );
+  return <div className="rusty-view"><main className="app">
+    <header className="top"><div className="logo">R</div><h1 className="brand">RUSTY</h1><div className="top-right"><div className="date">{dateStr}</div><div className="production-controls">{controls}</div><a className="charts-link" href="/charts">Charts ↗</a></div></header>
+    {!cuts.length?<div className="loading">No Rusty snapshots published for this date yet.</div>:<>
+      <div className="toolbar"><div className="timebox"><span className="cut-label">Snapshot</span><button className="arrow" aria-label="Previous snapshot" disabled={active<=0} onClick={()=>setSelectedCut(cuts[active-1][0])}>‹</button><select aria-label="Snapshot time" value={cuts[active][0]} onChange={e=>setSelectedCut(e.target.value)}>{cuts.map(([cut])=><option key={cut}>{cut}</option>)}</select><button className="arrow" aria-label="Next snapshot" disabled={active>=cuts.length-1} onClick={()=>setSelectedCut(cuts[active+1][0])}>›</button><input className="slider" type="range" aria-label="Snapshot timeline" min={0} max={cuts.length-1} value={active} onChange={e=>setSelectedCut(cuts[Number(e.target.value)][0])}/></div><input className="search" aria-label="Search stocks" placeholder="Search a stock…" value={search} onChange={e=>setSearch(e.target.value)}/><button className={`latest ${selectedCut===null?'active':''}`} onClick={()=>setSelectedCut(null)}>{selectedCut===null?'Latest · auto':'Jump to latest'}</button></div>
+      <div className="sector-strip" aria-label="Sector pressure"><div className="sector-title">SECTOR PRESSURE<br/><button onClick={()=>setDetail('sectors')}>View details ↗</button></div>{sectors.map(s=><button className="sector-card" key={s.sector} onClick={()=>setDetail('sectors')} title={`${s.sector}: ${s.up} rising, ${s.down} falling. Coverage ${s.n}/${s.total}. Median move ${pct(s.move)}. OI tilt = PE growth minus CE growth.`}><b>{s.sector}</b><div className="sector-line"><span className={(s.move||0)>=0?'positive':'negative'}>{pct(s.move)}</span><span><span className="positive">{s.up} ↑</span> <span className="negative">{s.down} ↓</span></span></div><small>OI tilt {pp(s.tilt)} · {s.n}/{s.total}</small></button>)}</div>
+      <div className="boards">{board('bull')}{board('bear')}</div><footer className="foot"><span>5-minute snapshots · OI change from opening baseline · IST</span><span>{active+1} / {cuts.length} · {cuts[active][0]}</span></footer>
+    </>}
+  </main><dialog ref={dialog} className="detail-dialog" aria-label={detail==='sectors'?'Sector pressure details':'Stock details'} onCancel={()=>setDetail(null)} onClick={e=>{if(e.target===e.currentTarget)setDetail(null)}}><aside className="drawer">
+    <div className="drawer-top"><h2>{detail==='sectors'?'Sector pressure':detail?.row.s}</h2><button className="close" autoFocus aria-label="Close details" onClick={()=>setDetail(null)}>×</button></div>
+    {detail==='sectors'?<><p className="sector-explain">{cuts[active]?.[0]} IST · All available Rusty stocks at this snapshot. Board filters do not change these readings.</p><p className="sector-explain">Breadth counts stocks above/below their opening price baseline. Move is the median stock move. OI tilt = median (PE OI change % − CE OI change %), in percentage points. Positive means faster PE OI growth; negative means faster CE growth. OI alone does not establish buying or writing.</p><p className="sector-explain">Mapping: nse_data/tradefinder_sectors.py. Groups can overlap. Coverage shows available / mapped members. These are stock group readings, not sector index returns.</p>{sectors.map(s=><div className="sector-detail-row" key={s.sector}><b>{s.sector} <span className={(s.move||0)>=0?'positive':'negative'}>{pct(s.move)}</span></b><p>{s.up} rising · {s.down} falling · {s.flat} flat<br/>Net breadth {pct(s.breadth)} · OI tilt {pp(s.tilt)}<br/>Coverage {s.n}/{s.total} · Price {s.priceN}/{s.n} · OI {s.oiN}/{s.n}</p><p className="sector-members">{s.rows.map(r=>`${r.s} ${pct(r.mv)}`).join(' · ')}</p></div>)}</>:detail&&<>
+      <p className="detail-note">{detail.side==='bull'?'Bullish':'Bearish'} · {detail.cut} IST</p><div className="eyebrow">OI classification</div><div className="drawer-flow" style={{color:detail.row.badge_color||'#e5ecf5'}}>{detail.row.flow_label||'Unavailable'}</div><p className="detail-note">{detail.row.conviction||'Unavailable'} conviction{detail.row.entry_confirmed?' · Entry confirmed':''}</p><div className="detail-grid">{[['CALL OI',pct(detail.row.ce_pct)],['PUT OI',pct(detail.row.pe_pct)],['PRICE MOVE',pct(detail.row.mv)],['RUSTY OI CHANGE',pct(detail.row.p)]].map(([label,value])=><div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div><div className="eyebrow">Completed cash candle {detail.row.c_time}</div><div className="candle-chart">{detail.row.c_time?<Candle row={detail.row} large/>:<span className="detail-note">Cash candle unavailable at this cut</span>}</div><div className="detail-grid" style={{marginTop:18}}>{([['Open',detail.row.c_open],['Close',detail.row.c_close],['High',detail.row.c_high],['Low',detail.row.c_low]]as const).map(([label,value])=><div key={label}><small>{label.toUpperCase()}</small><strong>{fmt(value)}</strong></div>)}</div><p className="detail-note">Body {pct(detail.row.c_body)} · Upper wick {pct(detail.row.c_uw)} · Lower wick {pct(detail.row.c_lw)}</p><a className="tv" href={buildTradingViewUrl(detail.row.s,detail.row.s)} target="_blank" rel="noopener noreferrer">Open on TradingView ↗</a>
+    </>}
+  </aside></dialog></div>;
 }

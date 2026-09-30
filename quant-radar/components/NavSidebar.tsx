@@ -240,6 +240,7 @@ export default function NavSidebar() {
 
   return (
     <aside
+      data-rusty-navigation={pathname === "/rusty" ? "true" : undefined}
       className="w-full border-b px-3 py-3 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:flex-col lg:border-b-0 lg:border-r lg:px-3 lg:py-4"
       style={{
         background: "linear-gradient(180deg, #11131a 0%, #080a0f 100%)",

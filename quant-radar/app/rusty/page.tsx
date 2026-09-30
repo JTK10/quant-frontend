@@ -1,4 +1,3 @@
-import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import RustyClient from "./RustyClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
@@ -24,14 +23,6 @@ export default async function RustyPage({ searchParams }: { searchParams: DateSe
   const dateStr = await resolveDate(searchParams);
   const snaps = await getRustySnaps(dateStr);
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
-      <PageHeader title="RUSTY" subtitle="INTRADAY MOVE BOARD" badge="LIVE" dateStr={dateStr} accentColor="#f97316">
-        <DatePicker />
-        <AutoRefresh interval={45000} />
-      </PageHeader>
-      <div className="relative flex-1 overflow-hidden bg-gradient-to-b from-[#0A0A0B] to-[#121214]">
-        <RustyClient snaps={snaps} />
-      </div>
-    </div>
+    <RustyClient key={dateStr} snaps={snaps} dateStr={dateStr} controls={<><DatePicker /><AutoRefresh interval={45000} /></>} />
   );
 }
