@@ -8,6 +8,7 @@ import {
   HistogramSeries,
   LineSeries,
   LineStyle,
+  type AutoscaleInfo,
   type CandlestickData,
   type IChartApi,
   type ISeriesApi,
@@ -402,23 +403,35 @@ export default function LiveCandleChart({
 
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || !oiData) return;
-    const series: ISeriesApi<"Line">[] = [];
-    const bars = aggregateBars(sessionBars([...barsRef.current.values()]), timeframe);
-    const current = bars.filter(b => istDay(b.time) === oiData.date);
-    if (!current.length) return;
-    const last = current[current.length - 1].time;
+    const candles = candleRef.current;
+    if (!chart || !candles || !oiData) return;
+    const lines: ReturnType<typeof candles.createPriceLine>[] = [];
+    const prices: number[] = [];
     if (showPreviousOI) oiData.previous.forEach((snap, dayIndex) => {
       if (snap.degraded || snap.expiry < oiData.date) return;
       for (const side of ["support", "resistance"] as const) {
         const wall = snap[side][0];
-        if (!wall) continue;
-        const line = chart.addSeries(LineSeries, { color: side === "support" ? ["#b775ff", "#a25ee8", "#9954df"][dayIndex] : ["#ffab32", "#f79b20", "#ef8d13"][dayIndex], lineStyle: LineStyle.Solid, lineWidth: 3, title: `${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}`, lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
-        line.setData(current.length > 1 ? [{ time: current[0].time as UTCTimestamp, value: wall[0] }, { time: last as UTCTimestamp, value: wall[0] }] : [{ time: last as UTCTimestamp, value: wall[0] }]);
-        series.push(line);
+        if (!wall || !Number.isFinite(wall[0]) || wall[0] <= 0) continue;
+        prices.push(wall[0]);
+        lines.push(candles.createPriceLine({ price: wall[0], color: side === "support" ? ["#b775ff", "#a25ee8", "#9954df"][dayIndex % 3] : ["#ffab32", "#f79b20", "#ef8d13"][dayIndex % 3], lineStyle: LineStyle.Solid, lineWidth: 3, title: `${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}`, axisLabelVisible: true, lineVisible: true }));
       }
     });
-    return () => { if (chartRef.current === chart) series.forEach(s => chart.removeSeries(s)); };
+    // Price lines need no session candles; include them in the scale so off-screen
+    // strikes remain visible even before the first candle or after a large move.
+    candles.applyOptions({ autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => {
+      const info = original();
+      if (!info?.priceRange || !prices.length) return info;
+      const min = Math.min(info.priceRange.minValue, ...prices);
+      const max = Math.max(info.priceRange.maxValue, ...prices);
+      const padding = Math.max((max - min) * 0.025, max * 0.001);
+      return { ...info, priceRange: { minValue: min - padding, maxValue: max + padding } };
+    } });
+    candles.priceScale().applyOptions({ autoScale: true });
+    return () => {
+      if (chartRef.current !== chart) return;
+      lines.forEach(line => candles.removePriceLine(line));
+      candles.applyOptions({ autoscaleInfoProvider: undefined });
+    };
   }, [oiData, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision]);
 
   useEffect(() => {
