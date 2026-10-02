@@ -71,7 +71,21 @@ def candidates(bars, cut, support, resistance):
                 extremum = c['low'] if s == 1 else c['high']
                 if s*(p[4]-level) <= 0 and s*(b['close']-level) >= 5 and -8 <= s*(extremum-level) <= 4 and s*(c['close']-level) >= 2 and s*(c['close']-c['open']) > 0:
                     found.append(dict(strategy='break_and_retest',side=side,level=level,stop=extremum-s*3))
-    return found
+    # Existing reversals/retests retain priority at the same completed cut.
+    return found + direct_breaks(bars, cut, support, resistance)
+
+def direct_breaks(bars, cut, support, resistance):
+    c, prior = candle(bars, cut), bars.get(cut-6)
+    if not c or not prior or abs(c['close']-c['open'])/(c['high']-c['low'] or 1) < .45:
+        return []
+    found = []
+    for side, walls in [('BULL', resistance), ('BEAR', support)]:
+        s = 1 if side == 'BULL' else -1
+        for level in walls:
+            if s*(prior[4]-level) <= 0 and s*(c['close']-level) >= 5 and s*(c['close']-c['open']) > 0:
+                found.append(dict(strategy='direct_break_body45', side=side, level=level,
+                                  stop=c['low']-3 if s == 1 else c['high']+3))
+    return sorted(found, key=lambda e: abs(c['close']-e['level']))
 
 def oi_change(series, center, width, start, end):
     result = {}

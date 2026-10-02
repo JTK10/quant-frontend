@@ -6,7 +6,7 @@ import LiveCandleChart, { type ChartBar, type Timeframe, type TradeOverlay } fro
 import { useOIData } from "../charts/useOIData";
 import "../charts/charts.css";
 import "./signals.css";
-type Signal={ time:string; side:"BULL"|"BEAR"; strategy:string; entry:number; stop:number; target:number; outcome:string; generated_at?:string; exit_time?:string };
+type Signal={ time:string; entry_time?:string; side:"BULL"|"BEAR"; strategy:string; entry:number; stop:number; target:number; outcome:string; generated_at?:string; exit_time?:string };
 type Report={date:string; mode:string; status:string; checked_at?:string; stale?:boolean; signals:Signal[]};
 const EMPTY_BARS:ChartBar[]=[];
 const EMPTY_SIGNALS:Signal[]=[];
@@ -27,7 +27,7 @@ export default function NiftySignalsChart({initialDate,streamUrl}:{initialDate?:
   const active=signals.find(s=>id(s)===selected)??signals.at(-1);
   const bars=history?.date===date?history.bars:EMPTY_BARS;
   const isToday=date===getTodayIstDate();
-  const overlays=useMemo<TradeOverlay[]>(()=>signals.map(s=>({id:id(s),time:s.generated_at?Date.parse(s.generated_at)/1000:stamp(date,s.time),side:s.side,entry:s.entry,stop:s.stop,target:s.target,endTime:s.exit_time?stamp(date,s.exit_time)+60:undefined})),[date,signals]);
+  const overlays=useMemo<TradeOverlay[]>(()=>signals.map(s=>({id:id(s),time:s.generated_at?Date.parse(s.generated_at)/1000:stamp(date,s.entry_time??s.time),side:s.side,entry:s.entry,stop:s.stop,target:s.target,endTime:s.exit_time?stamp(date,s.exit_time)+60:undefined})),[date,signals]);
   // Current-day closing OI must never become a historical trade level.
   const priorOI=useMemo(()=>oiData?.date===date?{...oiData,intraday:[]}:null,[oiData,date]);
   useEffect(()=>{
