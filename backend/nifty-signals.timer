@@ -1,0 +1,11 @@
+[Unit]
+Description=Scan Nifty completed five-minute candles
+
+[Timer]
+OnCalendar=*-*-* 09..16:00/5:05 Asia/Kolkata
+Persistent=false
+AccuracySec=1s
+Unit=nifty-signals.service
+
+[Install]
+WantedBy=timers.target

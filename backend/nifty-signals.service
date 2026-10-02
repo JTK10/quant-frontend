@@ -1,0 +1,16 @@
+[Unit]
+Description=Causal Nifty paper signal scan
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/nifty-signals
+ExecStart=/usr/bin/python3 /home/ubuntu/nifty-signals/nifty_signals.py
+TimeoutStartSec=180
+MemoryMax=100M
+Nice=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
