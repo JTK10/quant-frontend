@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CandlestickSeries,
+  BaselineSeries,
   ColorType,
   createChart,
   createSeriesMarkers,
@@ -222,6 +223,7 @@ export default function LiveCandleChart({
   tradeSignals = EMPTY_TRADES,
   selectedTradeId,
   strictSession = false,
+  mutedOI = false,
 }: {
   symbol: string;
   streamUrl: string;
@@ -236,6 +238,7 @@ export default function LiveCandleChart({
   tradeSignals?: TradeOverlay[];
   selectedTradeId?: string;
   strictSession?: boolean;
+  mutedOI?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -442,7 +445,7 @@ export default function LiveCandleChart({
         for (const [rank, wall] of snap[side].entries()) {
         if (!wall || !Number.isFinite(wall[0]) || wall[0] <= 0) continue;
         prices.push(wall[0]);
-        lines.push(candles.createPriceLine({price:wall[0],color:side === "support" ? "#b775ff" : "#ffab32",lineWidth:rank === 0 ? 3 : 2,lineStyle:LineStyle.Solid,axisLabelVisible:true,lineVisible:true,title:`${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}${rank+1}`}));
+        lines.push(candles.createPriceLine({price:wall[0],color:side === "support" ? mutedOI ? "#b775ff70" : "#b775ff" : mutedOI ? "#ffab3270" : "#ffab32",lineWidth:mutedOI ? 1 : rank === 0 ? 3 : 2,lineStyle:mutedOI ? LineStyle.Dashed : LineStyle.Solid,axisLabelVisible:!mutedOI,lineVisible:true,title:`${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}${rank+1}`}));
         }
       }
     });
@@ -463,25 +466,30 @@ export default function LiveCandleChart({
       overlays.forEach(series => chart.removeSeries(series));
       candles.applyOptions({ autoscaleInfoProvider: undefined });
     };
-  }, [oiData, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision, asOf]);
+  }, [oiData, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision, asOf, mutedOI]);
 
   useEffect(() => {
     const chart = chartRef.current, candles = candleRef.current;
     if (!chart || !candles || !tradeSignals.length) return;
     const bars = aggregateBars(sessionBars([...barsRef.current.values()]), timeframe);
     const visible = tradeSignals.filter(s => bars.some(b => b.time === bucketStart(s.time, timeframe)) && (!asOf || s.time <= asOf));
-    const markers = createSeriesMarkers(candles, visible.map(s => ({ time: bucketStart(s.time, timeframe) as UTCTimestamp, position: s.side === "BULL" ? "belowBar" as const : "aboveBar" as const, color: s.side === "BULL" ? "#35e07a" : "#ff4d5f", shape: s.side === "BULL" ? "arrowUp" as const : "arrowDown" as const, text: `${s.side} ${s.entry.toFixed(2)}` })).sort((a,b) => Number(a.time)-Number(b.time)));
+    const markers = createSeriesMarkers(candles, visible.map(s => ({ time: bucketStart(s.time, timeframe) as UTCTimestamp, position: s.side === "BULL" ? "belowBar" as const : "aboveBar" as const, color: s.side === "BULL" ? "#35e07a" : "#ff4d5f", shape: s.side === "BULL" ? "arrowUp" as const : "arrowDown" as const, size:s.id === selectedTradeId ? 2 : 1, text: `${s.side === "BULL" ? "BUY" : "SELL"} · ${new Date(s.time*1000).toLocaleTimeString("en-GB",{timeZone:"Asia/Kolkata",hour:"2-digit",minute:"2-digit"})}` })).sort((a,b) => Number(a.time)-Number(b.time)));
     const selected = visible.find(s => s.id === selectedTradeId) ?? visible.at(-1);
     const overlays: ISeriesApi<"Line">[] = [];
+    const zones: ISeriesApi<"Baseline">[] = [];
     if (selected && bars.length) {
       const start = selected.time;
       const end = Math.max(start+INTERVAL_SECONDS[timeframe], Math.min(selected.endTime ?? Infinity, bars.at(-1)!.time+INTERVAL_SECONDS[timeframe]));
+      for (const [value,color] of [[selected.target,"rgba(53,224,122,0.12)"],[selected.stop,"rgba(255,77,95,0.15)"]] as const) {
+        const zone=chart.addSeries(BaselineSeries,{baseValue:{type:"price",price:selected.entry},topFillColor1:color,topFillColor2:color,bottomFillColor1:color,bottomFillColor2:color,topLineColor:"transparent",bottomLineColor:"transparent",baseLineVisible:false,lastValueVisible:false,priceLineVisible:false,crosshairMarkerVisible:false});
+        zone.setData([{time:start as UTCTimestamp,value},{time:end as UTCTimestamp,value}]); zones.push(zone);
+      }
       for (const [value,title,color] of [[selected.entry,"ENTRY","#38bdf8"],[selected.stop,"SL","#ff4d5f"],[selected.target,"TARGET 3R","#35e07a"]] as const) {
-        const line = chart.addSeries(LineSeries,{ color, title, lineWidth:2, lineStyle:LineStyle.Dashed, priceLineVisible:false, lastValueVisible:true, crosshairMarkerVisible:false });
+        const line = chart.addSeries(LineSeries,{ color, title, lineWidth:title === "ENTRY" ? 3 : 2, lineStyle:LineStyle.Solid, priceLineVisible:false, lastValueVisible:true, crosshairMarkerVisible:false });
         line.setData([{time:start as UTCTimestamp,value},{time:end as UTCTimestamp,value}]); overlays.push(line);
       }
     }
-    return () => { if (chartRef.current !== chart) return; markers.detach(); overlays.forEach(s => chart.removeSeries(s)); };
+    return () => { if (chartRef.current !== chart) return; markers.detach(); overlays.forEach(s => chart.removeSeries(s)); zones.forEach(s=>chart.removeSeries(s)); };
   }, [tradeSignals, selectedTradeId, timeframe, symbol, sessionDate, sessionBars, barRevision, asOf]);
 
   useEffect(() => {
