@@ -8,6 +8,7 @@ import {
   HistogramSeries,
   LineSeries,
   LineStyle,
+  LineType,
   type AutoscaleInfo,
   type CandlestickData,
   type IChartApi,
@@ -213,6 +214,7 @@ export default function LiveCandleChart({
   oiData = null,
   showPreviousOI = true,
   sessionDate,
+  asOf,
   onQuote,
 }: {
   symbol: string;
@@ -223,6 +225,7 @@ export default function LiveCandleChart({
   oiData?: OIData | null;
   showPreviousOI?: boolean;
   sessionDate?: string;
+  asOf?: number;
   onQuote?: (symbol: string, value: number) => void;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -250,7 +253,7 @@ export default function LiveCandleChart({
   const [hasBars, setHasBars] = useState(false);
   const quoteRef = useRef(onQuote);
   useEffect(() => { quoteRef.current = onQuote; }, [onQuote]);
-  const sessionBars = useCallback((bars: ChartBar[]) => sessionDate ? bars.filter(b => istDay(b.time) <= sessionDate) : bars, [sessionDate]);
+  const sessionBars = useCallback((bars: ChartBar[]) => bars.filter(b => (!sessionDate || istDay(b.time) <= sessionDate) && (!asOf || b.time + 300 <= asOf)), [sessionDate, asOf]);
 
   const resetView = () => {
     const range = recentRangeRef.current;
@@ -274,7 +277,8 @@ export default function LiveCandleChart({
       const normalized = normalizeFiveMinuteBar(bar);
       return [normalized.time, normalized];
     }));
-  }, [symbol, initialBars]);
+    redrawRef.current(aggregateBars(sessionBars([...barsRef.current.values()]), timeframe));
+  }, [symbol, initialBars, sessionBars, timeframe]);
 
   useEffect(() => {
     indicatorsRef.current = indicators;
@@ -407,13 +411,27 @@ export default function LiveCandleChart({
     if (!chart || !candles || !oiData) return;
     const lines: ReturnType<typeof candles.createPriceLine>[] = [];
     const prices: number[] = [];
+    const overlays: ISeriesApi<"Line">[] = [];
+    const snapshots = oiData.intraday.filter(s => !s.degraded && (!asOf || s.time <= asOf));
+    for (const side of ["support", "resistance"] as const) for (let rank = 0; rank < 2; rank++) {
+      const points = snapshots.map(s => s[side][rank] ? {time: s.time as UTCTimestamp, value:s[side][rank][0]} : {time:s.time as UTCTimestamp});
+      if (!points.length) continue;
+      const series = chart.addSeries(LineSeries, {color: side === "support" ? "#35e07a" : "#ff4d5f", lineWidth: rank === 0 ? 2 : 1, lineType: LineType.WithSteps, pointMarkersVisible:false, lastValueVisible:true, priceLineVisible:false, title:`OI ${side === "support" ? "S" : "R"}${rank+1}`});
+      series.setData(points); overlays.push(series);
+      const wall = snapshots.at(-1)?.[side][rank]; if (wall) prices.push(wall[0]);
+    }
     if (showPreviousOI) oiData.previous.forEach((snap, dayIndex) => {
       if (snap.degraded || snap.expiry < oiData.date) return;
       for (const side of ["support", "resistance"] as const) {
-        const wall = snap[side][0];
+        for (const [rank, wall] of snap[side].entries()) {
         if (!wall || !Number.isFinite(wall[0]) || wall[0] <= 0) continue;
         prices.push(wall[0]);
-        lines.push(candles.createPriceLine({ price: wall[0], color: side === "support" ? ["#b775ff", "#a25ee8", "#9954df"][dayIndex % 3] : ["#ffab32", "#f79b20", "#ef8d13"][dayIndex % 3], lineStyle: LineStyle.Solid, lineWidth: 3, title: `${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}`, axisLabelVisible: true, lineVisible: true }));
+        const series = chart.addSeries(LineSeries, {color:side === "support" ? "#b775ff" : "#ffab32", lineWidth:rank === 0 ? 2 : 1, priceLineVisible:false, title:`${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}${rank+1}`, lastValueVisible:true});
+        const start = Date.parse(`${oiData.date}T09:15:00+05:30`)/1000;
+        const end = asOf ?? Math.max(start, ...sessionBars([...barsRef.current.values()]).map(b=>b.time));
+        series.setData(end > start ? [{time:start as UTCTimestamp,value:wall[0]},{time:end as UTCTimestamp,value:wall[0]}] : [{time:start as UTCTimestamp,value:wall[0]}]);
+        overlays.push(series);
+        }
       }
     });
     // Price lines need no session candles; include them in the scale so off-screen
@@ -430,9 +448,10 @@ export default function LiveCandleChart({
     return () => {
       if (chartRef.current !== chart) return;
       lines.forEach(line => candles.removePriceLine(line));
+      overlays.forEach(series => chart.removeSeries(series));
       candles.applyOptions({ autoscaleInfoProvider: undefined });
     };
-  }, [oiData, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision]);
+  }, [oiData, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision, asOf]);
 
   useEffect(() => {
     if (!streamUrl) return;
