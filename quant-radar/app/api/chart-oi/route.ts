@@ -2,8 +2,7 @@ import { requireApiSession } from "@/utils/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getTodayIstDate } from "@/utils/backend";
 import type { OIData, OISnapshot, OIWall } from "@/app/charts/oiTypes";
-import niftyHistory from "@/data/nifty-chart.json";
-import niftySeptember30 from "@/data/nifty-chart-sept30.json";
+import niftyHistory from "@/data/nifty-chart-sessions.json";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -83,14 +82,13 @@ export async function GET(request: NextRequest) {
   const parsed = new Date(`${date}T00:00:00Z`);
   if (!/^[A-Z0-9 &._-]{1,30}$/.test(symbol) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) return NextResponse.json({ error: "Invalid symbol or date" }, { status: 400 });
   const result: OIData = { symbol, date, intraday: [], previous: [], errors: [] };
-  if (symbol === "NIFTY 50" && date === niftySeptember30.date) {
-    return NextResponse.json({ ...result, intraday: niftySeptember30.intraday, previous: niftySeptember30.previous }, { headers: { "Cache-Control": "private, no-store" } });
-  }
-  if (symbol === "NIFTY 50" && date === niftyHistory.date) {
-    return NextResponse.json({ ...result, intraday: niftyHistory.intraday, previous: niftyHistory.previous }, { headers: { "Cache-Control": "private, no-store" } });
-  }
-  if (symbol === "NIFTY 50" && date > niftyHistory.date && date <= "2026-10-05") {
-    return NextResponse.json({ ...result, previous: [niftyHistory.intraday.at(-1), ...niftyHistory.previous] }, { headers: { "Cache-Control": "private, no-store" } });
+  if (symbol === "NIFTY 50") {
+    const selected = niftyHistory.sessions.find(s=>s.date === date);
+    if (selected) return NextResponse.json({ ...result, intraday:selected.intraday, previous:selected.previous }, { headers: { "Cache-Control": "private, no-store" } });
+    const last = niftyHistory.sessions.at(-1)!;
+    const closing = last.intraday.at(-1)!;
+    const gap = (parsed.getTime()-Date.parse(last.date))/86400000;
+    if (gap > 0 && gap <= 4 && closing.expiry >= date) return NextResponse.json({ ...result, previous:[closing,...last.previous] }, { headers: { "Cache-Control": "private, no-store" } });
   }
   const dates: string[] = [];
   // Today's intraday history is no longer requested by the previous-day view.
