@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
   catch { return NextResponse.json({ error: "Invalid request" }, { status: 400 }); }
   if (!input || typeof input.currentPassword !== "string" || typeof input.newPassword !== "string" || typeof input.confirmPassword !== "string")
     return NextResponse.json({ error: "Please fill in all three password fields." }, { status: 400 });
-  if (input.newPassword.length < 16 || input.newPassword.length > 256)
-    return NextResponse.json({ error: "Use 16–256 characters. A long, unique passphrase works well." }, { status: 400 });
+  if (input.newPassword.length < 8 || input.newPassword.length > 256)
+    return NextResponse.json({ error: "Use 8–256 characters. A long, unique passphrase works well." }, { status: 400 });
   if (input.newPassword !== input.confirmPassword) return NextResponse.json({ error: "The new passwords do not match." }, { status: 400 });
   if (input.newPassword === input.currentPassword) return NextResponse.json({ error: "Choose a different password." }, { status: 400 });
   try {
