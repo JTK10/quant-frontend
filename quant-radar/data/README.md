@@ -16,3 +16,10 @@ This is historical replay coverage, not a current live option-chain feed.
 The authenticated chart API explicitly dates this data; later dates do not
 receive October 1 intraday observations. Previous levels remain labelled with
 their originating date. Full CSVs and original source responses stay local.
+
+`nifty-chart-sept30.json` adds September 30's 75 causal snapshots and 75 derived
+five-minute candles, with matching October 6 contracts' September 29 closing
+baseline. Generation: local `nifty-research/export-chart-sept30.mjs`. All 75 cuts
+pass removal-of-future-observations checks. Its final OI ranks and values agree
+with the September 30 closing baseline already used for October 1.
+Historical replay starts/reset at 09:20 so EOD levels are not the default.

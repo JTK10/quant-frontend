@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTodayIstDate } from "@/utils/backend";
 import type { OIData, OISnapshot, OIWall } from "@/app/charts/oiTypes";
 import niftyHistory from "@/data/nifty-chart.json";
+import niftySeptember30 from "@/data/nifty-chart-sept30.json";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -82,6 +83,9 @@ export async function GET(request: NextRequest) {
   const parsed = new Date(`${date}T00:00:00Z`);
   if (!/^[A-Z0-9 &._-]{1,30}$/.test(symbol) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) return NextResponse.json({ error: "Invalid symbol or date" }, { status: 400 });
   const result: OIData = { symbol, date, intraday: [], previous: [], errors: [] };
+  if (symbol === "NIFTY 50" && date === niftySeptember30.date) {
+    return NextResponse.json({ ...result, intraday: niftySeptember30.intraday, previous: niftySeptember30.previous }, { headers: { "Cache-Control": "private, no-store" } });
+  }
   if (symbol === "NIFTY 50" && date === niftyHistory.date) {
     return NextResponse.json({ ...result, intraday: niftyHistory.intraday, previous: niftyHistory.previous }, { headers: { "Cache-Control": "private, no-store" } });
   }
