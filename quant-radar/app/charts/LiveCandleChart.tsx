@@ -309,7 +309,7 @@ export default function LiveCandleChart({
       upColor: "#089981", downColor: "#F23645", borderVisible: false,
       wickUpColor: "#089981", wickDownColor: "#F23645",
     });
-    const volume = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "" });
+    const volume = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "", lastValueVisible: symbol !== "NIFTY 50", priceLineVisible: symbol !== "NIFTY 50" });
     volume.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     const ema = chart.addSeries(LineSeries, { color: "#fbbf24", lineWidth: 2, title: "EMA 9", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
     const superBull = chart.addSeries(LineSeries, { color: "#22c55e", lineWidth: 2, lineStyle: LineStyle.Solid, title: "Supertrend 10,3", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
@@ -546,7 +546,7 @@ export default function LiveCandleChart({
       onClick={() => contextMenu && setContextMenu(null)}
     >
       <div ref={hostRef} className="h-full w-full" aria-label={`${symbol} live price chart`} />
-      <div className="pointer-events-none absolute left-2 bottom-8 z-10 text-[9px] text-slate-400">{connection}{!hasBars ? " · No candles received for this session" : ""}</div>
+      <div className="pointer-events-none absolute left-2 bottom-8 z-10 text-[9px] text-slate-400">{streamUrl ? connection : "Session chart"}{!hasBars ? " · No candles received for this session" : ""}</div>
       <div className="absolute right-2 top-2 z-10 flex overflow-hidden rounded border text-xs shadow-lg" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>
         <button type="button" onClick={(event) => { event.stopPropagation(); zoom(1.45); }} className="px-2 py-1 hover:bg-white/10">−</button><button type="button" onClick={(event) => { event.stopPropagation(); resetView(); }} className="border-x px-2 py-1 font-mono text-[10px] hover:bg-white/10" style={{ borderColor: "var(--color-border)" }}>RESET</button><button type="button" onClick={(event) => { event.stopPropagation(); zoom(0.7); }} className="px-2 py-1 hover:bg-white/10">+</button>
       </div>
