@@ -418,7 +418,14 @@ export default function LiveCandleChart({
       if (!points.length) continue;
       const series = chart.addSeries(LineSeries, {color: side === "support" ? "#35e07a" : "#ff4d5f", lineWidth: rank === 0 ? 2 : 1, lineType: LineType.WithSteps, pointMarkersVisible:false, lastValueVisible:true, priceLineVisible:false, title:`OI ${side === "support" ? "S" : "R"}${rank+1}`});
       series.setData(points); overlays.push(series);
-      const wall = snapshots.at(-1)?.[side][rank]; if (wall) prices.push(wall[0]);
+      const latest = snapshots.at(-1);
+      const wall = latest?.[side][rank];
+      if (wall && latest) {
+        prices.push(wall[0]);
+        // Full-width guide for the selected cut; the stepped trace retains
+        // when historical levels became available. Never select a later cut.
+        lines.push(candles.createPriceLine({price:wall[0],color:side === "support" ? "#35e07a" : "#ff4d5f",lineWidth:2,lineStyle:LineStyle.Solid,axisLabelVisible:true,lineVisible:true,title:`${latest.cut} OI ${side === "support" ? "S" : "R"}${rank+1}`}));
+      }
     }
     if (showPreviousOI) oiData.previous.forEach((snap, dayIndex) => {
       if (snap.degraded || snap.expiry < oiData.date) return;
@@ -426,11 +433,7 @@ export default function LiveCandleChart({
         for (const [rank, wall] of snap[side].entries()) {
         if (!wall || !Number.isFinite(wall[0]) || wall[0] <= 0) continue;
         prices.push(wall[0]);
-        const series = chart.addSeries(LineSeries, {color:side === "support" ? "#b775ff" : "#ffab32", lineWidth:rank === 0 ? 2 : 1, priceLineVisible:false, title:`${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}${rank+1}`, lastValueVisible:true});
-        const start = Date.parse(`${oiData.date}T09:15:00+05:30`)/1000;
-        const end = asOf ?? Math.max(start, ...sessionBars([...barsRef.current.values()]).map(b=>b.time));
-        series.setData(end > start ? [{time:start as UTCTimestamp,value:wall[0]},{time:end as UTCTimestamp,value:wall[0]}] : [{time:start as UTCTimestamp,value:wall[0]}]);
-        overlays.push(series);
+        lines.push(candles.createPriceLine({price:wall[0],color:side === "support" ? "#b775ff" : "#ffab32",lineWidth:rank === 0 ? 3 : 2,lineStyle:LineStyle.Solid,axisLabelVisible:true,lineVisible:true,title:`${snap.date.slice(5)} OI ${side === "support" ? "S" : "R"}${rank+1}`}));
         }
       }
     });
