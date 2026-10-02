@@ -2,7 +2,7 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import LynxClient from "./LynxClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ async function getLynxSnaps(dateStr: string) {
     const url = await getInternalApiUrl(
       `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=lynx`
     );
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) {
       const errText = await response.text();
       console.error(`LYNX route failed: ${response.status} - ${errText}`);
@@ -42,7 +42,7 @@ async function getOcelotMetrics(dateStr: string) {
     const url = await getInternalApiUrl(
       `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=ocelot&topN=25&rankBy=d`
     );
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`Ocelot route failed: ${response.status}`);
     const data = await response.json();
     return (data as any[]).filter((s) => s.source === "ocelot");

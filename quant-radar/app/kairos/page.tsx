@@ -2,14 +2,14 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import KairosClient from "./KairosClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
 async function getKairosEvents(dateStr: string) {
   try {
     const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=kairos`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`Kairos route failed: ${response.status}`);
     const data = await response.json();
     // KAIROS rows: source:"kairos" -- option trades on the LYNX rank-1 pick.

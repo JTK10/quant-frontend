@@ -2,7 +2,7 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import StrikeClient from "./StrikeClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ async function getRows(dateStr: string, sources: string) {
     const url = await getInternalApiUrl(
       `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=${sources}`
     );
-    const r = await fetch(url, { cache: "no-store" });
+    const r = await fetchInternalApi(url, { cache: "no-store" });
     if (!r.ok) throw new Error(`panther-signals ${r.status}`);
     return await r.json();
   } catch (err) {

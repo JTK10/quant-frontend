@@ -1,3 +1,4 @@
+import { requireApiSession } from "@/utils/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +54,8 @@ function istNow() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireApiSession(req);
+  if (denied) return denied;
   try {
     const b = await req.json();
 

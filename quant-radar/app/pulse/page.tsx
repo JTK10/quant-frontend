@@ -3,14 +3,14 @@ import { AutoRefresh, DatePicker } from "@/components/Controls";
 import WatchlistClient from "@/components/WatchlistClient";
 import type { PulseData } from "@/utils/backend";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
 async function getPulseData(dateStr: string): Promise<PulseData> {
   try {
     const url = await getInternalApiUrl(`/api/pulse?date=${encodeURIComponent(dateStr)}`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error("Pulse route failed");
     return response.json();
   } catch {

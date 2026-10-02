@@ -1,7 +1,7 @@
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import RustyClient from "./RustyClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ async function getRustySnaps(dateStr: string) {
     const url = await getInternalApiUrl(
       `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=rusty`
     );
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`RUSTY route failed: ${response.status}`);
     return (await response.json() as any[]).filter((s) => s.source === "rusty");
   } catch (error) {

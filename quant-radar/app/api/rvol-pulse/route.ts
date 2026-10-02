@@ -1,9 +1,12 @@
+import { requireApiSession } from "@/utils/auth";
 import { NextResponse } from "next/server";
 import { fetchBackendRoute, getTodayIstDate, normalizeRvolPulseData } from "@/utils/backend";
 
 export const revalidate = 0; // Disable static optimization
 
 export async function GET(request: Request) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date") || getTodayIstDate();

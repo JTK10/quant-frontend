@@ -2,7 +2,7 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import CaracalClient from "./CaracalClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ const ACCENT = "#f59e0b";
 async function getCaracalSignals(dateStr: string) {
   try {
     const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=caracal3,caracal2,shakeout`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) {
       const errText = await response.text();
       console.error(`Caracal Signal route failed: ${response.status} - ${errText}`);

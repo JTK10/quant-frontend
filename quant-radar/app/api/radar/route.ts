@@ -1,9 +1,12 @@
+import { requireApiSession } from "@/utils/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchBackendRoute, getTodayIstDate, normalizeRadarSignals } from "@/utils/backend";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
 
   try {

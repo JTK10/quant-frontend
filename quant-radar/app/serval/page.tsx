@@ -2,14 +2,14 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import ServalClient from "./ServalClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
 async function getServalSignals(dateStr: string) {
   try {
     const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=serval`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`Serval signal route failed: ${response.status}`);
     const data = await response.json();
     // SERVAL rows: source:"serval" -- funnel entries cap:"SERVAL", tier trades

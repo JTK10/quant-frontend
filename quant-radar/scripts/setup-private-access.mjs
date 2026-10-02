@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import { randomBytes, scryptSync } from 'node:crypto';
+const filename = '.env.local';
+let env = fs.existsSync(filename) ? fs.readFileSync(filename, 'utf8') : '';
+if (/^AUTH_PASSWORD_HASH=/m.test(env) || /^AUTH_SESSION_SECRET=/m.test(env)) throw new Error('Private access already configured. Preserve current credentials.');
+const password = randomBytes(18).toString('base64url');
+const salt = randomBytes(16).toString('hex');
+const hash = `${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
+const secret = randomBytes(48).toString('base64url');
+fs.mkdirSync('.private', { recursive: true });
+if(fs.existsSync(filename)) fs.copyFileSync(filename, '.private/env-before-auth.backup');
+fs.writeFileSync(filename, `${env.trimEnd()}\nAUTH_PASSWORD_HASH=${hash}\nAUTH_SESSION_SECRET=${secret}\n`);
+fs.writeFileSync('.private/login-credentials.txt', `Quant Radar private password\n${password}\n\nUse the same password on your laptops. Do not commit or share this file.\n`);
+fs.writeFileSync('.private/vercel-auth.env', `AUTH_PASSWORD_HASH=${hash}\nAUTH_SESSION_SECRET=${secret}\n`);
+console.log('Local private access configured. Password saved in .private/login-credentials.txt; deployment settings in .private/vercel-auth.env. No secrets printed.');

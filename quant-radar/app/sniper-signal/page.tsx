@@ -3,14 +3,14 @@ import { AutoRefresh, DatePicker } from "@/components/Controls";
 import SniperClient from "./SniperClient";
 import type { SniperRow } from "@/utils/backend";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
 async function getSniperSignals(dateStr: string): Promise<SniperRow[]> {
   try {
     const url = await getInternalApiUrl(`/api/sniper-signal?date=${encodeURIComponent(dateStr)}`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error("Sniper Signal route failed");
     return response.json();
   } catch {

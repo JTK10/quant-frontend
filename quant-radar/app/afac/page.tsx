@@ -2,7 +2,7 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import AfacClient from "./AfacClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ async function getAfacRows(dateStr: string) {
     const url = await getInternalApiUrl(
       `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=afac2&topN=${TOP_N}&rankBy=score_afac3`,
     );
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) {
       const errText = await response.text();
       console.error(`AFAC signal route failed: ${response.status} - ${errText}`);

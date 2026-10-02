@@ -2,7 +2,7 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import OcelotClient from "./OcelotClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ async function getOcelotSnaps(dateStr: string) {
     const url = await getInternalApiUrl(
       `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=ocelot&topN=${TOP_N}&rankBy=d`
     );
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) {
       const errText = await response.text();
       console.error(`OCELOT route failed: ${response.status} - ${errText}`);

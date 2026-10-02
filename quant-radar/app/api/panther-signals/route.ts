@@ -1,3 +1,4 @@
+import { requireApiSession } from "@/utils/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePantherSignals, getTodayIstDate } from "@/utils/backend";
 
@@ -305,6 +306,8 @@ async function buildPayload(
 // could return the previous cycle. Removed: correctness over latency here.
 
 export async function GET(request: NextRequest) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   const dateStr = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
   const targetDate = dateStr.replace(/-/g, "");
 

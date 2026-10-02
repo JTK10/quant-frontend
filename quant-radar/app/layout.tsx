@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "@/globals.css";
-import NavSidebar from "@/components/NavSidebar";
+import AppShell from "@/components/AppShell";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { SESSION_COOKIE, validSession } from "@/utils/auth";
 
 export const metadata: Metadata = {
   title: "Quant Radar",
   description: "NSE intraday radar, pulse, sector flow, and AI analysis terminal.",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const path = (await headers()).get("x-quant-path") ?? "/";
+  if (path.split("?")[0] !== "/login" && !validSession((await cookies()).get(SESSION_COOKIE)?.value))
+    redirect(`/login?next=${encodeURIComponent(path)}`);
   return (
     <html lang="en">
       <body>
-        <div className="min-h-screen lg:flex">
-          <NavSidebar />
-          <main className="min-w-0 flex-1">{children}</main>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

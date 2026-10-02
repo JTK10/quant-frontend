@@ -2,7 +2,7 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import Afac2Client from "./Afac2Client";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ async function getSectorSnaps(dateStr: string) {
     // one ~15min back for the score delta -- afac2 publishes ~69 cycles/day, so
     // fetching them all downloaded ~1.7MB to use two of them.
     const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=sectorrd&lastN=4`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`sectorrd route failed: ${response.status}`);
     const data = await response.json();
     // sectorrd snapshots: one doc per 5-min cut, source:"sectorrd", same shape

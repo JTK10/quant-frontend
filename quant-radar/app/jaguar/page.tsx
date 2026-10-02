@@ -2,7 +2,7 @@ import PageHeader from "@/components/PageHeader";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import JaguarClient from "./JaguarClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ async function getJaguarSignals(dateStr: string) {
   try {
     // Fetch all cuts for the day
     const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=jaguar`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`Jaguar route failed: ${response.status}`);
     }
@@ -27,7 +27,7 @@ async function getAuxiliarySnaps(dateStr: string, source: "neofelis" | "ocelot")
     const url = await getInternalApiUrl(
       `/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=${source}${extra}`
     );
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error(`${source} route failed: ${response.status}`);
     const data = await response.json();
     return (data as any[]).filter((snap) => snap.source === source);

@@ -3,14 +3,14 @@ import { AutoRefresh, DatePicker } from "@/components/Controls";
 import ObSignalClient from "./ObSignalClient";
 import type { ObSignalRow } from "@/utils/backend";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
 async function getObSignals(dateStr: string): Promise<ObSignalRow[]> {
   try {
     const url = await getInternalApiUrl(`/api/ob-signal?date=${encodeURIComponent(dateStr)}`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error("OB Signal route failed");
     return response.json();
   } catch {

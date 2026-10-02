@@ -3,14 +3,14 @@ import { AutoRefresh, DatePicker } from "@/components/Controls";
 import CapitulationClient from "./CapitulationClient";
 import type { CapitulationRow } from "@/utils/backend";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl } from "@/utils/internalApi";
+import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 
 export const dynamic = "force-dynamic";
 
 async function getCapitulationSignals(dateStr: string): Promise<CapitulationRow[]> {
   try {
     const url = await getInternalApiUrl(`/api/capitulation-signal?date=${encodeURIComponent(dateStr)}`);
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchInternalApi(url, { cache: "no-store" });
     if (!response.ok) throw new Error("Capitulation Signal route failed");
     return response.json();
   } catch {

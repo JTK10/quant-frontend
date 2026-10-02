@@ -1,3 +1,4 @@
+import { requireApiSession } from "@/utils/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getTodayIstDate } from "@/utils/backend";
 import type { OIData, OISnapshot, OIWall } from "@/app/charts/oiTypes";
@@ -73,6 +74,8 @@ async function loadSession(date: string): Promise<Session> {
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await requireApiSession(request);
+  if (denied) return denied;
   const symbol = (request.nextUrl.searchParams.get("symbol") ?? "").toUpperCase();
   const date = request.nextUrl.searchParams.get("date") ?? getTodayIstDate();
   const parsed = new Date(`${date}T00:00:00Z`);
