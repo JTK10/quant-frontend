@@ -2,3 +2,4 @@
 
 .charts-indicatorbar{overflow-x:auto}.charts-indicatorbar select{background:var(--chart-panel);color:#d4dbea;border:1px solid var(--chart-line);border-radius:4px;padding:3px 5px;font-size:11px}.charts-indicatorbar label{white-space:nowrap}
 
+.charts-replaybar{display:flex;align-items:center;gap:10px;padding:8px 14px;flex-shrink:0;flex-wrap:wrap;border-bottom:1px solid var(--chart-line);font-size:11px}.charts-replaybar select{background:#171c28;color:#eef3ff;border:1px solid #455878;border-radius:4px;padding:6px;cursor:pointer}.charts-replaybar button{padding:6px 10px;border:1px solid #455878;border-radius:4px}.charts-replaybar button:disabled{opacity:.35;cursor:default}.charts-replaybar input[type=range]{flex:1;min-width:130px;accent-color:#79a6ff;cursor:pointer}.charts-replaybar span{color:#a0abc0}.charts-indicatorbar label{margin-left:12px}
