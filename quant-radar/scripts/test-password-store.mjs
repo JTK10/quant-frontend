@@ -25,6 +25,7 @@ globalThis.fetch=async(url,init)=>{
   else if(op==='SET'){if(args[2]==='NX'&&records.has(args[0]))result=null;else{records.set(args[0],args[1]);result='OK';}}
   else if(op==='EVAL'&&args[0].includes("redis.call('GET'")){const [, ,key,previous,next]=args;result=records.get(key)===previous?1:0;if(result)records.set(key,next);}
   else if(op==='EVAL'){const key=args[2];const count=(counts.get(key)??0)+1;counts.set(key,count);result=count;}
+  else if(op==='DEL'){result=counts.delete(args[0])?1:0;}
   else throw Error('Unexpected command');
   return new Response(JSON.stringify({result}),{status:200});
 };
@@ -43,6 +44,12 @@ try {
   assert.equal(await auth.validSession(newToken,Date.now()+366*86400000),false);
   for(let i=0;i<5;i++)assert.equal(await store.allowPasswordAttempt('test-ip','change'),true);
   assert.equal(await store.allowPasswordAttempt('test-ip','change'),false);
+  for(let i=0;i<10;i++){
+    assert.equal(await store.allowPasswordAttempt('successful-login-ip','login-v2'),true);
+    await store.resetPasswordAttempts('successful-login-ip','login-v2');
+  }
+  for(let i=0;i<5;i++)assert.equal(await store.allowPasswordAttempt('failed-login-ip','login-v2'),true);
+  assert.equal(await store.allowPasswordAttempt('failed-login-ip','login-v2'),false);
   outage=true;assert.equal(await auth.validSession(newToken),false);await assert.rejects(store.currentPasswordHash());
   console.log('PASS: bootstrap, hashed-only storage, current/new password checks, atomic concurrent change, all-session invalidation, one-year expiry, durable backoff and fail-closed outage. Test-only credentials; no external database changed.');
 } finally {for(const file of files)await fs.unlink(path.join(dir,`${file}.mjs`));}

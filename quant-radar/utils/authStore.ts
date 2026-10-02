@@ -41,3 +41,7 @@ export async function allowPasswordAttempt(ip: string, purpose: string) {
   const attemptKey = `${key()}:attempt:${purpose}:${ip}`;
   return Number(await authRedis(["EVAL", "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],900) end; return n", 1, attemptKey])) <= 5;
 }
+export async function resetPasswordAttempts(ip: string, purpose: string) {
+  if (!passwordStoreConfigured()) return;
+  await authRedis(["DEL", `${key()}:attempt:${purpose}:${ip}`]);
+}
