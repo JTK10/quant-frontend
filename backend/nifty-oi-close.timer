@@ -1,0 +1,14 @@
+[Unit]
+Description=Nifty closing OI capture with bounded evening retries
+
+[Timer]
+OnCalendar=*-*-* 15:40:00 Asia/Kolkata
+OnCalendar=*-*-* 16:00:00 Asia/Kolkata
+OnCalendar=*-*-* 16:20:00 Asia/Kolkata
+OnCalendar=*-*-* 17:00:00 Asia/Kolkata
+OnCalendar=*-*-* 22:00:00 Asia/Kolkata
+Persistent=true
+Unit=nifty-oi-close.service
+
+[Install]
+WantedBy=timers.target

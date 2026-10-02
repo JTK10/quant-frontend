@@ -85,10 +85,36 @@ export async function GET(request: NextRequest) {
   if (symbol === "NIFTY 50") {
     const selected = niftyHistory.sessions.find(s=>s.date === date);
     if (selected) return NextResponse.json({ ...result, intraday:selected.intraday, previous:selected.previous }, { headers: { "Cache-Control": "private, no-store" } });
-    const last = niftyHistory.sessions.at(-1)!;
-    const closing = last.intraday.at(-1)!;
-    const gap = (parsed.getTime()-Date.parse(last.date))/86400000;
-    if (gap > 0 && gap <= 4 && closing.expiry >= date) return NextResponse.json({ ...result, previous:[closing,...last.previous] }, { headers: { "Cache-Control": "private, no-store" } });
+    // Today's trading can only use captures from strictly earlier dates.
+    // Closing jobs save two future expiries, so rollover never projects an
+    // expired contract onto today's chart.
+    const closingDeadline = Date.now()+35000;
+    for (let offset=1; offset<=14 && !result.previous.length && Date.now()<closingDeadline; offset++) {
+      const prior = new Date(parsed); prior.setUTCDate(prior.getUTCDate()-offset);
+      const priorDate = prior.toISOString().slice(0,10);
+      try {
+        const docs = (await fetchDocs(priorDate,"nifty_oi_close")).filter(d=>!d.degraded && /^\d{2}:\d{2}$/.test(d.cut)).sort((a,b)=>Number(b.ts ?? 0)-Number(a.ts ?? 0));
+        for (const doc of docs) {
+          const rows = (doc.oi_levels ?? []).filter(r=>r[0] === symbol && /^\d{4}-\d{2}-\d{2}$/.test(String(r[2])) && String(r[2]) >= date).sort((a,b)=>String(a[2]).localeCompare(String(b[2])));
+          const row = rows[0];
+          const validWalls = (value:unknown):value is OIWall[] => Array.isArray(value) && value.length>0 && value.every(w=>Array.isArray(w) && Number.isFinite(w[0]) && w[0]>0 && Number.isFinite(w[1]) && w[1]>0 && (w[2] === null || Number.isFinite(w[2])));
+          if (!row || !Number.isFinite(Number(row[1])) || !validWalls(row[3]) || !validWalls(row[4])) continue;
+          result.previous.push({date:priorDate,cut:doc.cut,time:Date.parse(`${priorDate}T${doc.cut}:00+05:30`)/1000,spot:Number(row[1]),expiry:String(row[2]),support:row[3],resistance:row[4],degraded:false});
+          break;
+        }
+      } catch (error) {
+        result.errors.push(error instanceof Error ? error.message : "Nifty closing feed unavailable");
+        break;
+      }
+    }
+    // Preserve verified local history when no newer closing capture exists.
+    const fallback = niftyHistory.sessions.filter(s=>s.date<date).reverse().flatMap(s=>[s.intraday.at(-1)!,...s.previous]);
+    for (const snap of fallback) {
+      if (result.previous.length >= 3) break;
+      if (snap.date<date && snap.expiry>=date && !result.previous.some(s=>s.date===snap.date)) result.previous.push({...snap,support:snap.support as OIWall[],resistance:snap.resistance as OIWall[]});
+    }
+    result.previous.sort((a,b)=>b.date.localeCompare(a.date));
+    return NextResponse.json(result,{headers:{"Cache-Control":"private, no-store"}});
   }
   const dates: string[] = [];
   // Today's intraday history is no longer requested by the previous-day view.

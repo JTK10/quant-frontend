@@ -1,0 +1,17 @@
+[Unit]
+Description=Capture and publish previous-session Nifty OI levels
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/nifty-oi-close
+ExecStart=/usr/bin/python3 /home/ubuntu/nifty-oi-close/nifty_oi_close.py
+TimeoutStartSec=240
+MemoryMax=100M
+Nice=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
