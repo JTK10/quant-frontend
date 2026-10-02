@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE, validSession, sameOrigin } from "@/utils/auth";
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const forwarded = new Headers(request.headers);
   forwarded.set("x-quant-path", path + request.nextUrl.search);
   if (path === "/login" || path === "/api/auth/login" || path === "/api/auth/logout") return NextResponse.next({ request: { headers: forwarded } });
-  if (!validSession(request.cookies.get(SESSION_COOKIE)?.value)) {
+  if (!await validSession(request.cookies.get(SESSION_COOKIE)?.value)) {
     if (path.startsWith("/api/")) return NextResponse.json({ error: "Please sign in" }, { status: 401, headers: { "Cache-Control": "private, no-store" } });
     const url = new URL("/login", request.url);
     url.searchParams.set("next", path + request.nextUrl.search);

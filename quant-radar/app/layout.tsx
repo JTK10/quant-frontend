@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const path = (await headers()).get("x-quant-path") ?? "/";
-  if (path.split("?")[0] !== "/login" && !validSession((await cookies()).get(SESSION_COOKIE)?.value))
+  if (path.split("?")[0] !== "/login" && !await validSession((await cookies()).get(SESSION_COOKIE)?.value))
     redirect(`/login?next=${encodeURIComponent(path)}`);
   return (
     <html lang="en">

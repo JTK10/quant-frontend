@@ -5,6 +5,6 @@ import LoginForm from "./LoginForm";
 export const metadata = { title: "Sign in · Quant Radar", robots: { index: false, follow: false } };
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const next = safeDestination((await searchParams).next);
-  if (validSession((await cookies()).get(SESSION_COOKIE)?.value)) redirect(next);
+  if (await validSession((await cookies()).get(SESSION_COOKIE)?.value)) redirect(next);
   return <LoginForm next={next} />;
 }

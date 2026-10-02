@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { randomBytes } from 'node:crypto';
+// Run only against the localhost mock Redis server, never production.
+const base='http://127.0.0.1:3003';
+const initial=fs.readFileSync('.private/login-credentials.txt','utf8').split('\n')[1];
+const replacement=randomBytes(24).toString('base64url');
+const login=p=>fetch(base+'/api/auth/login',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({password:p})});
+const initialResponse=await login(initial);assert.equal(initialResponse.status,200);
+const cookie=initialResponse.headers.get('set-cookie').split(';')[0];
+const change=(currentPassword,newPassword,confirmPassword,origin=base,session=cookie)=>fetch(base+'/api/auth/change-password',{method:'POST',headers:{Origin:origin,Cookie:session,'Content-Type':'application/json'},body:JSON.stringify({currentPassword,newPassword,confirmPassword})});
+assert.equal((await change(initial,replacement,replacement,base,'')).status,401);
+assert.equal((await change(initial,replacement,replacement,'https://foreign.invalid')).status,403);
+assert.equal((await change(initial,'short','short')).status,400);
+assert.equal((await change(initial,replacement,'mismatch')).status,400);
+assert.equal((await change('wrong',replacement,replacement)).status,401);
+const changed=await change(initial,replacement,replacement);assert.equal(changed.status,200);
+assert.match(changed.headers.get('set-cookie'),/Max-Age=0/i);
+assert.equal((await fetch(base+'/api/radar',{headers:{Cookie:cookie}})).status,401);
+assert.equal((await login(initial)).status,401);
+const latest=await login(replacement);assert.equal(latest.status,200);
+assert.match(latest.headers.get('set-cookie'),/Max-Age=31536000/i);
+const session=latest.headers.get('set-cookie').split(';')[0];
+const page=await fetch(base+'/settings/password',{headers:{Cookie:session}});assert.equal(page.status,200);
+assert.match(await page.text(),/Current password/);
+console.log('PASS: HTTP change-password rejects anonymous/foreign-origin/wrong-current/short/mismatched passwords, clears cookie, rejects old sessions/password, accepts new password, and renders settings. Only isolated in-memory mock changed.');
