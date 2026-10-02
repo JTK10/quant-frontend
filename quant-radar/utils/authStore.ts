@@ -9,11 +9,13 @@ export function passwordStoreConfigured() {
 const key = () => `quant-radar:auth:${process.env.AUTH_STORE_NAMESPACE ?? process.env.VERCEL_ENV ?? "development"}:password`;
 export async function authRedis(command: (string | number)[]): Promise<unknown> {
   const { url, token } = credentials();
-  if (!url || !token || !url.startsWith("https://")) throw new Error("Password storage unavailable");
-  const response = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(command), cache: "no-store", redirect: "error", signal: AbortSignal.timeout(5000) });
-  if (!response.ok) throw new Error("Password storage unavailable");
+  if (!url || !token || !url.startsWith("https://")) { console.error("AUTH_STORE_CONFIG_INVALID"); throw new Error("Password storage unavailable"); }
+  let response: Response;
+  try { response = await fetch(url, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(command), cache: "no-store", redirect: "error", signal: AbortSignal.timeout(5000) }); }
+  catch { console.error("AUTH_STORE_FETCH_FAILED"); throw new Error("Password storage unavailable"); }
+  if (!response.ok) { console.error("AUTH_STORE_HTTP_ERROR", response.status); throw new Error("Password storage unavailable"); }
   const data = await response.json();
-  if (data.error) throw new Error("Password storage unavailable");
+  if (data.error) { console.error("AUTH_STORE_COMMAND_ERROR", command[0]); throw new Error("Password storage unavailable"); }
   return data.result;
 }
 export async function currentPasswordHash() {
@@ -26,7 +28,7 @@ export async function currentPasswordHash() {
     await authRedis(["SET", key(), initial, "NX"]);
     stored = await authRedis(["GET", key()]);
   }
-  if (!passwordHashValid(stored)) throw new Error("Password storage unavailable");
+  if (!passwordHashValid(stored)) { console.error("AUTH_STORE_HASH_INVALID", typeof stored); throw new Error("Password storage unavailable"); }
   return stored;
 }
 export async function replacePasswordHash(expected: string, replacement: string) {
