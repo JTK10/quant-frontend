@@ -5,6 +5,7 @@ import {
   CandlestickSeries,
   ColorType,
   createChart,
+  createSeriesMarkers,
   HistogramSeries,
   LineSeries,
   LineStyle,
@@ -29,6 +30,8 @@ export type ChartBar = {
   volume: number;
 };
 
+export type TradeOverlay = { id: string; time: number; side: "BULL" | "BEAR"; entry: number; stop: number; target: number; endTime?: number };
+const EMPTY_TRADES: TradeOverlay[] = [];
 type CandleMessage = ChartBar & {
   type: "candle";
   kind: "update" | "closed";
@@ -216,6 +219,9 @@ export default function LiveCandleChart({
   sessionDate,
   asOf,
   onQuote,
+  tradeSignals = EMPTY_TRADES,
+  selectedTradeId,
+  strictSession = false,
 }: {
   symbol: string;
   streamUrl: string;
@@ -227,6 +233,9 @@ export default function LiveCandleChart({
   sessionDate?: string;
   asOf?: number;
   onQuote?: (symbol: string, value: number) => void;
+  tradeSignals?: TradeOverlay[];
+  selectedTradeId?: string;
+  strictSession?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -253,7 +262,7 @@ export default function LiveCandleChart({
   const [hasBars, setHasBars] = useState(false);
   const quoteRef = useRef(onQuote);
   useEffect(() => { quoteRef.current = onQuote; }, [onQuote]);
-  const sessionBars = useCallback((bars: ChartBar[]) => bars.filter(b => (!sessionDate || istDay(b.time) <= sessionDate) && (!asOf || b.time + 300 <= asOf)), [sessionDate, asOf]);
+  const sessionBars = useCallback((bars: ChartBar[]) => bars.filter(b => (!sessionDate || (strictSession ? istDay(b.time) === sessionDate : istDay(b.time) <= sessionDate)) && (!asOf || b.time + 300 <= asOf)), [sessionDate, asOf, strictSession]);
 
   const resetView = () => {
     const range = recentRangeRef.current;
@@ -455,6 +464,25 @@ export default function LiveCandleChart({
       candles.applyOptions({ autoscaleInfoProvider: undefined });
     };
   }, [oiData, showPreviousOI, timeframe, symbol, sessionDate, sessionBars, barRevision, asOf]);
+
+  useEffect(() => {
+    const chart = chartRef.current, candles = candleRef.current;
+    if (!chart || !candles || !tradeSignals.length) return;
+    const bars = aggregateBars(sessionBars([...barsRef.current.values()]), timeframe);
+    const visible = tradeSignals.filter(s => bars.some(b => b.time === bucketStart(s.time, timeframe)) && (!asOf || s.time <= asOf));
+    const markers = createSeriesMarkers(candles, visible.map(s => ({ time: bucketStart(s.time, timeframe) as UTCTimestamp, position: s.side === "BULL" ? "belowBar" as const : "aboveBar" as const, color: s.side === "BULL" ? "#35e07a" : "#ff4d5f", shape: s.side === "BULL" ? "arrowUp" as const : "arrowDown" as const, text: `${s.side} ${s.entry.toFixed(2)}` })).sort((a,b) => Number(a.time)-Number(b.time)));
+    const selected = visible.find(s => s.id === selectedTradeId) ?? visible.at(-1);
+    const overlays: ISeriesApi<"Line">[] = [];
+    if (selected && bars.length) {
+      const start = selected.time;
+      const end = Math.max(start+INTERVAL_SECONDS[timeframe], Math.min(selected.endTime ?? Infinity, bars.at(-1)!.time+INTERVAL_SECONDS[timeframe]));
+      for (const [value,title,color] of [[selected.entry,"ENTRY","#38bdf8"],[selected.stop,"SL","#ff4d5f"],[selected.target,"TARGET 3R","#35e07a"]] as const) {
+        const line = chart.addSeries(LineSeries,{ color, title, lineWidth:2, lineStyle:LineStyle.Dashed, priceLineVisible:false, lastValueVisible:true, crosshairMarkerVisible:false });
+        line.setData([{time:start as UTCTimestamp,value},{time:end as UTCTimestamp,value}]); overlays.push(line);
+      }
+    }
+    return () => { if (chartRef.current !== chart) return; markers.detach(); overlays.forEach(s => chart.removeSeries(s)); };
+  }, [tradeSignals, selectedTradeId, timeframe, symbol, sessionDate, sessionBars, barRevision, asOf]);
 
   useEffect(() => {
     if (!streamUrl) return;
