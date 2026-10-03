@@ -1,0 +1,39 @@
+--- ocelot.py
++++ ocelot.py
+@@ -1916,9 +1916,6 @@
+     if not degraded:
+         bulk(con, "scores", score_rows, cut_ts)
+         bulk(con, "flow_5min", flow_rows, cut_ts)
+-        bulk(con, "margay_5min", margay_rows, cut_ts)
+-        bulk(con, "neofelis_5min", neo_rows, cut_ts)
+-        bulk(con, "jaguar_5min", jaguar_rows, cut_ts)
+     note = ("degraded: thin coverage" if degraded
+             else ("display-only: past 15:25" if late else "ok"))
+     con.execute("DELETE FROM health WHERE cut_ts = ?", [cut_ts])
+@@ -1934,24 +1931,9 @@
+     await publish(client, cut_ts, score_rows, degraded or late,
+                   {f[1]: f for f in flow_rows}, opp_by_symbol)
+     if not (degraded or late):
+-        await publish_margay(client, cut_ts, margay_rows)
+-        await publish_jaguar(client, cut_ts, jaguar_rows, jaguar_aux)
+         await publish_sector_rd(client, cut_ts, score_rows, lv)
+-        # act ranks across EVERY scored symbol, not only the board rows --
+-        # that is the population it was measured on.
+-        _ex = {o[0]: {"ce_cr": o[1], "pe_cr": o[2]} for o in opp_rows}
+-        for _s, _v in sess.items():
+-            if _v.get("act") is not None:
+-                _ex.setdefault(_s, {}).update(
+-                    {"act": _v["act"], "net": _v.get("net_cum")})
+-        _ordered = sorted(
+-            (_s for _s in _ex if _ex[_s].get("act") is not None),
+-            key=lambda z: _ex[z]["act"])
+-        for _i, _s in enumerate(_ordered):
+-            _ex[_s]["actrk"] = round(100.0 * (_i + 1) / len(_ordered))
+-        await publish_neofelis(client, cut_ts, neo_rows,
+-                               round(ok / expected, 3) if expected else None,
+-                               extra=_ex)
++        # Retired Jaguar/Neofelis/Margay outputs October 3, 2026.
++        # Keep score_symbol and jaguar_aux: Rusty and Ocelot still consume them.
+         rusty_candles = {}
+         if hm_now >= FIRST_CUT:
+             try:

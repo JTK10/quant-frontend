@@ -133,12 +133,10 @@ const JaguarIcon = (props: any) => (
 // Publishers rfac-scanner / smartlist / v2dyn disabled on the VM the same day. --
 const NAV_ITEMS: any[] = [
   { href: "/rusty", icon: Cat, label: "Rusty", color: "#fb7185", rgb: "251,113,133" },
-  { href: "/neofelis", icon: NeofelisIcon, label: "Neofelis", color: "#2dd4bf", rgb: "45,212,191" },
   { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },
   { href: "/nifty-signals", icon: Target, label: "Nifty Signals", color: "#22d3ee", rgb: "34,211,238" },
-  { href: "/jaguar", icon: JaguarIcon, label: "Jaguar", color: "#8b5cf6", rgb: "139,92,246" },
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/ocelot", icon: Activity, label: "Ocelot", color: "#f97316", rgb: "249,115,22" },
@@ -150,7 +148,6 @@ const NAV_ITEMS: any[] = [
 // Restore by uncommenting; the icons are still imported.
 // { href: "/afac", icon: Target, label: "AFAC", color: "#fce205", rgb: "252,226,5" },
 // { href: "/serval", icon: Cat, label: "Serval", color: "#ec4899", rgb: "236,72,153" },
-// { href: "/margay", icon: MargayIcon, label: "Margay", color: "#a855f7", rgb: "168,85,247" },
 // -- Removed 2026-08-23: TradingView embeds cannot show NSE symbols. Indian
 // exchange symbols are blocked in widgets by the NSE Data Sharing & Usage
 // Policy, so every pane rendered "this symbol is only available on
@@ -158,7 +155,6 @@ const NAV_ITEMS: any[] = [
 // Click-through links to tradingview.com still work and are used elsewhere.
 // Restore this when the panes render our own bars instead. --
 // { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },
-  { href: "/strike", icon: Crown, label: "Strike", color: "#f59e0b", rgb: "245,158,11" },
 ];
 
 // -- Hidden 2026-07: Panther-live and Elephant (panther-rank) engines retired on
