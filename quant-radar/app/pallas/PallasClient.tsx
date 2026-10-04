@@ -4,6 +4,7 @@ import {Cat,Plus,Check,ExternalLink,X} from 'lucide-react';
 import {addChartWatchlistSymbol,readChartWatchlist,CHART_WATCHLIST_UPDATED_EVENT} from '@/utils/chartWatchlist';
 import {buildTradingViewUrl,getTodayIstDate} from '@/utils/backend';
 import {PALLAS_DATES,quoteKey,pallasAiScore,passesPallasAi,type PallasResponse,type PallasSignal,type PallasCandidate,type PallasBar} from '@/utils/pallas';
+import {pallasSessionRollover} from '@/utils/pallasTime';
 import './pallas.css';
 const fmt=(v:unknown,d=2)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('en-IN',{maximumFractionDigits:d}):'—';
 const hm=(v?:string|null)=>v?new Date(v).toLocaleTimeString('en-GB',{timeZone:'Asia/Kolkata',hour12:false}):'—';
@@ -21,6 +22,12 @@ function PriceChart({bars,event}:{bars:PallasBar[];event:PallasSignal}){
 export default function PallasClient(){
   const [mode,setMode]=useState('live'),[date,setDate]=useState(getTodayIstDate),[minute,setMinute]=useState(690),[play,setPlay]=useState(false),[data,setData]=useState<PallasResponse|null>(null),[error,setError]=useState(''),[search,setSearch]=useState(''),[side,setSide]=useState('ALL'),[onlyOi,setOnlyOi]=useState(false),[onlyAi,setOnlyAi]=useState(false),[onlyWatch,setOnlyWatch]=useState(false),[watch,setWatch]=useState<string[]>([]),[selected,setSelected]=useState<PallasSignal|null>(null),[chart,setChart]=useState<PallasBar[]>([]),[notice,setNotice]=useState('');
   const dialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{
+    if(mode!=='live')return;
+    const sync=()=>{const next=pallasSessionRollover(mode,date);if(next){setData(null);setSelected(null);setDate(next);}};
+    sync();const timer=setInterval(sync,5000);document.addEventListener('visibilitychange',sync);
+    return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',sync);};
+  },[mode,date]);
   useEffect(()=>{const sync=()=>setWatch(readChartWatchlist());sync();window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.addEventListener('storage',sync);return()=>{window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.removeEventListener('storage',sync);};},[]);
   useEffect(()=>{let disposed=false,controller:AbortController|undefined,timer:ReturnType<typeof setTimeout>;const load=async()=>{controller=new AbortController();try{const p=new URLSearchParams({mode,date});if(mode==='research')p.set('asof',clock(minute));const r=await fetch('/api/pallas?'+p,{cache:'no-store',signal:controller.signal});if(r.status===401){window.location.assign('/login?next=%2Fpallas');return;}const body=await r.json();if(!r.ok)throw new Error(body.error??'Feed unavailable');if(!disposed){setData(body);setError('');}}catch(e){if(!disposed&&!(e instanceof DOMException&&e.name==='AbortError')){setError(e instanceof Error?e.message:'Feed unavailable');setData(null);}}finally{if(!disposed&&mode==='live')timer=setTimeout(load,5000);}};setData(null);load();return()=>{disposed=true;controller?.abort();clearTimeout(timer);};},[mode,date,minute]);
   useEffect(()=>{if(!play||mode!=='research')return;const t=setInterval(()=>setMinute(m=>{if(m>=690){setPlay(false);return m;}return m+5;}),1000);return()=>clearInterval(t);},[play,mode]);
