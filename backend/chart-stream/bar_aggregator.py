@@ -104,7 +104,7 @@ class CandleAggregator:
         return sorted(rows, key=lambda row: (row["symbol"], row["time"]))
 
 
-def parse_feed_line(line: str) -> list[tuple[str, float, float, float]]:
+def parse_feed_line(line: str, *, include_metadata: bool = False) -> list:
     """Read the exact JSONL feed shape already consumed by caracal_feed.py."""
     import json
 
@@ -131,6 +131,13 @@ def parse_feed_line(line: str) -> list[tuple[str, float, float, float]]:
         except (TypeError, ValueError):
             continue
         if ltp > 0 and vtt >= 0:
-            rows.append((str(key), float(recv_ts), ltp, vtt))
+            row = (str(key), float(recv_ts), ltp, vtt)
+            if include_metadata:
+                try:
+                    trade_ts = float((market.get("ltpc") or {}).get("ltt")) / 1000
+                except (TypeError, ValueError):
+                    trade_ts = None
+                row += (trade_ts,)
+            rows.append(row)
     return rows
 

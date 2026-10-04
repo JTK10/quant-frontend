@@ -1,0 +1,26 @@
+[Unit]
+Description=Pallas causal alerts using existing VM1 ticks and VM2 captures
+After=network-online.target ocelot.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/pallas
+ExecStart=/home/ubuntu/ocelot/venv/bin/python -u /home/ubuntu/pallas/pallas_live.py
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=10
+MemoryHigh=96M
+MemoryMax=128M
+CPUQuota=25%
+Nice=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/pallas
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
