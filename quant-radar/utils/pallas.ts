@@ -5,7 +5,7 @@ export type PallasSignal = {
   Pole_Move_Pct:number; Pole_Body_Pct:number; Flag_Pullback_Pct:number; PF_Ratio:number;
   Flow_Type:string; Volume_Share_Pct:number; Prior_OI_Line:number|null; Prior_OI_Line_Type:string;
   Line_Respect:boolean; Intraday_Wall_Buildup_Pct:number|null; Intraday_Wall_OI_Added:number|null;
-  OI_Age_Seconds:number; Chain_Received_At:string; Confirmation_Status:string; Confirmation_At?:string; Recovered?:boolean;
+  OI_Age_Seconds:number|null; Chain_Received_At:string; Confirmation_Status:string; Confirmation_At?:string; Recovered?:boolean;
 };
 export type PallasCandidate={symbol:string;side:string;stage:string;spot:number;pole_move_pct:number;flag_pb_pct:number;pole_extreme:number;prev_levels:{s1:number|null;r1:number|null}};
 export type PallasQuote={symbol:string;expiry:string;strike:number;leg:string;ltp:number;received_at:string};

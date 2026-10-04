@@ -42,7 +42,7 @@ export async function GET(request:NextRequest){
       if(url)throw new Error('Incomplete feed pages');
     }
     const result=foldPallas(docs,date,limit,symbol);
-    if(mode==='research'){result.mode='CAUSAL_RESEARCH';result.stale=false;result.status='Closed-candle replay · original receipt latency unavailable';}
+    if(mode==='research'){result.mode='CAUSAL_RESEARCH';result.stale=false;result.status='Closed-candle replay · original receipt latency unavailable';for(const s of result.signals)s.OI_Age_Seconds=null;}
     return json(result);
   }catch{return json({error:'Pallas data unavailable; current signals cannot be confirmed'},503);}
 }
