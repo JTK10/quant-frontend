@@ -11,7 +11,7 @@ Pallas uses the corrected causal Frontier 1 engine. Numeric gates are unchanged.
 
 ## Decisions and recovery
 
-Closed candles establish the pole and flag. A fresh VM1 tick crossing that structure can issue `EARLY_TICK` using only a chain already available at that tick's arrival. Exchange/transport timestamps must be at most ten seconds old; OI capture age is bounded to one five-minute cycle plus sixty seconds. Connection gaps reset crossing baselines and invalidate queued ticks from the previous connection.
+Closed candles establish the pole and flag. The observed opening candle's open replaces the initial opening-quote fallback once that candle closes. A fresh VM1 tick crossing that structure can issue `EARLY_TICK` using only a chain already available at that tick's arrival. Exchange/transport timestamps must be at most ten seconds old; OI capture age is bounded to one five-minute cycle plus sixty seconds. Connection gaps reset crossing baselines and invalidate queued ticks from the previous connection.
 
 `CONFIRMED_CLOSE` evaluates a completed candle with the available current cut's chain. The early alert's premium, wall buildup and OI fields stay frozen; only its candle confirmation status changes. Early alerts can fail confirmation. The option premium is a dated reference quote, never an asserted fill. No auto-order execution.
 
@@ -30,10 +30,11 @@ Historical replay covers September 25, 28, 29, 30 and October 1, 2026: 10, 47, 4
 ## Validation and rollout, October 5, 2026 IST
 
 - Worker parity with all 136 corrected research decisions across five sessions.
-- 140 API replay-prefix checks, frozen-field duplicate check, seven live timing/quote tests, three stream metadata/backpressure/history tests, existing aggregation test.
+- 140 API replay-prefix checks, frozen-field duplicate check, eight live timing/quote/open tests, three stream metadata/backpressure/history tests, existing aggregation test.
 - TypeScript, focused ESLint and Next production build passed. Authenticated local production-build API reads confirmed all five session counts, rewind, completed-candle cutoff and actual VM2 ORDS market-closed state. Anonymous API denied; anonymous page redirects to login.
 - VM2 input benchmark: 9,827 contracts / 213 stocks, about 17 ms unpack, 34.1 MiB peak process RSS. Running idle cgroup about 22 MiB, available host memory about 524 MiB. This is an overnight measurement; full market-day load remains to be observed.
 - Existing VM1 stream probe from VM2 passed; retained services active following controlled restarts.
+- Production Vercel deployment verified in the authenticated browser: October 1 replay displayed 19 signals, sorted premium change descending, wall buildup and a completed-candle inspector. Live mode displayed October 5 market-closed state read from VM2. Unrecorded historical receipt ages remain blank.
 
 ### Backups / rollback
 

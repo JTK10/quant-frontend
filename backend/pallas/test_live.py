@@ -50,6 +50,18 @@ def update(hm, price, **kw):
 
 
 class LiveTests(unittest.TestCase):
+    def test_actual_opening_bar_replaces_premarket_quote_fallback(self):
+        with tempfile.TemporaryDirectory() as t:
+            state=State(Path(t));state.start_day(DAY)
+            payload=dict(date=DAY,cut='09:15:00',expiry=EXPIRY,exported_at=epoch('09:15:01'),
+                         chain_received={},degraded=False,chains={},candles={},
+                         baselines={'TEST':dict(spot=100.,pdh=102.,pdl=98.,open=99.)})
+            state.ingest(payload,epoch('09:15:01'))
+            self.assertEqual(state.scanner.baselines['TEST']['open'],99.)
+            payload.update(cut='09:20:00',exported_at=epoch('09:20:01'),candles={'TEST':dict(time='09:15',open=100.,high=102.,low=100.,close=101.8)})
+            state.ingest(payload,epoch('09:20:01'))
+            self.assertEqual(state.scanner.baselines['TEST']['open'],100.)
+
     def test_cross_uses_prior_available_chain_and_freezes(self):
         with tempfile.TemporaryDirectory() as t:
             state=prepared(Path(t))

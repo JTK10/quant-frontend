@@ -199,6 +199,10 @@ class State:
             if minute(start) + 5 != minute(cut):
                 continue
             bars[sym] = dict(hm=start, o=candle['open'], h=candle['high'], l=candle['low'], c=candle['close'])
+            # Ocelot's opening quote can precede the first trade. Once the
+            # actual opening candle closes, anchor to its observed open.
+            if start == '09:15:00' and sym in self.scanner.baselines and finite(candle['open']) and candle['open'] > 0:
+                self.scanner.baselines[sym]['open'] = candle['open']
         new = []
         if cut <= '11:30:00':
             # Missing/OI-late symbols can still accumulate valid cash history.
