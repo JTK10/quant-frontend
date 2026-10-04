@@ -6,7 +6,16 @@ export type PallasSignal = {
   Flow_Type:string; Volume_Share_Pct:number; Prior_OI_Line:number|null; Prior_OI_Line_Type:string;
   Line_Respect:boolean; Intraday_Wall_Buildup_Pct:number|null; Intraday_Wall_OI_Added:number|null;
   OI_Age_Seconds:number|null; Chain_Received_At:string; Confirmation_Status:string; Confirmation_At?:string; Recovered?:boolean;
+  AI_Score?:number|null; AI_Model_ID?:string|null; AI_Status?:string; AI_Scored_At?:string|null;
 };
+// Frozen experimental score only. A missing score never defaults to a value.
+export function pallasAiScore(s:PallasSignal):number|null {
+  const issued=Date.parse(s.Issued_At),scored=Date.parse(s.AI_Scored_At??'');
+  return s.Event_Type==='CONFIRMED_CLOSE'&&s.AI_Status==='SCORED'&&Boolean(s.AI_Model_ID)&&
+    typeof s.AI_Score==='number'&&Number.isFinite(s.AI_Score)&&s.AI_Score>=0&&s.AI_Score<=1&&
+    Number.isFinite(issued)&&Number.isFinite(scored)&&scored<=issued?s.AI_Score:null;
+}
+export const passesPallasAi=(s:PallasSignal,cutoff=.70)=>{const score=pallasAiScore(s);return score!==null&&score>=cutoff;};
 export type PallasCandidate={symbol:string;side:string;stage:string;spot:number;pole_move_pct:number;flag_pb_pct:number;pole_extreme:number;prev_levels:{s1:number|null;r1:number|null}};
 export type PallasQuote={symbol:string;expiry:string;strike:number;leg:string;ltp:number;received_at:string};
 export type PallasBar=[string,string,number,number,number,number,number];

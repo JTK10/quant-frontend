@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'deps'))
 import httpx
 import websockets
 from pallas_engine import Scanner, minute, clock, VERSION, finite
+from pallas_ai import get_scorer
 
 IST = ZoneInfo('Asia/Kolkata')
 ROOT = Path(os.environ.get('PALLAS_ROOT', '/home/ubuntu/pallas'))
@@ -74,6 +75,10 @@ def structures(scanner):
 class State:
     def __init__(self, root=ROOT):
         self.root = root
+        try:
+            self.ai = get_scorer()
+        except (OSError, ValueError, KeyError, AssertionError):
+            self.ai = None  # Base scanner keeps running if model is unavailable.
         self.day = None
         self.scanner = None
         self.snapshots = []
@@ -124,6 +129,8 @@ class State:
                      Reference_Premium_At=iso(chain_at), OI_Age_Seconds=round(issued - chain_at, 2),
                      Ticks_At=iso(tick_at) if tick_at else None, Recovered=bool(recovered),
                      Confirmation_Status='PENDING_CLOSE' if event_type == 'EARLY_TICK' else 'CONFIRMED')
+        event.update(self.ai.annotation(event, event_type, event['Issued_At']) if self.ai else
+                     dict(AI_Score=None, AI_Model_ID=None, AI_Status='MODEL_UNAVAILABLE', AI_Scored_At=None))
         self.events[identifier] = event
         save(self.root / 'events' / self.day / (identifier.replace('|', '_').replace(' ', '_').replace(':', '_') + '.json'), event)
         self.document('EARLY' if event_type == 'EARLY_TICK' else 'CONFIRMED', dict(signals=[event], status='Early tick breakout' if event_type == 'EARLY_TICK' else 'Completed candle confirmed'), issued)
@@ -390,6 +397,8 @@ async def run():
                                   tick_received_at=iso(state.last_tick_at) if state.last_tick_at else None,
                                   last_cut=max(state.processed) if state.processed else None,
                                   events=len(state.events), early=len(state.early), engine=VERSION)
+                    health.update(ai_model_id=state.ai.model_id if state.ai else None,
+                                  ai_status='READY' if state.ai else 'MODEL_UNAVAILABLE')
                     save(ROOT / 'health.json', health)
                     interval = 300 if status == 'Market closed' else 60
                     if status != state.last_status or now - state.last_published_health >= interval:
