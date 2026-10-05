@@ -111,6 +111,21 @@ def save(state, path):
     temp.write_text(json.dumps(state,allow_nan=False))
     temp.replace(path)
 
+def ready_index(fetch_bars, index, cut, deadline, now=time.time, pause=time.sleep):
+    # The intraday API can publish the last completed minute after the timer's
+    # five-second start. Retry only this current cut, leaving 15 seconds inside
+    # the existing 90-second entry deadline for OI and a fresh quote.
+    required = {cut-12, *range(cut-5, cut)}
+    while not required.issubset(index):
+        remaining = deadline-now()
+        if remaining <= 0:
+            raise ValueError('Current-date completed index candles unavailable; no signal')
+        pause(min(10, remaining))
+        index = fetch_bars()
+        if now() > deadline:
+            raise ValueError('Current-date completed index candles unavailable; no signal')
+    return index
+
 def main():
     now = datetime.now(feed.IST)
     day = now.date().isoformat()
@@ -160,9 +175,10 @@ def main():
                 state['expiry']=row[2]
                 support,resistance = [r[0] for r in row[3]],[r[0] for r in row[4]]
                 state['support'],state['resistance']=support,resistance
+                index = ready_index(lambda: bars(feed.KEY), index, cut,
+                                    now.replace(second=0,microsecond=0).timestamp()+75)
+                state['index_ready_at'] = datetime.now(feed.IST).isoformat()
                 found = candidates(index,cut,support,resistance)
-                if cut-12 not in index or cut-1 not in index:
-                    raise ValueError('Current-date completed index candles unavailable; no signal')
                 series = {}
                 atm = math.floor(index[cut-12][4]/50+.5)*50
                 if found:

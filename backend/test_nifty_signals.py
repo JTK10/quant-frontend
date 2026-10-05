@@ -2,9 +2,49 @@ import json
 import gzip
 import unittest
 from pathlib import Path
-from nifty_signals import candidates, direct_breaks, minute, accepts, oi_change, quote_epoch
+from nifty_signals import candidates, direct_breaks, minute, accepts, oi_change, quote_epoch, ready_index
 
 class Rules(unittest.TestCase):
+    def test_ready_index_waits_for_provider_publication(self):
+        cut=630;clock=[5];calls=[]
+        ready={m:['row'] for m in [cut-12,*range(cut-5,cut)]}
+        initial={m:r for m,r in ready.items() if m!=cut-1}
+        def pause(seconds):clock[0]+=seconds
+        def fetch():
+            calls.append(clock[0])
+            return ready if clock[0]>=30 else initial
+        self.assertEqual(ready_index(fetch,initial,cut,75,lambda:clock[0],pause),ready)
+        self.assertEqual(calls,[15,25,35])
+
+    def test_ready_index_complete_data_needs_no_retry(self):
+        cut=630;ready={m:['row'] for m in [cut-12,*range(cut-5,cut)]}
+        def unexpected():self.fail('Complete candles must not be refetched')
+        self.assertIs(ready_index(unexpected,ready,cut,75,lambda:5),ready)
+
+    def test_ready_index_missing_data_has_bounded_wait(self):
+        clock=[5];calls=[]
+        def pause(seconds):clock[0]+=seconds
+        def fetch():calls.append(clock[0]);return {}
+        with self.assertRaisesRegex(ValueError,'completed index candles unavailable'):
+            ready_index(fetch,{},630,75,lambda:clock[0],pause)
+        self.assertEqual(clock[0],75)
+        self.assertEqual(len(calls),7)
+
+    def test_ready_index_requires_entire_closed_candle(self):
+        cut=630;clock=[5]
+        ready={m:['row'] for m in [cut-12,*range(cut-5,cut)]}
+        partial={m:r for m,r in ready.items() if m!=cut-3}
+        def pause(seconds):clock[0]+=seconds
+        self.assertEqual(ready_index(lambda:ready,partial,cut,75,lambda:clock[0],pause),ready)
+        self.assertEqual(clock[0],15)
+
+    def test_ready_index_late_response_fails_closed(self):
+        cut=630;clock=[60];ready={m:['row'] for m in [cut-12,*range(cut-5,cut)]}
+        def pause(seconds):clock[0]+=seconds
+        def fetch():clock[0]+=20;return ready
+        with self.assertRaisesRegex(ValueError,'completed index candles unavailable'):
+            ready_index(fetch,{},cut,75,lambda:clock[0],pause)
+
     def test_detector_parity(self):
         path=Path(__file__).resolve().parent/'fixtures/nifty-detector-parity.json.gz'
         cases=json.loads(gzip.decompress(path.read_bytes()))
