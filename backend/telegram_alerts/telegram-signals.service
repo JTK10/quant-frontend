@@ -1,0 +1,25 @@
+[Unit]
+Description=Telegram alerts for confirmed Pallas AI>70 and Kairos2 paper trades
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/telegram-signals
+EnvironmentFile=/home/ubuntu/telegram-signals/private.env
+ExecStart=/usr/bin/python3 -u /home/ubuntu/telegram-signals/telegram_signal_relay.py
+Restart=on-failure
+RestartSec=30
+UMask=0077
+MemoryHigh=40M
+MemoryMax=64M
+CPUQuota=5%
+Nice=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/telegram-signals
+
+[Install]
+WantedBy=multi-user.target
