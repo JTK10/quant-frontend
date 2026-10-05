@@ -1,10 +1,11 @@
-import PageHeader from "@/components/PageHeader";
+import { BrainCircuit, ChevronRight, ShieldCheck } from "lucide-react";
 import { AutoRefresh, DatePicker } from "@/components/Controls";
 import KairosClient from "./KairosClient";
 import { resolveDate, type DateSearchParams } from "@/utils/date";
 import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
 import Link from "next/link";
 import { kairosSource, type KairosEngine, type KairosEvent } from "@/utils/kairos";
+import styles from "./kairos.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -35,21 +36,22 @@ export default async function KairosPage({ searchParams }: { searchParams: DateS
   const live = events.some((e) => kairosSource(e) === engine && e.mode === "live");
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
-      <PageHeader
-        title={engine === "kairos2" ? "KAIROS 2.0" : "KAIROS"}
-        subtitle={engine === "kairos2" ? "PALLAS AI · OPTIONS PAPER TRADER" : `OPTIONS BOT — LYNX RANK-1${live ? "" : " — PAPER"}`}
-        badge={live ? "LIVE" : "PAPER"}
-        dateStr={dateStr}
-        accentColor="#22d3ee"
-      >
-        <DatePicker />
-        <AutoRefresh interval={30000} />
-      </PageHeader>
-      <div className="flex gap-2 px-3 pt-3 md:px-6" aria-label="Kairos engine">
+    <div className={styles.dashboard}>
+      <header className={styles.header}>
+        <div className={styles.brand}>
+          <div className={styles.core}><BrainCircuit size={25} strokeWidth={1.5} /></div>
+          <div><div className={styles.eyebrow}>{engine === "kairos2" ? "AI POWERED EXECUTION" : "LYNX OPTIONS ENGINE"}</div><h1>Kairos <span>{engine === "kairos2" ? "2.0" : "Classic"}</span></h1></div>
+          <span className={styles.mode}><ShieldCheck size={12} />{live ? "LIVE" : "PAPER"}</span>
+        </div>
+        <div className={styles.controls}><DatePicker /><AutoRefresh interval={30000} /></div>
+      </header>
+      <div className={styles.toolbar}>
+      <nav className={styles.engineTabs} aria-label="Kairos engine">
         {([['kairos2','Kairos 2.0'],['kairos','Kairos']] as const).map(([value,label]) => <Link key={value}
           href={`/kairos?engine=${value}&date=${dateStr}`} aria-current={engine === value ? "page" : undefined}
-          className={`rounded-lg border px-4 py-2 font-mono text-xs ${engine === value ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-slate-400 hover:text-white"}`}>{label}</Link>)}
+          className={engine === value ? styles.selectedTab : styles.tab}>{value === "kairos2" && <BrainCircuit size={13} />}{value === "kairos" ? "Classic" : label}</Link>)}
+      </nav>
+      <div className={styles.pipeline}>{engine === "kairos2" ? <><span>Pallas signals</span><ChevronRight size={11}/><span>AI selection</span><ChevronRight size={11}/><span>Paper execution</span></> : <span>Lynx rank-1 · options execution</span>}</div>
       </div>
       <KairosClient events={events} engine={engine} dateStr={dateStr} asOf={asOf} />
     </div>

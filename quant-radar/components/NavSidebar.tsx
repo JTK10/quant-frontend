@@ -134,12 +134,12 @@ const JaguarIcon = (props: any) => (
 const NAV_ITEMS: any[] = [
   { href: "/rusty", icon: Cat, label: "Rusty", color: "#fb7185", rgb: "251,113,133" },
   { href: "/pallas", icon: Cat, label: "Pallas", color: "#5ad9ee", rgb: "90,217,238" },
+  { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },
   { href: "/nifty-signals", icon: Target, label: "Nifty Signals", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
-  { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/ocelot", icon: Activity, label: "Ocelot", color: "#f97316", rgb: "249,115,22" },
 // -- Dropped from the nav 2026-09-08 (RK). The PAGES and their publishers are
 // untouched -- /afac, /serval and /margay still render and still receive data,
