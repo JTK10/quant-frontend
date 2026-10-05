@@ -83,17 +83,17 @@ class Scanner:
         candidates = []
         if bull:
             candidates.append(('BULL', 'STANDARD', bm, ph, next(b for b in pole_window if b['h'] == ph), base['open'], None))
-        if bear:
+        if rev_bear:
+            p_type = 'CASCADE' if bear else 'REVERSE_POLE'
+            candidates.append(('BEAR', p_type, rev_move, rev_trough_bar['l'], rev_trough_bar, rev_peak_bar['h'], rev_peak_bar))
+        elif bear:
             candidates.append(('BEAR', 'STANDARD', sm, pl, next(b for b in pole_window if b['l'] == pl), base['open'], None))
-        if rev_bear and not bear:
-            candidates.append(('BEAR', 'REVERSE_POLE', rev_move, rev_trough_bar['l'], rev_trough_bar, rev_peak_bar['h'], rev_peak_bar))
 
         if not candidates:
             return None
 
         best_event = None
         for side, pattern_type, move, extreme, pole, pole_anchor, pole_start in candidates:
-            # Trigger never establishes its own flag: OHLC cannot tell high/low order.
             flag_window = [b for b in prior if pole['hm'] < b['hm'] <= '10:35:00']
             if not flag_window:
                 continue
@@ -115,7 +115,6 @@ class Scanner:
             body = round(sum(abs(b['c'] - b['o']) / (b['h'] - b['l'] if b['h'] > b['l'] else .01) * 100 for b in pole_bars) / len(pole_bars), 1)
             net_disp = abs(pole_bars[-1]['c'] - pole_bars[0]['o']) / (p_range if p_range > 0 else .01) * 100
             effective_body = max(body, round(net_disp, 1))
-            # Preserve published gate precision with directional body recognition for open-drive cascades
             move_r, pb_r, retrace_r = round(move, 2), round(pb, 2), round(retrace, 1)
             if not (move_r >= 1 and .10 <= pb_r <= 2.20 and retrace_r <= 140 and ratio >= 1.50 and (body >= 40 or effective_body >= 50 or move_r >= 2.0)):
                 continue
@@ -171,6 +170,7 @@ class Scanner:
             boost = 1.25 if 'Writing' in flow or 'Covering' in flow else 1
             score = round((move_r / 1.5) * (share / 20) * math.sqrt(ratio) / (retrace_r / 50 + .5) * boost, 2)
             best_event = dict(Engine=VERSION, Date=self.day, Symbol=sym, Side=side, Expiry=expiry,
+                              Pattern_Type=pattern_type,
                               Pole_Time=pole['hm'][:5], Pole_Move_Pct=move_r, Pole_Extreme=round(extreme, 2),
                               Flag_Time=flag['hm'][:5], Flag_Retrace_Pct=retrace_r, Flag_Pullback_Pct=pb_r,
                               Breakout_Bar_Start=trigger['hm'][:5], Signal_Time=cut[:5], Chain_Time=cut[:5],
