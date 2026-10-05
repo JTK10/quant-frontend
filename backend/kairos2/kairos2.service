@@ -1,0 +1,26 @@
+[Unit]
+Description=Kairos 2.0 paper trades from confirmed Pallas AI signals
+After=network-online.target pallas.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/kairos2
+ExecStart=/home/ubuntu/ocelot/venv/bin/python -u /home/ubuntu/kairos2/kairos2_live.py
+Restart=on-failure
+RestartSec=15
+MemoryHigh=64M
+MemoryMax=96M
+CPUQuota=15%
+Nice=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/kairos2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
