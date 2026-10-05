@@ -58,11 +58,39 @@ def structures(scanner):
         bm, sm = (hi / base['open'] - 1) * 100, (1 - lo / base['open']) * 100
         bd, sd = (hi / base['pdh'] - 1) * 100, (1 - lo / base['pdl']) * 100
         bull, bear = hi > base['pdh'] and bm >= 1, lo < base['pdl'] and sm >= 1
-        if not (bull or bear):
+        
+        # Reverse Pole Flag (Top-rejection dump from morning swing high, e.g. GAIL)
+        rev_bear, rev_extreme, rev_move, rev_pole_bar = False, None, 0.0, None
+        for i, b_hi in enumerate(pole[:-1]):
+            if b_hi['h'] == hi and hi >= base['open'] * 0.998:
+                after_bars = pole[i+1:]
+                if after_bars:
+                    min_after = min(b['l'] for b in after_bars)
+                    drop = (hi - min_after) / hi * 100
+                    if drop >= 1.0:
+                        rev_bear = True
+                        rev_extreme = min_after
+                        rev_move = drop
+                        rev_pole_bar = next(b for b in after_bars if b['l'] == min_after)
+                        break
+
+        if not (bull or bear or rev_bear):
             continue
-        side = 'BULL' if bull and (not bear or bd > sd) else 'BEAR'
-        extreme, move = (hi, bm) if side == 'BULL' else (lo, sm)
-        pole_bar = next(b for b in pole if b['h' if side == 'BULL' else 'l'] == extreme)
+
+        if bear or (rev_bear and not bull):
+            side = 'BEAR'
+            extreme, move, pole_bar = (lo, sm, next(b for b in pole if b['l'] == lo)) if bear else (rev_extreme, rev_move, rev_pole_bar)
+        elif bull and rev_bear:
+            if bars[-1]['c'] < (hi + rev_extreme) / 2:
+                side = 'BEAR'
+                extreme, move, pole_bar = rev_extreme, rev_move, rev_pole_bar
+            else:
+                side = 'BULL'
+                extreme, move, pole_bar = hi, bm, next(b for b in pole if b['h'] == hi)
+        else:
+            side = 'BULL'
+            extreme, move, pole_bar = hi, bm, next(b for b in pole if b['h'] == hi)
+
         pb_bars = [b for b in bars if pole_bar['hm'] < b['hm'] <= '10:35:00']
         pb = ((extreme - min(b['l'] for b in pb_bars)) if side == 'BULL' else (max(b['h'] for b in pb_bars) - extreme)) / extreme * 100 if pb_bars else 0
         walls = scanner.prior_walls.get((sym, scanner.expiry), {})
