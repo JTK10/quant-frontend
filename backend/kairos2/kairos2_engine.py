@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 IST = ZoneInfo('Asia/Kolkata')
 VERSION = 'kairos2-paper-1'
-MODEL = 'poleflag-lgb-2201fff7d915-compat-v1'
+MODEL = 'pallas-revpole-lgb-d53e5a653f19'
 BUDGET = 30000
 QUOTE_AGE = 30
 ENTRY_AGE = 90

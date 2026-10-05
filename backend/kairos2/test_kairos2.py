@@ -42,6 +42,27 @@ class CausalPaperTests(unittest.TestCase):
     def entry(self):
         return self.trader.enter(event(), contract(), quote(), NOW, OPEN, CLOSE)
 
+    def test_accepts_current_pallas_model_and_rejects_previous_model(self):
+        model_path = Path(__file__).parent.parent / 'pallas' / 'pallas_ai_model.json'
+        self.assertEqual(MODEL, json.loads(model_path.read_text())['model_id'])
+        self.assertTrue(self.trader.eligible(event(), NOW, OPEN, CLOSE))
+        previous = event(AI_Model_ID='poleflag-lgb-2201fff7d915-compat-v1')
+        self.assertFalse(self.trader.eligible(previous, NOW, OPEN, CLOSE))
+
+    def test_model_change_preserves_previous_trade_and_daily_lock(self):
+        self.entry()
+        previous_model = 'poleflag-lgb-2201fff7d915-compat-v1'
+        self.trader.state['position']['model_id'] = previous_model
+        self.trader.state['pending'][0]['model_id'] = previous_model
+        self.trader.save()
+        restarted = Trader(self.root, NOW + 1)
+        self.assertEqual(restarted.state['position']['model_id'], previous_model)
+        self.assertEqual(restarted.state['pending'][0]['model_id'], previous_model)
+        restarted.mark(quote(NOW + 5, bid=80), NOW + 5)
+        self.assertIsNone(restarted.state['position'])
+        self.assertTrue(restarted.state['taken'])
+        self.assertEqual(restarted.candidates([event(NOW + 10)], NOW + 10, OPEN, CLOSE), [])
+
     def test_does_not_use_a_later_high_score_to_trade_an_earlier_low_score(self):
         past = event(NOW-10, score=.5)
         future = event(NOW+60, 'LATER', .99)
