@@ -1,5 +1,15 @@
 # Pallas production integration
 
+## Pallas refresh correction — October 5, 2026
+
+The custom ORDS handler returns an unpaged source/date response and ignores the `limit` hint. Repeated publications had grown the live Pallas feed past its former 6 MB reader limit, causing HTTP 503 and a cleared board. The Pallas-only frontend reader now streams one document at a time, discards unrelated candle arrays before retaining documents, shares in-flight source/date/symbol requests and authorization, and folds the result into the existing compact board payload. There is no result cache or partial-success fallback. Reads remain bounded to 64 MiB, 10,000 documents, six pages and a 40-second overall feed deadline; malformed or incomplete feeds fail explicitly.
+
+On a failed refresh the last successful same-session board remains visible with a refresh-error message, the last available timestamp and stale quote labels. Date/mode changes, midnight rollover and replay rewinds hide previous data immediately. Old asynchronous responses cannot restore a previous session. Candle-close, receipt-time, frozen-event and AI-score boundaries are unchanged.
+
+The source/date transport remains the existing ORDS GET. This change does not reduce the upstream stored history or add an incremental database cursor: ORDS ignores pagination hints. It prevents the current size failure and bounds parser memory while keeping the browser response small. Watch daily publication growth before the transport reaches its larger explicit bound. No VM code/service, scanner/model, shared-page API or credential change is required.
+
+Validation: `node scripts/test-pallas-refresh.mjs`, existing Pallas/replay and time tests, TypeScript, focused ESLint and production build. A read of October 5's actual feed succeeded at 7.3 MB, returning about 74 KB with 46 events across 38 symbols. Production verification is recorded in the deployment audit after rollout.
+
 Pallas uses the corrected causal Frontier 1 engine. Numeric gates are unchanged. There is no daily cap, stop/target model or claimed trading win rate.
 
 ## Existing inputs
