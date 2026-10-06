@@ -5,6 +5,7 @@ import {requireApiSession} from '@/utils/auth';
 import {getTodayIstDate} from '@/utils/backend';
 import {foldPallas,PALLAS_DATES,type PallasDocument} from '@/utils/pallas';
 import {readPallasFeed,newPallasReadBudget,pallasInflight} from '@/utils/pallasFeed';
+import {pallasAsOf} from '@/utils/pallasTime';
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
 export const maxDuration=60;
@@ -15,10 +16,10 @@ const json=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'C
 export async function GET(request:NextRequest){
   const denied=await requireApiSession(request);if(denied)return denied;
   const p=request.nextUrl.searchParams, mode=p.get('mode')??'live', date=p.get('date')??getTodayIstDate(),asof=p.get('asof'),symbol=p.get('symbol')??undefined;
-  if(!['live','research'].includes(mode)||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date||
+  if(!['live','history','research'].includes(mode)||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date||
+    (mode==='history'&&date>getTodayIstDate())||
     (asof&&!/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(asof))||(symbol&&!/^[A-Z0-9 &_.-]{1,40}$/.test(symbol)))return json({error:'Invalid session, mode or time'},400);
-  let limit=asof?Date.parse(`${date}T${asof.length===5?asof+':00':asof}+05:30`):mode==='research'?Date.parse(`${date}T11:30:00+05:30`):Date.now();
-  if(mode==='live')limit=Math.min(limit,Date.now());
+  const limit=pallasAsOf(mode,date,asof);
   try{
     let docs:PallasDocument[];
     if(mode==='research'){
@@ -50,8 +51,10 @@ export async function GET(request:NextRequest){
         return collected;
       });
     }
+    if(mode==='history'&&!docs.length)return json({error:`No recorded Pallas data for ${date}`},404);
     const result=foldPallas(docs,date,limit,symbol);
     if(mode==='research'){result.mode='CAUSAL_RESEARCH';result.stale=false;result.status='Closed-candle replay · original receipt latency unavailable';for(const s of result.signals)s.OI_Age_Seconds=null;}
+    if(mode==='history'){result.mode='HISTORICAL';result.stale=false;result.tick_connected=undefined;result.status='Recorded session · original alerts and AI scores';}
     return json(result);
   }catch{return json({error:'Pallas data unavailable; current signals cannot be confirmed'},503);}
 }

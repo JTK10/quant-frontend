@@ -7,6 +7,7 @@ export type PallasSignal = {
   Line_Respect:boolean; Intraday_Wall_Buildup_Pct:number|null; Intraday_Wall_OI_Added:number|null;
   OI_Age_Seconds:number|null; Chain_Received_At:string; Confirmation_Status:string; Confirmation_At?:string; Recovered?:boolean;
   AI_Score?:number|null; AI_Model_ID?:string|null; AI_Status?:string; AI_Scored_At?:string|null;
+  AI_Submodel?:string|null; Pattern_Type?:string; Breakout_Level?:number;
 };
 // Frozen experimental score only. A missing score never defaults to a value.
 export function pallasAiScore(s:PallasSignal):number|null {
@@ -16,6 +17,23 @@ export function pallasAiScore(s:PallasSignal):number|null {
     Number.isFinite(issued)&&Number.isFinite(scored)&&scored<=issued?s.AI_Score:null;
 }
 export const passesPallasAi=(s:PallasSignal,cutoff=.70)=>{const score=pallasAiScore(s);return score!==null&&score>=cutoff;};
+export function pallasEngineLabel(s:PallasSignal):{label:string;detail:string;reported:boolean} {
+  if(s.Event_Type!=='CONFIRMED_CLOSE')return {label:'Engine pending',detail:'AI engine is assigned at candle confirmation',reported:false};
+  const engine=s.AI_Submodel;
+  if(engine==='pallas_pdh_break_ai'||s.AI_Model_ID?.startsWith('pallas-pdh-'))return {label:'Engine 3 · PDH/PDL',detail:'PDH/PDL breakout AI',reported:true};
+  if(engine==='pallas_reverse_pole_cascade_ai')return {label:'Engine 2 · Reverse/Cascade',detail:'Reverse-pole / cascade AI',reported:true};
+  if(engine==='pallas_standard_poleflag')return {label:'Engine 1 · Standard',detail:'Standard AI (also scores late-pole setups)',reported:true};
+  if(engine)return {label:'Engine unrecognized',detail:`Reported submodel: ${engine}`,reported:true};
+  // Legacy two-model producers did not publish AI_Submodel. Never infer the
+  // third model from a PDH pattern: older PDH events used the standard model.
+  if(['REVERSE_POLE','CASCADE'].includes(s.Pattern_Type??''))return {label:'Engine 2 · Reverse/Cascade',detail:'Inferred from the legacy reverse/cascade pattern; submodel was not recorded',reported:false};
+  if(['STANDARD','LATE_POLE_FLAG','PDH_BREAK_FLAG','PDL_BREAK_FLAG'].includes(s.Pattern_Type??''))return {label:'Engine 1 · Standard',detail:'Legacy standard-AI route; submodel was not recorded',reported:false};
+  return {label:'Legacy AI · engine unreported',detail:'This saved alert does not identify its scoring engine',reported:false};
+}
+export function pallasAiPassLabel(s:PallasSignal):string {
+  if(s.Event_Type!=='CONFIRMED_CLOSE')return 'AI pending';
+  return pallasAiScore(s)===null?'AI unavailable':passesPallasAi(s)?'AI passed ≥70':'Below 70';
+}
 export type PallasCandidate={symbol:string;side:string;stage:string;spot:number;pole_move_pct:number;flag_pb_pct:number;pole_extreme:number;prev_levels:{s1:number|null;r1:number|null}};
 export type PallasQuote={symbol:string;expiry:string;strike:number;leg:string;ltp:number;received_at:string};
 export type PallasBar=[string,string,number,number,number,number,number];
