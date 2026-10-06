@@ -31,6 +31,16 @@ if(process.env.PALLAS_HISTORY_FIXTURES){
   for(const [date,count] of [['2026-10-05',34],['2026-10-06',29]]){
     const docs=JSON.parse(fs.readFileSync(path.join(process.env.PALLAS_HISTORY_FIXTURES,date+'.json'),'utf8'));
     const result=foldPallas(docs,date,pallasAsOf('history',date,null,now));
+    let previous=new Set();
+    for(const time of ['09:15','09:30','10:00','11:30','15:30',null]){
+      const cutoff=pallasAsOf('history',date,time,now);
+      const replay=foldPallas(docs,date,cutoff);
+      const ids=new Set(replay.signals.map(s=>s.Event_ID));
+      for(const id of previous)assert.ok(ids.has(id),'Moving forward retains recorded alerts');
+      for(const signal of replay.signals)assert.ok(Date.parse(signal.Issued_At)<=cutoff,'No future signal');
+      for(const quote of replay.quotes)assert.ok(Date.parse(quote.received_at)<=cutoff,'No future quote');
+      previous=ids;
+    }
     const confirmed=result.signals.filter(s=>s.Event_Type==='CONFIRMED_CLOSE');
     assert.equal(confirmed.length,count);
     assert.equal(new Set(result.signals.map(s=>s.Event_ID)).size,result.signals.length);
