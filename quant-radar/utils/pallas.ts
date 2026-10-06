@@ -8,6 +8,7 @@ export type PallasSignal = {
   OI_Age_Seconds:number|null; Chain_Received_At:string; Confirmation_Status:string; Confirmation_At?:string; Recovered?:boolean;
   AI_Score?:number|null; AI_Model_ID?:string|null; AI_Status?:string; AI_Scored_At?:string|null;
   AI_Submodel?:string|null; Pattern_Type?:string; Breakout_Level?:number;
+  OI_Wall_Broken?:boolean|null;
 };
 // Frozen experimental score only. A missing score never defaults to a value.
 export function pallasAiScore(s:PallasSignal):number|null {
@@ -17,6 +18,12 @@ export function pallasAiScore(s:PallasSignal):number|null {
     Number.isFinite(issued)&&Number.isFinite(scored)&&scored<=issued?s.AI_Score:null;
 }
 export const passesPallasAi=(s:PallasSignal,cutoff=.70)=>{const score=pallasAiScore(s);return score!==null&&score>=cutoff;};
+// A snapshot comparison at the alert time, not a claim that wall OI unwound.
+// Compute from saved prices/levels so legacy records can use the same filter.
+export function pallasOiCrossed(side:string,spot:unknown,line:unknown):boolean|null {
+  if(typeof spot!=='number'||!Number.isFinite(spot)||spot<=0||typeof line!=='number'||!Number.isFinite(line)||line<=0)return null;
+  return side==='BULL'?spot>=line:side==='BEAR'?spot<=line:null;
+}
 export function pallasEngineLabel(s:PallasSignal):{label:string;detail:string;reported:boolean} {
   if(s.Event_Type!=='CONFIRMED_CLOSE')return {label:'Engine pending',detail:'AI engine is assigned at candle confirmation',reported:false};
   const engine=s.AI_Submodel;
