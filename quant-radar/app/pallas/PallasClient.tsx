@@ -44,8 +44,8 @@ export default function PallasClient(){
   const change=(s:PallasSignal)=>{const q=quotes.get(quoteKey(s));return q&&s.Reference_Premium>0?(q.ltp/s.Reference_Premium-1)*100:null;};
   const show=(symbol:string,direction:string,oi:boolean)=>symbol.includes(search.toUpperCase())&&(side==='ALL'||direction===side)&&(!onlyOi||oi)&&(!onlyWatch||watch.includes(symbol));
   const all=new Map<string,PallasSignal>();for(const s of data?.signals??[]){const old=all.get(s.Symbol);if(!old||s.Event_Type==='CONFIRMED_CLOSE')all.set(s.Symbol,s);}
-  // Recorded history retains every event, including multiple alerts for one stock.
-  const recorded=mode==='history'?(data?.signals??[]):[...all.values()];
+  // History uses the same per-stock confirmed-over-early selection as Live.
+  const recorded=[...all.values()];
   const signals=recorded.filter(s=>show(s.Symbol,s.Side,Boolean(s.Line_Respect))&&(!onlyAi||passesPallasAi(s))).sort((a,b)=>(change(b)??-Infinity)-(change(a)??-Infinity)||a.Symbol.localeCompare(b.Symbol));
   const now=mode==='live'?Date.now():data?Date.parse(data.asof):0,newSignals=signals.filter(s=>now-Date.parse(s.Issued_At)<300000),active=signals.filter(s=>!newSignals.includes(s));
   const candidates=(data?.candidates??[]).filter(c=>!all.has(c.symbol)&&show(c.symbol,c.side,false)).sort((a,b)=>b.pole_move_pct-a.pole_move_pct);

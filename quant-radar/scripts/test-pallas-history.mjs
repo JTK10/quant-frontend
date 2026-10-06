@@ -24,7 +24,7 @@ assert.equal(foldPallas([doc],'2026-10-06',pallasAsOf('history','2026-10-06',nul
 assert.equal(foldPallas([doc],'2026-10-06',pallasAsOf('research','2026-10-06',null,now)).signals.length,0);
 assert.match(fs.readFileSync('app/page.tsx','utf8'),/redirect\("\/rusty"\)/);
 const ui=fs.readFileSync('app/pallas/PallasClient.tsx','utf8');
-assert.match(ui,/mode==='history'\?\(data\?\.signals\?\?\[\]\)/);
+assert.match(ui,/const recorded=\[\.\.\.all.values\(\)\];/);
 assert.match(ui,/type="date" aria-label="Historical session"/);
 assert.doesNotMatch(ui,/signals\.slice\(/);
 if(process.env.PALLAS_HISTORY_FIXTURES){
