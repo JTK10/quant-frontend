@@ -80,6 +80,13 @@ def verified_close(candles, day, end_epoch):
     return spot
 
 
+def closing_boundaries(timings):
+    """Cash candles end at NSE close; option capture waits for both sessions."""
+    cash = [r['end_time']/1000 for r in timings if r.get('exchange') == 'NSE']
+    futures = [r['end_time']/1000 for r in timings if r.get('exchange') == 'NFO']
+    return max(cash, default=0), max(cash+futures, default=0)
+
+
 def make_doc(day, cut, levels, provenance):
     digest = hashlib.sha256(json.dumps([day, levels], sort_keys=True).encode()).hexdigest()
     return {'source':SOURCE, 'cap':'NIFTY_OI_CLOSE', 'name':'NIFTY 50',
@@ -152,8 +159,8 @@ def main(args):
     if not args.probe and (not cash or not futures):
         print(json.dumps({'date':day, 'status':'market holiday; no capture'}))
         return
-    close = max((r['end_time']/1000 for r in cash+futures), default=0)
-    if not args.probe and now.timestamp() < close+300:
+    cash_close, capture_close = closing_boundaries(timings)
+    if not args.probe and now.timestamp() < capture_close+300:
         print(json.dumps({'date':day, 'status':'session has not closed; no capture'}))
         return
     contracts = get('/v2/option/contract', {'instrument_key':KEY}).get('data', [])
@@ -171,7 +178,7 @@ def main(args):
             chain = get('/v2/option/chain', {'instrument_key':KEY, 'expiry_date':expiries[0]}).get('data', [])
             spot = chain[0]['underlying_spot_price'] if chain else None
     else:
-        spot = verified_close(candles, day, close)
+        spot = verified_close(candles, day, cash_close)
     if not isinstance(spot, (int, float)) or not math.isfinite(spot) or spot <= 0:
         raise ValueError('Closing spot unavailable')
     levels, counts, raw_chains = [], [], {}

@@ -25,3 +25,18 @@ Private raw data is under `/home/ubuntu/nifty-oi-close/data`.
 October 1 closing fixture was seeded with its actual date and publication
 read-back verified. October 2 holiday skip was verified. The first new
 automatic trading-day capture still needs observation after a market close.
+
+October 7 fix: cash-index candle validation now uses the NSE close (15:30 in
+the measured response); capture readiness still waits for both NSE and NFO
+to finish plus five minutes. NFO's 15:40 close must not require a nonexistent
+15:35 cash-index candle. The calling-path regression covers differing close
+times, the genuine 15:25 index candle and two future expiries.
+
+The missing October 6 record was recovered from genuine broker historical
+15:39 option OI for October 13 and October 19 expiries, using the verified NSE
+closing index price. All eight required contracts per expiry were present.
+The recovery is explicitly identified in provenance; unavailable OI changes
+are null. Published source remains `nifty_oi_close` and date remains October 6.
+No today's OI was substituted, no historical paper entries replayed, and no
+services restarted. The corrected collector was replaced atomically; the
+existing timer will pick it up on its next scheduled run.

@@ -12,7 +12,7 @@ const snap=(date,expiry='2026-10-06',degraded=false,cut='15:30')=>({
   date,expiry,degraded,cut,time:Date.parse(`${date}T${cut}:00+05:30`)/1000,
   spot:22500,support:[[22300,1000,null]],resistance:[[22500,1000,null]],
 });
-function harness(date,oi,historyBars=[]){
+function harness(date,oi,historyBars=[],oiLoading=false){
   const state=[],requests=[];let cursor=0,effects=[];
   const chart=()=>null;
   const jsx=(type,props,key)=>({type,props,key});
@@ -28,7 +28,7 @@ function harness(date,oi,historyBars=[]){
     if(name==='@/components/Controls')return {DatePicker:()=>null};
     if(name==='@/utils/backend')return {getTodayIstDate:()=>today};
     if(name==='../charts/LiveCandleChart')return {__esModule:true,default:chart};
-    if(name==='../charts/useOIData')return {useOIData:()=>({data:oi,error:''})};
+    if(name==='../charts/useOIData')return {useOIData:()=>({data:oi,error:'',loading:oiLoading})};
     if(name.endsWith('.css'))return {};
     throw Error('Unexpected import '+name);
   },Date,AbortController,setTimeout:()=>1,clearTimeout:()=>{},fetch:async url=>{
@@ -43,7 +43,9 @@ function harness(date,oi,historyBars=[]){
     }
     return null;
   }
-  return {requests,render(){cursor=0;effects=[];return find(exports.default({initialDate:date,streamUrl:'wss://existing-stream'}));},
+  let tree;
+  function text(node){if(node==null||typeof node==='boolean')return '';if(typeof node==='string'||typeof node==='number')return String(node);if(Array.isArray(node))return node.map(text).join('');return text(node.props?.children);}
+  return {requests,text:()=>text(tree),render(){cursor=0;effects=[];tree=exports.default({initialDate:date,streamUrl:'wss://existing-stream'});return find(tree);},
     async start(){const cleanup=effects[0]();await new Promise(resolve=>setImmediate(resolve));return cleanup;}};
 }
 
@@ -63,6 +65,7 @@ assert.equal(updated.oiData.intraday.length,0);
 assert.equal(updated.oiData.previous.length,1);
 assert.equal(updated.oiData.previous[0].date,'2026-10-01');
 assert.equal(updated.oiData.previous[0].cut,'15:30');
+assert.ok(live.text().includes('expiry 2026-10-06'));
 assert.equal(oi.previous.length,8,'Date filtering must not mutate shared cached OI');
 cleanup();
 
@@ -81,4 +84,9 @@ const emptyInitial=empty.render();const emptyCleanup=await empty.start();
 assert.equal(empty.render().initialBars,emptyInitial.initialBars,'An empty historical response must keep the stable empty seed');
 assert.equal(empty.render().oiData.previous.length,0);
 emptyCleanup();
+assert.ok(empty.text().includes('Previous-session OI unavailable'));
+assert.ok(!empty.text().includes('Loading OI'));
+const loading=harness(today,null,[],true);loading.render();assert.ok(loading.text().includes('Loading OI'));
+const rolled=harness('2026-10-07',{...oi,date:'2026-10-07',previous:[snap('2026-10-06','2026-10-06'),snap('2026-10-06','2026-10-13')]});
+assert.equal(rolled.render().oiData.previous[0].expiry,'2026-10-13');
 console.log('PASS: live snapshot preservation, polling, latest eligible prior OI, expiry/date/partial exclusions, historical loading and empty-session stability.');
