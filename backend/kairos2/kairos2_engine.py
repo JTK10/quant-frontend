@@ -12,6 +12,9 @@ from zoneinfo import ZoneInfo
 IST = ZoneInfo('Asia/Kolkata')
 VERSION = 'kairos2-paper-1'
 MODEL = 'pallas-revpole-lgb-d53e5a653f19'
+ENGINE3_MODEL = 'pallas-pdh-lgb-20261006'
+ENGINE3_SUBMODEL = 'pallas_pdh_break_ai'
+ENTRY_POLICY = 'pallas-e3-oi-cross-20261007'
 BUDGET = 30000
 QUOTE_AGE = 30
 ENTRY_AGE = 90
@@ -49,6 +52,19 @@ def positive(value):
 
 def integer(value):
     return positive(value) and int(value) == value
+
+
+def accepted_signal_model(event):
+    """Keep Engines 1/2 rules; Engine 3 additionally requires prior R1 crossed."""
+    model, submodel = event.get('AI_Model_ID'), event.get('AI_Submodel')
+    if model == MODEL:
+        return submodel != ENGINE3_SUBMODEL
+    if model != ENGINE3_MODEL or submodel != ENGINE3_SUBMODEL:
+        return False
+    spot, line = event.get('Breakout_Spot'), event.get('Prior_OI_Line')
+    return (event.get('Pattern_Type') == 'PDH_BREAK_FLAG' and event.get('Side') == 'BULL'
+            and event.get('Prior_OI_Line_Type') == 'R1' and positive(spot) and positive(line)
+            and spot >= line)
 
 
 def quote_valid(q, now, key):
@@ -163,7 +179,7 @@ class Trader:
             cutoff = min(closing, epoch(day(now) + 'T11:30:00+05:30'))
             return (event['Event_Type'] == 'CONFIRMED_CLOSE' and event['Confirmation_Status'] == 'CONFIRMED'
                     and event.get('Recovered') is False and event['AI_Status'] == 'SCORED'
-                    and event['AI_Model_ID'] == MODEL and isinstance(score, (int, float))
+                    and accepted_signal_model(event) and isinstance(score, (int, float))
                     and not isinstance(score, bool) and math.isfinite(score) and .7 <= score <= 1
                     and event['Date'] == day(now) and day(issued) == day(now)
                     and opening <= issued <= now < cutoff and self.boot_at <= issued
@@ -213,6 +229,10 @@ class Trader:
                         side='LONG' if event['Side'] == 'BULL' else 'SHORT', underlying=event['Symbol'],
                         expiry=contract['expiry'], strike=contract['strike'], leg=contract['leg'],
                         opt_key=contract['key'], ai_score=event['AI_Score'], model_id=event['AI_Model_ID'],
+                        ai_submodel=event.get('AI_Submodel'),
+                        engine3_oi_cross_required=event['AI_Model_ID'] == ENGINE3_MODEL,
+                        breakout_spot=event.get('Breakout_Spot'), prior_oi_line=event.get('Prior_OI_Line'),
+                        prior_oi_line_type=event.get('Prior_OI_Line_Type'),
                         signal_issued_at=event['Issued_At'], entry_at=stamp(now), quote_at=stamp(q['quote_at']),
                         **size, entry_fill=size['fill'], peak_gain_pct=0., stop_pct=-15.,
                         stop_premium=size['fill'] * .85, closing=closing, last_quote_epoch=q['quote_at'])
@@ -274,6 +294,8 @@ class Trader:
             self.state['status'] = status
         p = self.state['position']
         h = dict(date=day(now), mode='paper', engine=VERSION, model_id=MODEL,
+                 accepted_model_ids=[MODEL, ENGINE3_MODEL], engine3_model_id=ENGINE3_MODEL,
+                 engine3_oi_cross_required=True, entry_policy=ENTRY_POLICY,
                  status=self.state['status'], checked_at=stamp(now), ai_threshold=.7,
                  budget=BUDGET, daily_trade_taken=self.state['taken'],
                  open_positions=int(p is not None), pending_publications=len(self.state['pending']),
@@ -285,9 +307,10 @@ class Trader:
         # Bound overnight/no-trade publication to one per 15 minutes.
         previous = self.state.get('health_status')
         interval = 60 if '09:15:00' <= hm(now) <= '11:35:00' else 900
-        if len(self.state['pending']) < 1000 and (previous != h['status'] or now - self.state['last_health'] >= interval):
+        if len(self.state['pending']) < 1000 and (previous != h['status'] or
+                self.state.get('health_policy') != ENTRY_POLICY or now - self.state['last_health'] >= interval):
             self.emit('HEALTH', now, {**{k: v for k, v in h.items() if k not in ('date', 'mode', 'engine', 'checked_at')},
                                     'heartbeat_seconds': interval})
-            self.state.update(last_health=now, health_status=h['status'])
+            self.state.update(last_health=now, health_status=h['status'], health_policy=ENTRY_POLICY)
         self.save()
         return h

@@ -4,7 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from kairos2_engine import Trader, MODEL, epoch, stamp, buy_size, quote_valid
+from kairos2_engine import Trader, MODEL, ENGINE3_MODEL, ENGINE3_SUBMODEL, epoch, stamp, buy_size, quote_valid
 
 DAY = '2026-10-05'
 OPEN = epoch(DAY + 'T09:15:00+05:30')
@@ -62,6 +62,80 @@ class CausalPaperTests(unittest.TestCase):
         self.assertIsNone(restarted.state['position'])
         self.assertTrue(restarted.state['taken'])
         self.assertEqual(restarted.candidates([event(NOW + 10)], NOW + 10, OPEN, CLOSE), [])
+
+    def engine3(self, **extra):
+        return event(AI_Model_ID=ENGINE3_MODEL, AI_Submodel=ENGINE3_SUBMODEL,
+                     Pattern_Type='PDH_BREAK_FLAG', Prior_OI_Line_Type='R1',
+                     Breakout_Spot=1001, Prior_OI_Line=1000, **extra)
+
+    def test_engine3_cross_y_enters_and_persists_model_and_gate(self):
+        e = self.engine3()
+        doc = self.trader.enter(e, contract(), quote(), NOW, OPEN, CLOSE)
+        self.assertIsNotNone(doc)
+        self.assertEqual(doc['model_id'], ENGINE3_MODEL)
+        self.assertEqual(doc['ai_submodel'], ENGINE3_SUBMODEL)
+        self.assertTrue(doc['engine3_oi_cross_required'])
+        restarted = Trader(self.root, NOW + 1)
+        self.assertEqual(restarted.state['position']['prior_oi_line'], 1000)
+        self.assertEqual(restarted.state['position']['model_id'], ENGINE3_MODEL)
+        restarted.mark(quote(NOW + 5, bid=80), NOW + 5)
+        self.assertIsNone(restarted.state['position'])
+        self.assertTrue(restarted.state['taken'])
+
+    def test_engine3_at_line_qualifies_below_line_does_not(self):
+        for spot, allowed in [(1000, True), (999.9, False)]:
+            e = self.engine3(); e['Breakout_Spot'] = spot
+            self.assertEqual(self.trader.eligible(e, NOW, OPEN, CLOSE), allowed)
+
+    def test_engine3_missing_invalid_or_wrong_wall_is_rejected(self):
+        for field in ['Breakout_Spot', 'Prior_OI_Line']:
+            for value in [None, '', '1000', True, 0, -1, float('nan'), float('inf')]:
+                e = self.engine3(); e[field] = value; e['OI_Wall_Broken'] = True
+                with self.subTest(field=field, value=value):
+                    self.assertFalse(self.trader.eligible(e, NOW, OPEN, CLOSE))
+        e = self.engine3(); e['Prior_OI_Line_Type'] = 'S1'
+        self.assertFalse(self.trader.eligible(e, NOW, OPEN, CLOSE))
+        e = self.engine3(); e['Breakout_Spot'] = 999; e['OI_Wall_Broken'] = True
+        self.assertFalse(self.trader.eligible(e, NOW, OPEN, CLOSE))
+
+    def test_engine3_mismatched_model_route_and_bear_are_rejected(self):
+        for changes in [dict(AI_Model_ID=MODEL), dict(AI_Model_ID='unreviewed'),
+                        dict(AI_Submodel='pallas_standard_poleflag'), dict(AI_Submodel=None),
+                        dict(Pattern_Type='STANDARD'), dict(Side='BEAR', Leg='PE')]:
+            e = self.engine3(); e.update(changes)
+            with self.subTest(changes=changes):
+                self.assertFalse(self.trader.eligible(e, NOW, OPEN, CLOSE))
+
+    def test_engines_1_and_2_do_not_require_an_oi_cross(self):
+        for submodel, pattern, side, leg in [('pallas_standard_poleflag', 'STANDARD', 'BULL', 'CE'),
+                                           ('pallas_standard_poleflag', 'PDH_BREAK_FLAG', 'BULL', 'CE'),
+                                           ('pallas_reverse_pole_cascade_ai', 'REVERSE_POLE', 'BEAR', 'PE')]:
+            e = event(AI_Submodel=submodel, Pattern_Type=pattern, Side=side, Leg=leg,
+                      Breakout_Spot=999, Prior_OI_Line=1000, OI_Wall_Broken=False)
+            self.assertTrue(self.trader.eligible(e, NOW, OPEN, CLOSE))
+            e.pop('Prior_OI_Line'); e.pop('Breakout_Spot')
+            self.assertTrue(self.trader.eligible(e, NOW, OPEN, CLOSE))
+
+    def test_engine3_retains_score_staleness_recovery_and_daily_lock_rules(self):
+        for changes in [dict(AI_Score=.699999), dict(Recovered=True), dict(Event_Type='EARLY_TICK'),
+                        dict(Issued_At=stamp(NOW-91)), dict(AI_Scored_At=stamp(NOW+1))]:
+            e = self.engine3(); e.update(changes)
+            self.assertFalse(self.trader.eligible(e, NOW, OPEN, CLOSE))
+        self.entry()
+        self.assertEqual(self.trader.candidates([self.engine3()], NOW, OPEN, CLOSE), [])
+
+    def test_engine3_only_oi_gate_selects_pgel_after_rejecting_abb(self):
+        abb = self.engine3(); abb.update(Symbol='ABB', Breakout_Spot=6994.5, Prior_OI_Line=7000,
+                                        AI_Score=.9970268347097519)
+        pgel = self.engine3(); pgel.update(Symbol='PGEL', Breakout_Spot=502.25, Prior_OI_Line=500,
+                                          AI_Score=.985840055726007)
+        self.assertEqual(self.trader.candidates([abb], NOW, OPEN, CLOSE), [])
+        self.assertEqual([e['Symbol'] for e in self.trader.candidates([pgel], NOW, OPEN, CLOSE)], ['PGEL'])
+
+    def test_health_publishes_both_model_pins_and_engine3_only_gate(self):
+        h = self.trader.health(NOW)
+        self.assertEqual(h['accepted_model_ids'], [MODEL, ENGINE3_MODEL])
+        self.assertTrue(h['engine3_oi_cross_required'])
 
     def test_does_not_use_a_later_high_score_to_trade_an_earlier_low_score(self):
         past = event(NOW-10, score=.5)
