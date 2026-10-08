@@ -13,6 +13,14 @@ const EMPTY_SIGNALS:Signal[]=[];
 const frames:Timeframe[]=["5m","15m","30m","1h"];
 const stamp=(date:string,time:string)=>Date.parse(`${date}T${time}:00+05:30`)/1000;
 const id=(s:Signal)=>`${s.time}-${s.side}-${s.strategy}`;
+function isMarketHours(): boolean {
+  try {
+    const s = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false });
+    return s >= '09:14:00' && s <= '15:35:00';
+  } catch {
+    return true;
+  }
+}
 export default function NiftySignalsChart({initialDate,streamUrl}:{initialDate?:string;streamUrl:string}) {
   const date=initialDate??getTodayIstDate();
   const [timeframe,setTimeframe]=useState<Timeframe>("5m");
@@ -37,21 +45,37 @@ export default function NiftySignalsChart({initialDate,streamUrl}:{initialDate?:
   },[oiData,date]);
   useEffect(()=>{
     const controller=new AbortController(); let timer:ReturnType<typeof setTimeout>;
+    const getInterval=()=>!isToday?300000:!isMarketHours()?300000:60000;
+    const scheduleNext=()=>{
+      clearTimeout(timer);
+      if(controller.signal.aborted||typeof document==='undefined'||document.hidden)return;
+      timer=setTimeout(poll,getInterval());
+    };
     const poll=async()=>{
+      if(typeof document!=='undefined'&&document.hidden)return;
       try {
         const response=await fetch(`/api/nifty-signals?date=${date}`,{cache:"no-store",signal:controller.signal});
         if(!response.ok) throw new Error("Signal feed unavailable");
         const next=await response.json();
         if(!controller.signal.aborted){setReport(next);setFailure(null);}
       }catch{if(!controller.signal.aborted)setFailure({date,message:"Signal feed unavailable"});}
-      finally{if(!controller.signal.aborted)timer=setTimeout(poll,isToday?10000:60000);}
+      finally{scheduleNext();}
+    };
+    const onVisibilityChange=()=>{
+      if(typeof document!=='undefined'&&!document.hidden){
+        poll();
+      }else{
+        clearTimeout(timer);
+      }
     };
     void poll();
-    // The existing WebSocket carries rolling recorded sessions as well as live
-    // candles. Bundled replay bars remain a fallback for older research dates;
-    // an empty response must not replace candles received from the stream.
+    if(typeof document!=='undefined')document.addEventListener('visibilitychange',onVisibilityChange);
     if(!isToday)fetch(`/api/chart-history?symbol=NIFTY%2050&date=${date}`,{signal:controller.signal}).then(r=>{if(!r.ok)throw new Error();return r.json();}).then(r=>{if(!controller.signal.aborted)setHistory({date,bars:r.bars??EMPTY_BARS});}).catch(()=>{});
-    return()=>{controller.abort();clearTimeout(timer);};
+    return()=>{
+      controller.abort();
+      clearTimeout(timer);
+      if(typeof document!=='undefined')document.removeEventListener('visibilitychange',onVisibilityChange);
+    };
   },[date,isToday]);
   const replay=current?.mode==="RESEARCH_REPLAY";
   const closed=current?.status?.startsWith("Market closed");

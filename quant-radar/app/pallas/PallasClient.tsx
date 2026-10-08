@@ -10,6 +10,14 @@ import './pallas.css';
 const fmt=(v:unknown,d=2)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('en-IN',{maximumFractionDigits:d}):'—';
 const hm=(v?:string|null)=>v?new Date(v).toLocaleTimeString('en-GB',{timeZone:'Asia/Kolkata',hour12:false}):'—';
 const clock=(m:number)=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+function isMarketHours(): boolean {
+  try {
+    const s = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false });
+    return s >= '09:14:00' && s <= '15:35:00';
+  } catch {
+    return true;
+  }
+}
 function PriceChart({bars,event}:{bars:PallasBar[];event:PallasSignal}){
   if(!bars.length)return <div className="empty">Completed candles unavailable at this time.</div>;
   const levels=[{p:event.Breakout_Level??event.Pole_Extreme,label:'Breakout',color:'#5ad9ee'},...(event.Prior_OI_Line?[{p:event.Prior_OI_Line,label:'Prior OI',color:'#b8a0f5'}]:[])];
@@ -31,11 +39,52 @@ export default function PallasClient(){
   useEffect(()=>{
     if(mode!=='live')return;
     const sync=()=>{const next=pallasSessionRollover(mode,date);if(next){setSelected(null);setDate(next);}};
-    sync();const timer=setInterval(sync,5000);document.addEventListener('visibilitychange',sync);
+    sync();const timer=setInterval(sync,60000);document.addEventListener('visibilitychange',sync);
     return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',sync);};
   },[mode,date]);
   useEffect(()=>{const sync=()=>setWatch(readChartWatchlist());sync();window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.addEventListener('storage',sync);return()=>{window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.removeEventListener('storage',sync);};},[]);
-  useEffect(()=>{let disposed=false,controller:AbortController|undefined,timer:ReturnType<typeof setTimeout>;const load=async()=>{controller=new AbortController();try{const p=new URLSearchParams({mode,date});if(asof)p.set('asof',asof);const r=await fetch('/api/pallas?'+p,{cache:'no-store',signal:controller.signal});if(r.status===401){window.location.assign('/login?next=%2Fpallas');return;}const body=await r.json();if(!r.ok)throw new Error(body.error??'Feed unavailable');if(!disposed)dispatchRefresh({type:'success',key:sessionKey,data:body});}catch(e){if(!disposed&&!(e instanceof DOMException&&e.name==='AbortError'))dispatchRefresh({type:'failure',key:sessionKey,error:e instanceof Error?e.message:'Feed unavailable'});}finally{if(!disposed&&mode==='live')timer=setTimeout(load,5000);}};dispatchRefresh({type:'reset',key:sessionKey});if(mode!=='live')timer=setTimeout(load,250);else load();return()=>{disposed=true;controller?.abort();clearTimeout(timer);};},[mode,date,asof,sessionKey]);
+  useEffect(()=>{
+    let disposed=false,controller:AbortController|undefined,timer:ReturnType<typeof setTimeout>;
+    const getInterval=()=>!isMarketHours()?300000:60000;
+    const scheduleNext=()=>{
+      clearTimeout(timer);
+      if(disposed||mode!=='live'||typeof document==='undefined'||document.hidden)return;
+      timer=setTimeout(load,getInterval());
+    };
+    const load=async()=>{
+      if(typeof document!=='undefined'&&document.hidden)return;
+      controller=new AbortController();
+      try{
+        const p=new URLSearchParams({mode,date});
+        if(asof)p.set('asof',asof);
+        const r=await fetch('/api/pallas?'+p,{cache:'no-store',signal:controller.signal});
+        if(r.status===401){window.location.assign('/login?next=%2Fpallas');return;}
+        const body=await r.json();
+        if(!r.ok)throw new Error(body.error??'Feed unavailable');
+        if(!disposed)dispatchRefresh({type:'success',key:sessionKey,data:body});
+      }catch(e){
+        if(!disposed&&!(e instanceof DOMException&&e.name==='AbortError'))dispatchRefresh({type:'failure',key:sessionKey,error:e instanceof Error?e.message:'Feed unavailable'});
+      }finally{
+        scheduleNext();
+      }
+    };
+    const onVisibilityChange=()=>{
+      if(typeof document!=='undefined'&&!document.hidden){
+        load();
+      }else{
+        clearTimeout(timer);
+      }
+    };
+    dispatchRefresh({type:'reset',key:sessionKey});
+    if(mode!=='live')timer=setTimeout(load,250);else load();
+    if(typeof document!=='undefined')document.addEventListener('visibilitychange',onVisibilityChange);
+    return()=>{
+      disposed=true;
+      controller?.abort();
+      clearTimeout(timer);
+      if(typeof document!=='undefined')document.removeEventListener('visibilitychange',onVisibilityChange);
+    };
+  },[mode,date,asof,sessionKey]);
   useEffect(()=>{if(!play||!replay||!data||error)return;const t=setTimeout(()=>{if(minute>=replayEnd){setPlay(false);return;}setMinute(minute+5);},1000);return()=>clearTimeout(t);},[play,replay,replayEnd,minute,data,error]);
   useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),2500);return()=>clearTimeout(t);},[notice]);
   useEffect(()=>{if(!selected)return;if(asof&&Date.parse(selected.Issued_At)>Date.parse(`${date}T${asof}:00+05:30`)){setSelected(null);return;}const c=new AbortController();const p=new URLSearchParams({mode,date,symbol:selected.Symbol});if(asof)p.set('asof',asof);setChart([]);fetch('/api/pallas?'+p,{cache:'no-store',signal:c.signal}).then(r=>{if(!r.ok)throw new Error();return r.json();}).then(d=>setChart(d.bars??[])).catch(()=>{});return()=>c.abort();},[selected,mode,date,asof,data?.cut]);

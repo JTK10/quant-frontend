@@ -223,21 +223,21 @@ class CausalPaperTests(unittest.TestCase):
 
     def test_trailing_stop_survives_restart_and_uses_actual_quote(self):
         self.entry()
-        self.trader.mark(quote(NOW+5,ask=141,bid=140),NOW+5)
+        self.trader.mark(quote(NOW+5,ask=146,bid=145),NOW+5)
         restarted=Trader(self.root,NOW+6)
-        self.assertEqual(restarted.state['position']['stop_pct'],25)
-        doc=restarted.mark(quote(NOW+10,ask=121,bid=120),NOW+10)
+        self.assertEqual(restarted.state['position']['stop_pct'],30)
+        doc=restarted.mark(quote(NOW+10,ask=126,bid=125),NOW+10)
         self.assertEqual(doc['reason'],'TRAILING_STOP')
-        self.assertEqual(doc['entry'],120)
+        self.assertEqual(doc['entry'],125)
 
     def test_trailing_tiers_and_no_stop_lowering(self):
         self.entry()
-        for n,stop in [(115,2),(125,15),(140,25),(160,40),(200,70)]:
+        for n,stop in [(108,-4),(112,2),(125,15),(145,30),(170,50)]:
             t=NOW+n
             self.trader.mark(quote(t,ask=n+1,bid=n),t)
             self.assertEqual(self.trader.state['position']['stop_pct'],stop)
-        self.trader.mark(quote(NOW+201,ask=191,bid=190),NOW+201)
-        self.assertEqual(self.trader.state['position']['stop_pct'],70)
+        self.trader.mark(quote(NOW+171,ask=165,bid=160),NOW+171)
+        self.assertEqual(self.trader.state['position']['stop_pct'],50)
 
     def test_time_exit_1130_at_fresh_quote(self):
         self.entry();t=epoch(DAY+'T11:30:00+05:30')
@@ -285,6 +285,36 @@ class CausalPaperTests(unittest.TestCase):
         strings=[n.value for n in ast.walk(broker) if isinstance(n,ast.Constant) and isinstance(n.value,str)]
         self.assertNotIn('POST',strings)
         self.assertFalse(any('/order' in s for s in strings))
+
+    def test_exhausted_pole_move_over_3_point_5_is_rejected(self):
+        self.assertTrue(self.trader.eligible(event(Pole_Move_Pct=3.5), NOW, OPEN, CLOSE))
+        self.assertFalse(self.trader.eligible(event(Pole_Move_Pct=3.51), NOW, OPEN, CLOSE))
+        self.assertFalse(self.trader.eligible(event(Pole_Move_Pct=4.98), NOW, OPEN, CLOSE))
+
+    def test_single_lot_within_35000_is_accepted_over_30000(self):
+        q = quote(ask=338.15)
+        # lot 100 at 338.15 = 33,815 (exceeds 30k but within 35k single lot buffer)
+        size = buy_size(q, 100, 100)
+        self.assertIsNotNone(size)
+        self.assertEqual(size['lots'], 1)
+        self.assertEqual(size['quantity'], 100)
+        # 360 ask * 100 = 36,000 (exceeds 35k limit)
+        q_over = quote(ask=360)
+        self.assertIsNone(buy_size(q_over, 100, 100))
+
+    def test_early_low_conviction_deferral_and_pattern_tier_priority(self):
+        t_early = epoch(DAY + 'T09:50:00+05:30')
+        early_trader = Trader(self.root / 'early', t_early - 60)
+        # At 09:50, a REVERSE_POLE with score 0.72 is deferred
+        rev_weak = event(t_early, 'WEAK_REV', .72, Pattern_Type='REVERSE_POLE', Signal_Time='09:50')
+        self.assertEqual(early_trader.candidates([rev_weak], t_early, OPEN, CLOSE), [])
+        # At 09:50, a CASCADE with score 0.72 is accepted
+        casc = event(t_early, 'CASC', .72, Pattern_Type='CASCADE', Signal_Time='09:50')
+        self.assertEqual([x['Symbol'] for x in early_trader.candidates([casc], t_early, OPEN, CLOSE)], ['CASC'])
+        # At 10:00, higher pattern tier / higher score comes first
+        ad = event(NOW, 'ADANIENSOL', .798, Pattern_Type='CASCADE', Signal_Time='10:00')
+        nk = event(NOW, 'NAUKRI', .705, Pattern_Type='CASCADE', Signal_Time='10:00')
+        self.assertEqual([x['Symbol'] for x in self.trader.candidates([nk, ad], NOW, OPEN, CLOSE)], ['ADANIENSOL', 'NAUKRI'])
 
 
 if __name__ == '__main__': unittest.main()

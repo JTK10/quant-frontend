@@ -12,7 +12,7 @@ export const maxDuration=60;
 let authCache:{token:string;until:number}|undefined;
 const shareRead=pallasInflight<PallasDocument[]>();
 const shareAuth=pallasInflight<void>();
-const json=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
+const json=(body:unknown,status=200,cacheHeaders?:Record<string,string>)=>NextResponse.json(body,{status,headers:cacheHeaders??{'Cache-Control':'private, no-store'}});
 export async function GET(request:NextRequest){
   const denied=await requireApiSession(request);if(denied)return denied;
   const p=request.nextUrl.searchParams, mode=p.get('mode')??'live', date=p.get('date')??getTodayIstDate(),asof=p.get('asof'),symbol=p.get('symbol')??undefined;
@@ -55,6 +55,9 @@ export async function GET(request:NextRequest){
     const result=foldPallas(docs,date,limit,symbol);
     if(mode==='research'){result.mode='CAUSAL_RESEARCH';result.stale=false;result.status='Closed-candle replay · original receipt latency unavailable';for(const s of result.signals)s.OI_Age_Seconds=null;}
     if(mode==='history'){result.mode='HISTORICAL';result.stale=false;result.tick_connected=undefined;result.status='Recorded session · original alerts and AI scores';}
-    return json(result);
+    const cacheHeader = (mode==='history'||mode==='research')
+      ? {'Cache-Control':'private, max-age=3600, stale-while-revalidate=86400'}
+      : {'Cache-Control':'private, max-age=15, stale-while-revalidate=30'};
+    return json(result, 200, cacheHeader);
   }catch{return json({error:'Pallas data unavailable; current signals cannot be confirmed'},503);}
 }

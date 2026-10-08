@@ -1,4 +1,9 @@
-"""Durable, causal PAPER trade accounting. No broker order functions."""
+"""Durable, causal PAPER trade accounting for Kairos 3.0.
+Integrates October 8 Candidate Selection Policy + 3 Robustness Guards:
+1. -10% Initial Stop with Early Breakeven Ratchet
+2. 45-Minute Stagnancy Cut (< +2.0% after 45m)
+3. Max Bid-Ask Spread Filter (<= 6.0%)
+"""
 import hashlib
 import json
 import math
@@ -10,22 +15,24 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 IST = ZoneInfo('Asia/Kolkata')
-VERSION = 'kairos2-paper-1'
+VERSION = 'kairos3-paper-1'
 MODEL = 'pallas-revpole-lgb-d53e5a653f19'
 ENGINE3_MODEL = 'pallas-pdh-lgb-20261006'
 ENGINE3_SUBMODEL = 'pallas_pdh_break_ai'
-ENTRY_POLICY = 'kairos3-robust-runner-20261008'
+ENTRY_POLICY = 'kairos3-e3-queue-robust-20261008'
+
+# Capital & Risk Parameters
 BUDGET = 30000
 MAX_SINGLE_LOT_BUDGET = 35000
 MAX_POLE_MOVE = 3.5
 QUOTE_AGE = 30
 ENTRY_AGE = 90
+
+# Robustness Guard Parameters
 INITIAL_STOP_PCT = -10.0
 MAX_BID_ASK_SPREAD_PCT = 6.0
 STAGNANCY_MINUTES = 45
 STAGNANCY_THRESHOLD_PCT = 2.0
-RUNNER_GAIN_THRESHOLD = 20.0
-RUNNER_LOCKED_STOP_MIN = 10.0
 TRAIL = ((8, -4), (12, 2), (25, 15), (45, 30), (70, 50))
 
 
@@ -34,7 +41,6 @@ def epoch(value):
         v = float(value)
         return v / 1000 if v > 10**11 else v
     iso = str(value).replace('Z', '+00:00')
-    # VM Python 3.10 accepts 3/6 fractional digits; Upstox also sends 1/2/9.
     iso = re.sub(r'\.(\d+)(?=[+-]\d{2}:?\d{2}$)', lambda m: '.' + (m[1] + '000000')[:6], iso)
     d = datetime.fromisoformat(iso)
     if d.tzinfo is None:
@@ -146,7 +152,7 @@ class Trader:
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / 'state.json'
         if self.path.exists():
-            self.state = json.loads(self.path.read_text())  # Corrupt state fails closed.
+            self.state = json.loads(self.path.read_text())
             if self.state.get('schema') != 1 or self.state.get('engine') != VERSION:
                 raise ValueError('Unknown persisted state schema')
         else:
@@ -167,14 +173,13 @@ class Trader:
     def roll(self, now):
         if self.state['date'] != day(now):
             self.state.update(date=day(now), taken=False, seen={}, last_mtm=0, last_health=0)
-            # An overdue position is kept, never implicitly closed at midnight.
             if self.state['position']:
                 self.state['status'] = 'Previous-session exit pending'
 
     def emit(self, kind, now, payload=None, trade_day=None):
         self.state['sequence'] += 1
         date = trade_day or self.state['date']
-        doc = dict(source='kairos2', cap='KAIROS2', mode='paper', engine=VERSION,
+        doc = dict(source='kairos3', cap='KAIROS3', mode='paper', engine=VERSION,
                    kind=kind, event=kind, name='', side='NEUTRAL', date=date,
                    sig_date=date.replace('-', ''), ts=now, time=hm(now),
                    checked_at=stamp(now))
@@ -228,7 +233,7 @@ class Trader:
         self.state['seen'][event['Event_ID']] = reason
         self.state['status'] = 'Skipped ' + event['Symbol'] + ': ' + reason
         self.emit('SKIP', now, dict(name=event['Symbol'], signal_id=event['Event_ID'], reason=reason,
-                                   ai_score=event['AI_Score'], model_id=event['AI_Model_ID']))
+                                    ai_score=event['AI_Score'], model_id=event['AI_Model_ID']))
         self.save()
 
     def enter(self, event, contract, q, now, opening, closing):
@@ -240,7 +245,7 @@ class Trader:
             return None
         size = buy_size(q, contract.get('lot_size'), contract.get('minimum_lot'))
         if not size:
-            self.reject(event, now, 'Whole lot/depth exceeds available Rs30,000 budget')
+            self.reject(event, now, 'Whole lot/depth exceeds available Rs35,000 single-lot budget')
             return None
         if sell_mark(q, size['quantity']) is None:
             self.reject(event, now, 'Insufficient quoted bid depth')
@@ -250,11 +255,13 @@ class Trader:
         if top_bid > top_ask:
             return None
 
+        # Guard 3: Max Bid-Ask Spread Filter (<= 6.0%)
         spread_pct = float((top_ask - top_bid) / top_ask) * 100.0
         if spread_pct > MAX_BID_ASK_SPREAD_PCT:
             self.reject(event, now, f'Spread {spread_pct:.1f}% exceeds max {MAX_BID_ASK_SPREAD_PCT}%')
             return None
 
+        # Guard 1: Strict -10% Initial Stop with Early Breakeven Ratchet
         stop_pct = INITIAL_STOP_PCT
         stop_premium = size['fill'] * (1.0 + stop_pct / 100.0)
 
@@ -275,7 +282,7 @@ class Trader:
         payload = {k: v for k, v in position.items() if k not in ('date', 'closing', 'last_quote_epoch', 'fill')}
         payload.update(entry=size['fill'], pnl=0., bid=float(top_bid), ask=float(top_ask))
         doc = self.emit('ENTRY', now, payload)
-        self.save()  # Position + entry outbox commit atomically, before publication.
+        self.save()
         return doc
 
     def mark(self, q, now):
@@ -293,33 +300,28 @@ class Trader:
             self.save()
             return None
         gain = (mark / p['entry_fill'] - 1) * 100
+        reason = None
+        cutoff = min(p['closing'], epoch(p['date'] + 'T11:30:00+05:30'))
+        mins_held = (now - epoch(p['entry_at'])) / 60.0
+
+        if now >= cutoff:
+            reason = 'TIME_EXIT_1130' if day(now) == p['date'] else 'OVERDUE_TIME_EXIT'
+        elif mark <= p['stop_premium']:
+            reason = 'STOP_LOSS' if p['stop_pct'] < 0 else 'TRAILING_STOP'
+        # Guard 2: 45-Minute Stagnancy Cut (< +2.0% after 45 min)
+        elif mins_held >= STAGNANCY_MINUTES and gain < STAGNANCY_THRESHOLD_PCT:
+            reason = 'STAGNANCY_45M'
+
         p['peak_gain_pct'] = max(p['peak_gain_pct'], gain)
         for trigger, stop in TRAIL:
             if p['peak_gain_pct'] + 1e-9 >= trigger:
                 p['stop_pct'] = max(p['stop_pct'], stop)
         p['stop_premium'] = p['entry_fill'] * (1 + p['stop_pct'] / 100)
         p['last_quote_epoch'] = q['quote_at']
-
-        # Runner Extension: if position achieved >= +20% gain or locked stop >= +10%, waive 11:30 cutoff
-        is_runner = p['peak_gain_pct'] >= RUNNER_GAIN_THRESHOLD or p['stop_pct'] >= RUNNER_LOCKED_STOP_MIN
-        cutoff = p['closing'] if is_runner else min(p['closing'], epoch(p['date'] + 'T11:30:00+05:30'))
-        mins_held = (now - epoch(p['entry_at'])) / 60.0
-
-        reason = None
-        if now >= cutoff:
-            if is_runner:
-                reason = 'RUNNER_EOD_EXIT' if day(now) == p['date'] else 'OVERDUE_TIME_EXIT'
-            else:
-                reason = 'TIME_EXIT_1130' if day(now) == p['date'] else 'OVERDUE_TIME_EXIT'
-        elif mark <= p['stop_premium']:
-            reason = 'STOP_LOSS' if p['stop_pct'] < 0 else 'TRAILING_STOP'
-        elif not is_runner and mins_held >= STAGNANCY_MINUTES and gain < STAGNANCY_THRESHOLD_PCT:
-            reason = 'STAGNANCY_45M'
-
         payload = {k: v for k, v in p.items() if k not in ('date', 'closing', 'last_quote_epoch', 'fill')}
         payload.update(entry=mark, quote_at=stamp(q['quote_at']), gain_pct=round(gain, 4),
                        pnl=round((mark - p['entry_fill']) * p['quantity'], 2),
-                       is_runner=is_runner)
+                       mins_held=round(mins_held, 1))
         if reason:
             payload.update(reason=reason, exit_at=stamp(now))
             doc = self.emit('EXIT', now, payload, p['date'])
@@ -331,7 +333,7 @@ class Trader:
             doc = self.emit('MTM', now, payload, p['date'])
             self.state['last_mtm'] = now
         self.state['status'] = 'Paper position open'
-        self.save()  # Persist trail even when a website mark is not due.
+        self.save()
         return doc
 
     def health(self, now, status=None, extra=None):
@@ -347,19 +349,17 @@ class Trader:
                  open_positions=int(p is not None), pending_publications=len(self.state['pending']),
                  position_date=p['date'] if p else None,
                  initial_stop_pct=INITIAL_STOP_PCT, max_spread_pct=MAX_BID_ASK_SPREAD_PCT,
-                 stagnancy_minutes=STAGNANCY_MINUTES, runner_extension_enabled=True,
-                 **(extra or {}))
+                 stagnancy_minutes=STAGNANCY_MINUTES, **(extra or {}))
         path = self.root / 'health.json'
         temp = path.with_suffix('.tmp')
         temp.write_text(json.dumps(h, separators=(',', ':'), allow_nan=False))
         os.replace(temp, path)
-        # Bound overnight/no-trade publication to one per 15 minutes.
         previous = self.state.get('health_status')
-        interval = 60 if ('09:15:00' <= hm(now) <= '15:35:00' and (p is not None or hm(now) <= '11:35:00')) else 900
+        interval = 60 if '09:15:00' <= hm(now) <= '11:35:00' else 900
         if len(self.state['pending']) < 1000 and (previous != h['status'] or
                 self.state.get('health_policy') != ENTRY_POLICY or now - self.state['last_health'] >= interval):
             self.emit('HEALTH', now, {**{k: v for k, v in h.items() if k not in ('date', 'mode', 'engine', 'checked_at')},
-                                    'heartbeat_seconds': interval})
+                                      'heartbeat_seconds': interval})
             self.state.update(last_health=now, health_status=h['status'], health_policy=ENTRY_POLICY)
         self.save()
         return h
