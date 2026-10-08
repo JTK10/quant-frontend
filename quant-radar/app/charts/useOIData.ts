@@ -32,12 +32,27 @@ export function useOIData(symbol: string, date: string) {
     setData(cached && Date.now() < cached.until ? cached.data : null);
     setLoading(!cached || Date.now() >= cached.until); setError("");
     const refresh = async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
       try { const next = await load(symbol, date); if (!stopped) { setData(next); setError(next.errors.join(" · ")); } }
       catch (e) { if (!stopped) setError(e instanceof Error ? e.message : "OI unavailable"); }
       finally { if (!stopped) { setLoading(false); timer = setTimeout(refresh, 300000); } }
     };
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden && !stopped) {
+        void refresh();
+      }
+    };
     void refresh();
-    return () => { stopped = true; clearTimeout(timer); };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+    }
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+      }
+    };
   }, [symbol, date]);
   return { data: data?.symbol === symbol && data.date === date ? data : null, loading, error };
 }

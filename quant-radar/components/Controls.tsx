@@ -51,11 +51,21 @@ export function DatePicker() {
   );
 }
 
+function isMarketHours(): boolean {
+  try {
+    const s = new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour12: false });
+    return s >= "09:14:00" && s <= "15:35:00";
+  } catch {
+    return true;
+  }
+}
+
 export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
   const router = useRouter();
   const [enabled, setEnabled] = useState(true);
 
   const refreshPage = useEffectEvent(() => {
+    if (typeof document !== "undefined" && document.hidden) return;
     if (enabled) {
       router.refresh();
     }
@@ -66,11 +76,28 @@ export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
       return;
     }
 
-    const timerId = window.setInterval(() => {
-      refreshPage();
-    }, interval);
+    const actualInterval = isMarketHours() ? interval : 300000;
 
-    return () => window.clearInterval(timerId);
+    const timerId = window.setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      refreshPage();
+    }, actualInterval);
+
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden && enabled) {
+        refreshPage();
+      }
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibility);
+    }
+
+    return () => {
+      window.clearInterval(timerId);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibility);
+      }
+    };
   }, [enabled, interval, refreshPage]);
 
   return (
