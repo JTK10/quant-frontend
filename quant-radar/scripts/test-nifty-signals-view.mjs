@@ -75,13 +75,16 @@ const historical=harness(replayDate,{...oi,date:replayDate,previous:[snap('2026-
 historical.render();const historicalCleanup=await historical.start();const replay=historical.render();
 assert.equal(historical.requests.filter(url=>url.includes('chart-history')).length,1);
 assert.equal(replay.initialBars,historicalBars,'Historical candles must still seed the chart');
-assert.equal(replay.streamUrl,'');
+assert.equal(replay.streamUrl,'wss://existing-stream','Historical sessions must receive recorded candles from the existing chart service');
+assert.equal(replay.strictSession,true,'Current-session stream updates must not enter a historical chart');
+assert.ok(historical.text().includes('Historical candles'));
 assert.equal(replay.oiData.previous[0].date,'2026-09-29');
 historicalCleanup();
 
 const empty=harness('2026-10-02',{...oi,date:'2026-10-02',previous:[]});
 const emptyInitial=empty.render();const emptyCleanup=await empty.start();
 assert.equal(empty.render().initialBars,emptyInitial.initialBars,'An empty historical response must keep the stable empty seed');
+assert.equal(empty.render().streamUrl,'wss://existing-stream','Missing bundled dates must still load recorded chart history');
 assert.equal(empty.render().oiData.previous.length,0);
 emptyCleanup();
 assert.ok(empty.text().includes('Previous-session OI unavailable'));
@@ -89,4 +92,4 @@ assert.ok(!empty.text().includes('Loading OI'));
 const loading=harness(today,null,[],true);loading.render();assert.ok(loading.text().includes('Loading OI'));
 const rolled=harness('2026-10-07',{...oi,date:'2026-10-07',previous:[snap('2026-10-06','2026-10-06'),snap('2026-10-06','2026-10-13')]});
 assert.equal(rolled.render().oiData.previous[0].expiry,'2026-10-13');
-console.log('PASS: live snapshot preservation, polling, latest eligible prior OI, expiry/date/partial exclusions, historical loading and empty-session stability.');
+console.log('PASS: live snapshot preservation, recorded historical stream, strict session isolation, replay fallback, latest eligible prior OI, expiry/date/partial exclusions and empty-session stability.');
