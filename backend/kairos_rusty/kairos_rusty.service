@@ -1,0 +1,26 @@
+[Unit]
+Description=Kairos Rusty paper trades from Rusty confirmed-entry labels
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/kairos_rusty
+ExecStart=/home/ubuntu/ocelot/venv/bin/python -u /home/ubuntu/kairos_rusty/rusty_live.py
+Restart=on-failure
+RestartSec=15
+MemoryHigh=192M
+MemoryMax=256M
+CPUQuota=15%
+Nice=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/kairos_rusty
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

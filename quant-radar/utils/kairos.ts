@@ -1,4 +1,4 @@
-export type KairosEngine = "kairos" | "kairos2";
+export type KairosEngine = "kairos" | "kairos2" | "kairos_rusty";
 export type KairosEvent = Record<string, unknown>;
 export type KairosTrade = { sid: string; entry?: KairosEvent; mtm?: KairosEvent; exit?: KairosEvent };
 
@@ -9,6 +9,7 @@ export function kairosNumber(value: unknown): number | null {
 }
 
 export function kairosSource(e: KairosEvent): KairosEngine | null {
+  if (e.source === "kairos_rusty" || e.cap === "KAIROS_RUSTY") return "kairos_rusty";
   if (e.source === "kairos2" || e.cap === "KAIROS2") return "kairos2";
   if (e.source === "kairos" || e.cap === "KAIROS") return "kairos";
   return null;

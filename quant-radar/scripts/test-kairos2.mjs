@@ -28,3 +28,17 @@ const {normalizePantherSignals}=moduleFrom('utils/backend.ts');
 const n=normalizePantherSignals([{...newer,mode:'paper',side:'LONG',stop_premium:87,quote_at:'2026-10-05T10:00:00+05:30',Doc_ID:'immutable'}])[0];
 assert.equal(n.ai_score,.8);assert.equal(n.quantity,200);assert.equal(n.lots,2);assert.equal(n.stop_premium,87);assert.equal(n.Doc_ID,'immutable');
 console.log('Kairos 2.0 source isolation, latest marks, P&L and API-field preservation passed.');
+const rusty={source:'kairos_rusty',cap:'KAIROS_RUSTY',signal_id:'same',kind:'ENTRY',ts:8,
+  name:'RUSTY OPTION',mode:'paper',rusty_pct:-35.4,rusty_rank:2,ce_pct:-35.4,pe_pct:12,
+  flow_type:'CE_DOWN_PE_UP',flow_label:'CE OI Down + PE OI Up',signal_source:'rusty',
+  entry_confirmed:true,c_time:'09:25',c_open:100,c_high:101.1,c_low:99.9,c_close:101,
+  candle_tier:'MARUBOZU',quantity:100,lots:1,capital_used:10000,stop_premium:85};
+const rustyNormalized=normalizePantherSignals([rusty])[0];
+for(const key of ['rusty_pct','rusty_rank','ce_pct','pe_pct','flow_type','flow_label','signal_source',
+  'entry_confirmed','c_time','c_open','c_high','c_low','c_close','candle_tier']) assert.equal(rustyNormalized[key],rusty[key]);
+const all=[...rows,rustyNormalized,{...rustyNormalized,kind:'MTM',ts:9,pnl:123}];
+assert.equal(kairosSummary(all,'kairos_rusty').unrealized,123);
+assert.equal(kairosSummary(all,'kairos2').unrealized,60);
+assert.equal(kairosSummary(all,'kairos').unrealized,10);
+assert.equal(kairosSummary(all,'kairos_rusty').open.length,1);
+console.log('Rusty native OI fields and three independent bot ledgers passed.');
