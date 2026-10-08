@@ -101,6 +101,20 @@ function istDay(time: number): string {
   return new Date((time + 19_800) * 1000).toISOString().slice(0, 10);
 }
 
+export function filterChartSession(bars: ChartBar[], sessionDate?: string, strictSession = false, includePreviousSession = false, asOf?: number): ChartBar[] {
+  let previousDay = "";
+  if (sessionDate && strictSession && includePreviousSession) {
+    for (const bar of bars) {
+      const day = istDay(bar.time);
+      if (day < sessionDate && day > previousDay && (!asOf || bar.time + 300 <= asOf)) previousDay = day;
+    }
+  }
+  return bars.filter(bar => {
+    const day = sessionDate ? istDay(bar.time) : "";
+    return (!sessionDate || (strictSession ? day === sessionDate || day === previousDay : day <= sessionDate)) && (!asOf || bar.time + 300 <= asOf);
+  });
+}
+
 function ema9(bars: ChartBar[]): LinePoint[] {
   if (!bars.length) return [];
   const multiplier = 2 / 10;
@@ -223,6 +237,7 @@ export default function LiveCandleChart({
   tradeSignals = EMPTY_TRADES,
   selectedTradeId,
   strictSession = false,
+  includePreviousSession = false,
   mutedOI = false,
 }: {
   symbol: string;
@@ -238,6 +253,7 @@ export default function LiveCandleChart({
   tradeSignals?: TradeOverlay[];
   selectedTradeId?: string;
   strictSession?: boolean;
+  includePreviousSession?: boolean;
   mutedOI?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -265,7 +281,7 @@ export default function LiveCandleChart({
   const [hasBars, setHasBars] = useState(false);
   const quoteRef = useRef(onQuote);
   useEffect(() => { quoteRef.current = onQuote; }, [onQuote]);
-  const sessionBars = useCallback((bars: ChartBar[]) => bars.filter(b => (!sessionDate || (strictSession ? istDay(b.time) === sessionDate : istDay(b.time) <= sessionDate)) && (!asOf || b.time + 300 <= asOf)), [sessionDate, asOf, strictSession]);
+  const sessionBars = useCallback((bars: ChartBar[]) => filterChartSession(bars, sessionDate, strictSession, includePreviousSession, asOf), [sessionDate, asOf, strictSession, includePreviousSession]);
 
   const resetView = () => {
     const range = recentRangeRef.current;
@@ -349,7 +365,7 @@ export default function LiveCandleChart({
       lastRenderedTimeRef.current = bars.length ? bars[bars.length - 1].time : null;
       updateRecentRange(bars);
       indicatorRedrawRef.current(bars);
-      setHasBars(bars.some(b => !sessionDate || istDay(b.time) === sessionDate));
+      setHasBars(bars.some(b => includePreviousSession || !sessionDate || istDay(b.time) === sessionDate));
       if (bars.length) quoteRef.current?.(symbol, bars[bars.length - 1].close);
       setBarRevision(n => n + 1);
     };
@@ -415,7 +431,7 @@ export default function LiveCandleChart({
       initialViewSetRef.current = false;
       lastRenderedTimeRef.current = null;
     };
-  }, [timeframe, symbol, sessionDate, sessionBars]);
+  }, [timeframe, symbol, sessionDate, sessionBars, includePreviousSession]);
 
   useEffect(() => {
     const chart = chartRef.current;
