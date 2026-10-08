@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTodayIstDate } from "@/utils/backend";
 import type { OIData, OISnapshot, OIWall } from "@/app/charts/oiTypes";
 import niftyHistory from "@/data/nifty-chart-sessions.json";
+import { fetchNiftyFeed } from "@/utils/niftyFeed";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,6 +30,15 @@ async function getToken() {
 }
 
 async function fetchDocs(date: string, source: string): Promise<Doc[]> {
+  if (source === "nifty_oi_close") {
+    const data = await fetchNiftyFeed(source, date);
+    return (data.items ?? []).flatMap(item => {
+      try {
+        const doc = (typeof item.doc === "string" ? JSON.parse(item.doc) : item.doc ?? item) as Doc;
+        return doc.source === source && String(doc.sig_date) === date.replaceAll("-", "") ? [doc] : [];
+      } catch { return []; }
+    });
+  }
   const signalsUrl = process.env.PANTHER_SIGNALS_URL;
   if (!signalsUrl) throw new Error("OI feed is not configured");
   const token = await getToken();
