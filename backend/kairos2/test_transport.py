@@ -1,13 +1,66 @@
 import json
 import time
 import unittest
-from unittest.mock import patch
+import tempfile
+from unittest.mock import patch, AsyncMock
 import httpx
 from kairos2_engine import MODEL
 import kairos2_live as live
+from test_kairos2 import Trader, event, quote, contract, NOW, OPEN, CLOSE
 
 
 class TransportTests(unittest.IsolatedAsyncioTestCase):
+    async def test_runner_exits_through_live_monitor_before_market_closes(self):
+        with tempfile.TemporaryDirectory() as root:
+            trader=Trader(root,NOW-100)
+            trader.enter(event(Pole_Move_Pct=2),contract(),quote(),NOW,OPEN,CLOSE)
+            trader.mark(quote(NOW+5,ask=126,bid=125),NOW+5)
+            trader=Trader(root,CLOSE-120)  # Restart must preserve runner and daily lock.
+            before=CLOSE-61
+            broker=AsyncMock()
+            broker.quote.return_value=quote(before,ask=125,bid=124)
+            with patch.object(live.time,'time',return_value=before):
+                await live.monitor_position(trader,broker,[(OPEN,CLOSE)],before,0)
+            self.assertIsNotNone(trader.state['position'])
+            due=CLOSE-60
+            broker.quote.return_value=quote(due,ask=125,bid=124)
+            with patch.object(live.time,'time',return_value=due):
+                await live.monitor_position(trader,broker,[(OPEN,CLOSE)],due,0)
+            self.assertIsNone(trader.state['position'])
+            exit=trader.state['pending'][-1]
+            self.assertEqual(exit['reason'],'RUNNER_EOD_EXIT')
+            self.assertEqual(exit['entry'],124)
+            self.assertEqual(exit['pnl'],7200)
+            self.assertTrue(trader.state['taken'])
+
+    async def test_runner_retries_stale_quote_inside_exit_buffer(self):
+        with tempfile.TemporaryDirectory() as root:
+            trader=Trader(root,NOW-100)
+            trader.enter(event(Pole_Move_Pct=2),contract(),quote(),NOW,OPEN,CLOSE)
+            trader.mark(quote(NOW+5,ask=126,bid=125),NOW+5)
+            due=CLOSE-60
+            broker=AsyncMock()
+            broker.quote.return_value={**quote(due-31,ask=125,bid=124),'received_at':due}
+            with patch.object(live.time,'time',return_value=due):
+                next_quote=await live.monitor_position(trader,broker,[(OPEN,CLOSE)],due,0)
+            self.assertIsNotNone(trader.state['position'])
+            self.assertEqual(next_quote,due+5)
+            broker.quote.return_value=quote(due+5,ask=125,bid=124)
+            with patch.object(live.time,'time',return_value=due+5):
+                await live.monitor_position(trader,broker,[(OPEN,CLOSE)],due+5,next_quote)
+            self.assertIsNone(trader.state['position'])
+            self.assertEqual(broker.quote.await_count,2)
+
+    async def test_closed_exchange_never_fabricates_an_exit(self):
+        with tempfile.TemporaryDirectory() as root:
+            trader=Trader(root,NOW-100)
+            trader.enter(event(Pole_Move_Pct=2),contract(),quote(),NOW,OPEN,CLOSE)
+            broker=AsyncMock()
+            await live.monitor_position(trader,broker,[(OPEN,CLOSE)],CLOSE,0)
+            broker.quote.assert_not_awaited()
+            self.assertIsNotNone(trader.state['position'])
+            self.assertIn('Exit pending',trader.state['status'])
+
     async def test_get_only_broker_parses_depth_and_exchange_ms(self):
         calls=[]
         def handler(request):

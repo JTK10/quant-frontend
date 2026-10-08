@@ -14,7 +14,7 @@ VERSION = 'kairos2-paper-1'
 MODEL = 'pallas-revpole-lgb-d53e5a653f19'
 ENGINE3_MODEL = 'pallas-pdh-lgb-20261006'
 ENGINE3_SUBMODEL = 'pallas_pdh_break_ai'
-ENTRY_POLICY = 'kairos3-robust-runner-20261008'
+ENTRY_POLICY = 'kairos3-robust-runner-eod60-20261009'
 BUDGET = 30000
 MAX_SINGLE_LOT_BUDGET = 35000
 MAX_POLE_MOVE = 3.5
@@ -26,6 +26,7 @@ STAGNANCY_MINUTES = 45
 STAGNANCY_THRESHOLD_PCT = 2.0
 RUNNER_GAIN_THRESHOLD = 20.0
 RUNNER_LOCKED_STOP_MIN = 10.0
+RUNNER_EXIT_BUFFER_SECONDS = 60
 TRAIL = ((8, -4), (12, 2), (25, 15), (45, 30), (70, 50))
 
 
@@ -302,7 +303,8 @@ class Trader:
 
         # Runner Extension: if position achieved >= +20% gain or locked stop >= +10%, waive 11:30 cutoff
         is_runner = p['peak_gain_pct'] >= RUNNER_GAIN_THRESHOLD or p['stop_pct'] >= RUNNER_LOCKED_STOP_MIN
-        cutoff = p['closing'] if is_runner else min(p['closing'], epoch(p['date'] + 'T11:30:00+05:30'))
+        # Start closing while the exchange can still supply executable depth.
+        cutoff = (p['closing'] - RUNNER_EXIT_BUFFER_SECONDS) if is_runner else min(p['closing'], epoch(p['date'] + 'T11:30:00+05:30'))
         mins_held = (now - epoch(p['entry_at'])) / 60.0
 
         reason = None
@@ -348,6 +350,7 @@ class Trader:
                  position_date=p['date'] if p else None,
                  initial_stop_pct=INITIAL_STOP_PCT, max_spread_pct=MAX_BID_ASK_SPREAD_PCT,
                  stagnancy_minutes=STAGNANCY_MINUTES, runner_extension_enabled=True,
+                 runner_exit_buffer_seconds=RUNNER_EXIT_BUFFER_SECONDS,
                  **(extra or {}))
         path = self.root / 'health.json'
         temp = path.with_suffix('.tmp')

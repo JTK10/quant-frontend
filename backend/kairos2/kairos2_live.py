@@ -167,6 +167,18 @@ def events(date):
     return rows
 
 
+async def monitor_position(trader, broker, sessions, now, next_quote):
+    """Monitor exits within the verified session; never fabricate a closed-market fill."""
+    if not sessions or not sessions[0][0] <= now < sessions[0][1]:
+        trader.state['status'] = 'Exit pending: NSE closed; open paper position retained'
+        return next_quote
+    if now < next_quote:
+        return next_quote
+    q = await broker.quote(trader.state['position']['opt_key'])
+    trader.mark(q, time.time())
+    return time.time() + 5
+
+
 async def run():
     import fcntl
     ROOT.mkdir(parents=True, exist_ok=True)
@@ -204,12 +216,7 @@ async def run():
                     sessions = await broker.timings(now)
                     now = time.time()
                     if trader.state['position']:
-                        if sessions and sessions[0][0] <= now < sessions[0][1] and now >= next_quote:
-                            q = await broker.quote(trader.state['position']['opt_key'])
-                            trader.mark(q, time.time())
-                            next_quote = time.time() + 5
-                        elif not sessions or not sessions[0][0] <= now < sessions[0][1]:
-                            trader.state['status'] = 'Open paper position retained; NSE closed'
+                        next_quote = await monitor_position(trader, broker, sessions, now, next_quote)
                     elif sessions:
                         opening, closing = sessions[0]
                         if opening <= now < min(closing, epoch(day(now) + 'T11:30:00+05:30')):

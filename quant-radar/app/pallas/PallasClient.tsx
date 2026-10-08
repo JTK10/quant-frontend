@@ -6,18 +6,11 @@ import {buildTradingViewUrl,getTodayIstDate} from '@/utils/backend';
 import {PALLAS_DATES,quoteKey,pallasAiScore,passesPallasAi,pallasEngineLabel,pallasAiPassLabel,pallasOiCrossed,type PallasSignal,type PallasCandidate,type PallasBar} from '@/utils/pallas';
 import {pallasSessionRollover,pallasPreviousWeekday} from '@/utils/pallasTime';
 import {initialPallasRefresh,pallasRefreshReducer,pallasRefreshView} from '@/utils/pallasRefresh';
+import {sessionPollingDelay} from '@/utils/sessionPolling';
 import './pallas.css';
 const fmt=(v:unknown,d=2)=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('en-IN',{maximumFractionDigits:d}):'—';
 const hm=(v?:string|null)=>v?new Date(v).toLocaleTimeString('en-GB',{timeZone:'Asia/Kolkata',hour12:false}):'—';
 const clock=(m:number)=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
-function isMarketHours(): boolean {
-  try {
-    const s = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false });
-    return s >= '09:14:00' && s <= '15:35:00';
-  } catch {
-    return true;
-  }
-}
 function PriceChart({bars,event}:{bars:PallasBar[];event:PallasSignal}){
   if(!bars.length)return <div className="empty">Completed candles unavailable at this time.</div>;
   const levels=[{p:event.Breakout_Level??event.Pole_Extreme,label:'Breakout',color:'#5ad9ee'},...(event.Prior_OI_Line?[{p:event.Prior_OI_Line,label:'Prior OI',color:'#b8a0f5'}]:[])];
@@ -44,33 +37,36 @@ export default function PallasClient(){
   },[mode,date]);
   useEffect(()=>{const sync=()=>setWatch(readChartWatchlist());sync();window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.addEventListener('storage',sync);return()=>{window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.removeEventListener('storage',sync);};},[]);
   useEffect(()=>{
-    let disposed=false,controller:AbortController|undefined,timer:ReturnType<typeof setTimeout>;
-    const getInterval=()=>!isMarketHours()?300000:60000;
+    let disposed=false,loaded=false,inFlight=false,controller:AbortController|undefined,timer:ReturnType<typeof setTimeout>;
     const scheduleNext=()=>{
       clearTimeout(timer);
       if(disposed||mode!=='live'||typeof document==='undefined'||document.hidden)return;
-      timer=setTimeout(load,getInterval());
+      const delay=sessionPollingDelay(date,60000);
+      timer=setTimeout(()=>{if(sessionPollingDelay(date,60000)!==null)void load();else scheduleNext();},delay??60000);
     };
     const load=async()=>{
-      if(typeof document!=='undefined'&&document.hidden)return;
+      if(disposed||inFlight||(typeof document!=='undefined'&&document.hidden))return;
+      clearTimeout(timer);inFlight=true;
       controller=new AbortController();
       try{
         const p=new URLSearchParams({mode,date});
         if(asof)p.set('asof',asof);
-        const r=await fetch('/api/pallas?'+p,{cache:'no-store',signal:controller.signal});
+        const r=await fetch('/api/pallas?'+p,{cache:'default',signal:controller.signal});
         if(r.status===401){window.location.assign('/login?next=%2Fpallas');return;}
         const body=await r.json();
         if(!r.ok)throw new Error(body.error??'Feed unavailable');
-        if(!disposed)dispatchRefresh({type:'success',key:sessionKey,data:body});
+        if(!disposed){loaded=true;dispatchRefresh({type:'success',key:sessionKey,data:body});}
       }catch(e){
         if(!disposed&&!(e instanceof DOMException&&e.name==='AbortError'))dispatchRefresh({type:'failure',key:sessionKey,error:e instanceof Error?e.message:'Feed unavailable'});
       }finally{
+        inFlight=false;
         scheduleNext();
       }
     };
     const onVisibilityChange=()=>{
       if(typeof document!=='undefined'&&!document.hidden){
-        load();
+        if(!loaded||(mode==='live'&&sessionPollingDelay(date,60000)!==null))void load();
+        else scheduleNext();
       }else{
         clearTimeout(timer);
       }
@@ -87,7 +83,7 @@ export default function PallasClient(){
   },[mode,date,asof,sessionKey]);
   useEffect(()=>{if(!play||!replay||!data||error)return;const t=setTimeout(()=>{if(minute>=replayEnd){setPlay(false);return;}setMinute(minute+5);},1000);return()=>clearTimeout(t);},[play,replay,replayEnd,minute,data,error]);
   useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),2500);return()=>clearTimeout(t);},[notice]);
-  useEffect(()=>{if(!selected)return;if(asof&&Date.parse(selected.Issued_At)>Date.parse(`${date}T${asof}:00+05:30`)){setSelected(null);return;}const c=new AbortController();const p=new URLSearchParams({mode,date,symbol:selected.Symbol});if(asof)p.set('asof',asof);setChart([]);fetch('/api/pallas?'+p,{cache:'no-store',signal:c.signal}).then(r=>{if(!r.ok)throw new Error();return r.json();}).then(d=>setChart(d.bars??[])).catch(()=>{});return()=>c.abort();},[selected,mode,date,asof,data?.cut]);
+  useEffect(()=>{if(!selected)return;if(asof&&Date.parse(selected.Issued_At)>Date.parse(`${date}T${asof}:00+05:30`)){setSelected(null);return;}const c=new AbortController();const p=new URLSearchParams({mode,date,symbol:selected.Symbol});if(asof)p.set('asof',asof);setChart([]);fetch('/api/pallas?'+p,{cache:'default',signal:c.signal}).then(r=>{if(!r.ok)throw new Error();return r.json();}).then(d=>setChart(d.bars??[])).catch(()=>{});return()=>c.abort();},[selected,mode,date,asof,data?.cut]);
   useEffect(()=>{if(selected&&!dialog.current?.open)dialog.current?.showModal();else if(!selected)dialog.current?.close();},[selected]);
   const quotes=new Map((data?.quotes??[]).map(q=>[`${q.symbol}|${q.expiry}|${q.strike}|${q.leg}`,q]));
   const change=(s:PallasSignal)=>{const q=quotes.get(quoteKey(s));return q&&s.Reference_Premium>0?(q.ltp/s.Reference_Premium-1)*100:null;};

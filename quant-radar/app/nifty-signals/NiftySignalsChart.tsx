@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { DatePicker } from "@/components/Controls";
 import { getTodayIstDate } from "@/utils/backend";
+import {sessionPollingDelay} from '@/utils/sessionPolling';
 import LiveCandleChart, { type ChartBar, type Timeframe, type TradeOverlay } from "../charts/LiveCandleChart";
 import { useOIData } from "../charts/useOIData";
 import "../charts/charts.css";
@@ -13,14 +14,6 @@ const EMPTY_SIGNALS:Signal[]=[];
 const frames:Timeframe[]=["5m","15m","30m","1h"];
 const stamp=(date:string,time:string)=>Date.parse(`${date}T${time}:00+05:30`)/1000;
 const id=(s:Signal)=>`${s.time}-${s.side}-${s.strategy}`;
-function isMarketHours(): boolean {
-  try {
-    const s = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false });
-    return s >= '09:14:00' && s <= '15:35:00';
-  } catch {
-    return true;
-  }
-}
 export default function NiftySignalsChart({initialDate,streamUrl}:{initialDate?:string;streamUrl:string}) {
   const date=initialDate??getTodayIstDate();
   const [timeframe,setTimeframe]=useState<Timeframe>("5m");
@@ -44,26 +37,28 @@ export default function NiftySignalsChart({initialDate,streamUrl}:{initialDate?:
     return {...oiData,intraday:[],previous};
   },[oiData,date]);
   useEffect(()=>{
-    const controller=new AbortController(); let timer:ReturnType<typeof setTimeout>;
-    const getInterval=()=>!isToday?300000:!isMarketHours()?300000:60000;
+    const controller=new AbortController(); let timer:ReturnType<typeof setTimeout>,loaded=false,inFlight=false;
     const scheduleNext=()=>{
       clearTimeout(timer);
-      if(controller.signal.aborted||typeof document==='undefined'||document.hidden)return;
-      timer=setTimeout(poll,getInterval());
+      if(!isToday||controller.signal.aborted||typeof document==='undefined'||document.hidden)return;
+      const delay=sessionPollingDelay(date,60000);
+      timer=setTimeout(()=>{if(sessionPollingDelay(date,60000)!==null)void poll();else scheduleNext();},delay??60000);
     };
     const poll=async()=>{
-      if(typeof document!=='undefined'&&document.hidden)return;
+      if(controller.signal.aborted||inFlight||(typeof document!=='undefined'&&document.hidden))return;
+      clearTimeout(timer);inFlight=true;
       try {
         const response=await fetch(`/api/nifty-signals?date=${date}`,{cache:"no-store",signal:controller.signal});
         if(!response.ok) throw new Error("Signal feed unavailable");
         const next=await response.json();
-        if(!controller.signal.aborted){setReport(next);setFailure(null);}
+        if(!controller.signal.aborted){loaded=true;setReport(next);setFailure(null);}
       }catch{if(!controller.signal.aborted)setFailure({date,message:"Signal feed unavailable"});}
-      finally{scheduleNext();}
+      finally{inFlight=false;scheduleNext();}
     };
     const onVisibilityChange=()=>{
       if(typeof document!=='undefined'&&!document.hidden){
-        poll();
+        if(!loaded||(isToday&&sessionPollingDelay(date,60000)!==null))void poll();
+        else scheduleNext();
       }else{
         clearTimeout(timer);
       }

@@ -2,6 +2,7 @@
 
 import { useEffect, useEffectEvent, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { sessionPollingDelay } from "@/utils/sessionPolling";
 
 function getTodayIstDate(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -51,22 +52,14 @@ export function DatePicker() {
   );
 }
 
-function isMarketHours(): boolean {
-  try {
-    const s = new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour12: false });
-    return s >= "09:14:00" && s <= "15:35:00";
-  } catch {
-    return true;
-  }
-}
-
 export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
   const router = useRouter();
+  const sessionDate = useSearchParams().get("date") ?? undefined;
   const [enabled, setEnabled] = useState(true);
 
   const refreshPage = useEffectEvent(() => {
     if (typeof document !== "undefined" && document.hidden) return;
-    if (enabled) {
+    if (enabled && sessionPollingDelay(sessionDate, interval) !== null) {
       router.refresh();
     }
   });
@@ -76,16 +69,21 @@ export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
       return;
     }
 
-    const actualInterval = isMarketHours() ? interval : 300000;
-
-    const timerId = window.setInterval(() => {
-      if (typeof document !== "undefined" && document.hidden) return;
+    let timerId: number;
+    const schedule = () => {
+      timerId = window.setTimeout(tick, sessionPollingDelay(sessionDate, interval) ?? 60000);
+    };
+    const tick = () => {
       refreshPage();
-    }, actualInterval);
+      schedule();
+    };
+    schedule();
 
     const onVisibility = () => {
       if (typeof document !== "undefined" && !document.hidden && enabled) {
+        window.clearTimeout(timerId);
         refreshPage();
+        schedule();
       }
     };
     if (typeof document !== "undefined") {
@@ -93,12 +91,12 @@ export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
     }
 
     return () => {
-      window.clearInterval(timerId);
+      window.clearTimeout(timerId);
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", onVisibility);
       }
     };
-  }, [enabled, interval, refreshPage]);
+  }, [enabled, interval, sessionDate]);
 
   return (
     <button
