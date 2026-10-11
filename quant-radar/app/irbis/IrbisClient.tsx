@@ -5,6 +5,7 @@ import {Check, ExternalLink, Plus, Radar, RefreshCw} from 'lucide-react';
 import {addChartWatchlistSymbol, readChartWatchlist, CHART_WATCHLIST_UPDATED_EVENT} from '@/utils/chartWatchlist';
 import {buildTradingViewUrl, getTodayIstDate} from '@/utils/backend';
 import type {IrbisCandidate, IrbisResponse} from '@/utils/irbis';
+import {sessionPollingDelay} from '@/utils/sessionPolling';
 import './irbis.css';
 
 type ReplaySnapshot = {date: string; asof: string; cut: string; state: string; candidates: IrbisCandidate[]};
@@ -48,13 +49,24 @@ export default function IrbisClient() {
   useEffect(() => {
     if (mode !== 'live') return;
     const syncDate = () => {const today = getTodayIstDate(); if (today !== date) {setDate(today); setData(null);}};
-    const timer = setInterval(syncDate, 5000); document.addEventListener('visibilitychange', syncDate);
+    const timer = setInterval(syncDate, 60000); document.addEventListener('visibilitychange', syncDate);
     return () => {clearInterval(timer); document.removeEventListener('visibilitychange', syncDate);};
   }, [mode, date]);
   useEffect(() => {
     if (mode !== 'live') return;
-    let disposed = false, controller: AbortController | undefined, timer: ReturnType<typeof setTimeout>;
+    let disposed = false, loaded = false, inFlight = false, controller: AbortController | undefined, timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      clearTimeout(timer);
+      if (disposed || document.hidden) return;
+      const delay = sessionPollingDelay(date, 60000);
+      timer = setTimeout(() => {
+        if (sessionPollingDelay(date, 60000) !== null) void load();
+        else schedule();
+      }, delay ?? 60000);
+    };
     const load = async () => {
+      if (disposed || inFlight || document.hidden) return;
+      clearTimeout(timer); inFlight = true; loaded = true;
       controller = new AbortController();
       try {
         const response = await fetch(`/api/irbis?date=${encodeURIComponent(date)}`, {cache: 'no-store', signal: controller.signal});
@@ -65,11 +77,18 @@ export default function IrbisClient() {
       } catch (e) {
         if (!disposed && !(e instanceof DOMException && e.name === 'AbortError')) setError(e instanceof Error ? e.message : 'Scanner unavailable');
       } finally {
-        if (!disposed) {setLoading(false); timer = setTimeout(load, 10000);}
+        inFlight = false;
+        if (!disposed) {setLoading(false); schedule();}
       }
     };
+    const onVisibility = () => {
+      clearTimeout(timer);
+      if (!document.hidden && (!loaded || sessionPollingDelay(date, 60000) !== null)) void load();
+      else schedule();
+    };
     setLoading(true); setError(''); load();
-    return () => {disposed = true; controller?.abort(); clearTimeout(timer);};
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {disposed = true; controller?.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', onVisibility);};
   }, [mode, date]);
 
   const research = useMemo(() => replay?.snapshots.find(s => s.date === date && s.cut === replayCut), [replay, date, replayCut]);
