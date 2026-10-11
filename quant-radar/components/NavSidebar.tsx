@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat, Bot, Crown } from "lucide-react";
+import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat, Bot, Crown, Radar } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const PantherIcon = (props: any) => (
@@ -135,6 +135,7 @@ const NAV_ITEMS: any[] = [
   { href: "/rusty", icon: Cat, label: "Rusty", color: "#fb7185", rgb: "251,113,133" },
   { href: "/pallas", icon: Cat, label: "Pallas", color: "#5ad9ee", rgb: "90,217,238" },
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
+  { href: "/irbis", icon: Radar, label: "Irbis", color: "#5ee4c0", rgb: "94,228,192" },
   { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
   { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
   { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },

@@ -1,0 +1,48 @@
+--- ocelot.py
++++ ocelot.py
+@@ -1012,7 +1012,7 @@
+     return out
+ 
+ 
+-def rusty_candle(hm, op, hi, lo, cl):
++def rusty_candle(hm, op, hi, lo, cl, volume=None):
+     """Return candle geometry only for a valid cash-equity OHLC bar."""
+     op, hi, lo, cl = map(float, (op, hi, lo, cl))
+     spread = hi - lo
+@@ -1020,6 +1020,7 @@
+         return None
+     return {
+         "time": hm, "open": op, "high": hi, "low": lo, "close": cl,
++        "volume": float(volume) if volume is not None else None,
+         "body": 100.0 * abs(cl - op) / spread,
+         "uw": 100.0 * (hi - max(op, cl)) / spread,
+         "lw": 100.0 * (min(op, cl) - lo) / spread,
+@@ -1044,7 +1045,7 @@
+     for sym, bars in (cached or {}).items():
+         for hm, day, op, hi, lo, cl, _volume in bars:
+             if hm == target_hm and day == target_day:
+-                candle = rusty_candle(hm, op, hi, lo, cl)
++                candle = rusty_candle(hm, op, hi, lo, cl, _volume)
+                 if candle is not None:
+                     out[sym] = candle
+                 break
+@@ -1060,7 +1061,7 @@
+                     match = next((bar for bar in bars
+                                   if str(bar[0]).startswith(target_prefix)), None)
+                     if match is not None:
+-                        candle = rusty_candle(target_hm, *match[1:5])
++                        candle = rusty_candle(target_hm, *match[1:5], volume=match[5])
+                         if candle is not None:
+                             return sym, candle
+             except (httpx.TimeoutException, httpx.TransportError, ValueError, TypeError, KeyError, IndexError):
+--- pallas_export.py
++++ pallas_export.py
+@@ -22,7 +22,7 @@
+         prior = levels.get(sym, {})
+         if prior.get('pdh') and prior.get('pdl') and current[3] > 0:
+             bases[sym] = dict(spot=current[0], pdh=prior['pdh'], pdl=prior['pdl'], open=current[3],
+-                              prior_day=prior.get('d'))
++                              prior_day=prior.get('d'), pdc=prior.get('pdc'))
+     exported = time.time()
+     payload = dict(date=cut_ts.strftime('%Y-%m-%d'), cut=cut_ts.strftime('%H:%M:00'),
+                    expiry=str(expiry), exported_at=exported, chain_received=received,
