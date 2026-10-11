@@ -6,7 +6,7 @@ import {pick} from 'stream-json/filters/pick.js';
 import {streamValues} from 'stream-json/streamers/stream-values.js';
 import {requireApiSession} from '@/utils/auth';
 import {getTodayIstDate} from '@/utils/backend';
-import {foldIrbis, type IrbisDocument} from '@/utils/irbis';
+import {foldIrbis, IRBIS_CUTS, IRBIS_DEFAULT_END, type IrbisDocument} from '@/utils/irbis';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -75,8 +75,10 @@ export async function GET(request: NextRequest) {
   const denied = await requireApiSession(request); if (denied) return denied;
   const date = request.nextUrl.searchParams.get('date') ?? getTodayIstDate();
   const asof = request.nextUrl.searchParams.get('asof');
+  const end = request.nextUrl.searchParams.get('end') ?? IRBIS_DEFAULT_END;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) ||
     new Date(date).toISOString().slice(0, 10) !== date ||
+    !IRBIS_CUTS.includes(end) ||
     (asof && !/^([01]\d|2[0-3]):[0-5]\d$/.test(asof))) return json({error: 'Invalid session or time'}, 400);
   const limit = Math.min(asof ? Date.parse(`${date}T${asof}:00+05:30`) : Date.now(), Date.now());
   try {
@@ -104,6 +106,6 @@ export async function GET(request: NextRequest) {
       url = candidate;
     }
     if (url) throw new Error('Incomplete Irbis feed pages');
-    return json(foldIrbis(docs, date, limit));
+    return json(foldIrbis(docs, date, limit, end));
   } catch {return json({error: 'Irbis data unavailable; current rankings cannot be confirmed'}, 503);}
 }

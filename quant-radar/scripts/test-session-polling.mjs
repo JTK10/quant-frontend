@@ -42,6 +42,7 @@ function harness(start,{queryDate=null,states={}}={}) {
     return exports;
   }
   policy=load('utils/sessionPolling.ts');
+  dependencies['@/utils/irbis']=load('utils/irbis.ts');
   return {policy,load,requests,timers,get refreshes(){return refreshes;},
     mount:async()=>{for(const fn of effects){const cleanup=fn();if(cleanup)cleanups.push(cleanup);}await flush();},
     visibility:async(hidden)=>{document.hidden=hidden;for(const fn of listeners.get('dvisibilitychange')??[])fn();await flush();},

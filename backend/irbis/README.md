@@ -1,6 +1,6 @@
 # Irbis morning scanner
 
-Irbis is a separate VM2 scanner and website page, not an order engine. Ounce research is parked. It freezes the original four-setup structural candidate pool at 10:00, displays the top five ranked candidates, then reranks that same frozen pool at 10:05, 10:10 and 10:15 using available OI and directional VWAP. No later candidate discovery, ORB gate, volume experiment or automatic paper trade is added.
+Irbis is a separate VM2 scanner and website page, not an order engine. Ounce research is parked. It freezes the original four-setup structural candidate pool at 10:00, displays the top five ranked candidates, then reranks that same frozen pool every five minutes from 10:05 through 11:00 using available OI and directional VWAP. No later candidate discovery, ORB gate, volume experiment or automatic paper trade is added.
 
 ## Inputs and model
 
@@ -12,7 +12,7 @@ Same-day cash bars must be complete through each decision. Missing volume, degra
 
 ## Durability and publication
 
-One advisory process lock; atomic date state and immutable four-decision document outbox. Restart preserves the frozen pool and processed cuts. Reconstructed decisions are marked Recovered with actual issue time, never backdated as live observations. ORDS source `irbis`, stable decision IDs, bounded read-back before publication retry. Health is separate from rankings and cannot erase a prior same-session board. Health every five minutes during normal session, fifteen minutes outside; local health updates every minute. No Telegram changes.
+One advisory process lock; atomic date state and immutable thirteen-decision document outbox. Restart preserves the frozen pool and processed cuts. After freezing, cash and OI state is restricted to frozen symbols; OI keeps the 09:55 baseline and two rolling cuts. The frontend cutoff control selects existing decisions from 10:00 through 11:00, defaults to 11:00 and fetches once when applied; saved research only exposes cuts present in its bundle. Reconstructed decisions are marked Recovered with actual issue time, never backdated as live observations. ORDS source `irbis`, stable decision IDs, bounded read-back before publication retry. Health is separate from rankings and cannot erase a prior same-session board. Health every five minutes during normal session, fifteen minutes outside; local health updates every minute. No Telegram changes.
 
 Unit `irbis.service`: `/usr/bin/python3`, MemoryHigh80M/MemoryMax128M, CPUQuota20%, Nice15. No scientific runtime installed on VM. Inputs read only; own state under `/home/ubuntu/irbis`. Outside regular weekday hours reports CLOSED; absence of a holiday capture is not fabricated as a successful session. A synthetic four-cut morning/restart probe peaked near92MiB before serialization optimization, so the hard cap retains headroom above that observation.
 

@@ -98,8 +98,9 @@ def rerank(frozen,bars,base,current,old,close):
             coverage.append(sum(near[k]['oi'] for k in matched)/total if total else 0)
             changes[leg]=100*(sum(cur[k]['oi'] for k in matched)/den-1) if den else None
         values=[b for b in bars.get(sym,[]) if b['hm']<close]
-        expected=9+int(close[3:5])//5
-        if len(values)!=expected or min(coverage)<.9 or any(v is None for v in changes.values()):continue
+        hour,minute=map(int,close.split(':'))
+        expected=[f'{n//60:02}:{n%60:02}' for n in range(555,hour*60+minute,5)]
+        if [b['hm'] for b in values]!=expected or min(coverage)<.9 or any(v is None for v in changes.values()):continue
         volume=sum(b['v'] for b in values)
         if volume<=0:continue
         vwap=sum((b['h']+b['l']+b['c'])/3*b['v'] for b in values)/volume

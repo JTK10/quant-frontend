@@ -8,7 +8,11 @@ from irbis_engine import Model, freeze, rerank, clean
 IST=ZoneInfo('Asia/Kolkata')
 ROOT=Path(os.environ.get('IRBIS_ROOT','/home/ubuntu/irbis'))
 INPUT=Path(os.environ.get('IRBIS_INPUT','/home/ubuntu/pallas/input'))
-DECISIONS=('10:00','10:05','10:10','10:15')
+DECISIONS=tuple(f'{n//60:02}:{n%60:02}' for n in range(600,661,5))
+
+def prior_cut(cut,minutes=5):
+    hour,minute=map(int,cut.split(':'));n=hour*60+minute-minutes
+    return f'{n//60:02}:{n%60:02}'
 
 def stamp(epoch):return datetime.fromtimestamp(epoch,IST).isoformat()
 def epoch(day,hm):return datetime.fromisoformat(day+'T'+hm+':00+05:30').timestamp()
@@ -52,18 +56,19 @@ class Worker:
         return dict(source='irbis',cap='IRBIS',sig_date=day.replace('-',''),date=day,kind='SNAPSHOT',
             Doc_ID=f'irbis|{self.model.id}|{day}|{cut}',Date=day,Time=datetime.fromtimestamp(now,IST).strftime('%H:%M:%S'),
             Issued_At=stamp(now),Available_At=stamp(now),Health_At=stamp(now),Recovered=recovered,Model_ID=self.model.id,
-            State=state,Cut=cut,Decision_Time=cut,Frozen_At='10:00',OI_Cut={'10:00':'09:55','10:05':'10:00','10:10':'10:05','10:15':'10:10'}.get(cut),
+            State=state,Cut=cut,Decision_Time=cut,Frozen_At='10:00',OI_Cut=prior_cut(cut) if cut in DECISIONS else None,
             Candidates=clean(candidates[:5]),Total_Candidates=len(candidates),Reason=reason,**extra)
     def ingest(self,p,now):
         day=self.state['day'];cut=p['cut'][:5]
         if cut in self.state['processed']:return
         p=validate(p,day,now)
         # Persist previous cash morning and same-expiry prior OI independently.
-        for sym,b in (p['candles'].items() if cut<='10:15' else []):
+        for sym,b in (p['candles'].items() if cut<='11:00' else []):
+            if self.state['frozen'] is not None and sym not in {r['symbol'] for r in self.state['frozen']}:continue
             bar=dict(hm=b['time'][:5],o=b['open'],h=b['high'],l=b['low'],c=b['close'],v=b['volume'])
             existing={x['hm']:x for x in self.state['bars'].get(sym,[])};existing.setdefault(bar['hm'],bar)
             self.state['bars'][sym]=sorted(existing.values(),key=lambda b:b['hm'])
-        if cut in ('09:45','09:55','10:00','10:05','10:10'):
+        if cut in ('09:45','09:55') or cut in DECISIONS:
             self.state['snapshots'][cut]=dict(expiry=p['expiry'],chains=p['chains'])
         prior_days={x.get('prior_day') for x in p['baselines'].values() if x.get('prior_day') and x['prior_day']<day}
         if prior_days:self.state['prior_day']=max(prior_days)
@@ -86,14 +91,22 @@ class Worker:
         elif cut in DECISIONS:
             frozen=self.state['frozen']
             if frozen is None:raise ValueError('10:00 freeze unavailable; later discovery disabled')
-            current={'10:05':'10:00','10:10':'10:05','10:15':'10:10'}[cut]
-            old={'10:05':'09:55','10:10':'10:00','10:15':'10:05'}[cut]
+            current=prior_cut(cut)
+            old=prior_cut(cut,10)
             if not all(x in snapshots for x in ('09:55',current,old)):raise ValueError('Missing OI rerank snapshot')
             if any(snapshots[x]['expiry']!=p['expiry'] for x in ('09:55',current,old)):raise ValueError('Expiry changed during morning')
             ranked=rerank(frozen,self.state['bars'],snapshots['09:55'],snapshots[current],snapshots[old],cut)
             self.state['documents'].append(self.doc(cut,'READY' if ranked else 'EMPTY',ranked,'OI rerank; confirmation requires both legs and VWAP',now,recovered))
         if cut=='10:00':save(self.root/'prior'/f'{day}-cash.json',dict(date=day,bars=self.state['bars']))
         if cut=='15:25':save(self.root/'prior'/f'{day}-chain.json',dict(date=day,expiry=p['expiry'],chains=p['chains']))
+        if self.state['frozen'] is not None:
+            # Keep the fixed OI baseline and two rolling cuts, only for the
+            # frozen pool. Extending the window must not grow full-chain state.
+            symbols={r['symbol'] for r in self.state['frozen']}
+            self.state['bars']={s:b for s,b in self.state['bars'].items() if s in symbols}
+            keep={'09:55',cut,prior_cut(cut)} if cut in DECISIONS else {'09:55'}
+            self.state['snapshots']={hm:dict(expiry=snap['expiry'],chains={s:r for s,r in snap['chains'].items() if s in symbols})
+                for hm,snap in snapshots.items() if hm in keep}
         self.state['processed'].append(cut);self.state['last_cut']=cut;save(self.path,self.state)
         self.error=None
 
@@ -131,7 +144,7 @@ def main():
         if worker.state is None or worker.state['day']!=day:worker.start(day);failed={}
         for path in sorted(INPUT.glob(day.replace('-','')+'-????.json')):
             cut=path.stem[-4:-2]+':'+path.stem[-2:]
-            if not ('09:20'<=cut<='10:15' or cut=='15:25'):continue
+            if not ('09:20'<=cut<='11:00' or cut=='15:25'):continue
             if cut in worker.state['processed'] or failed.get(cut)==path.stat().st_mtime:continue
             try:worker.ingest(read(path),now)
             except Exception as exc:

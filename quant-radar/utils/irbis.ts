@@ -26,9 +26,16 @@ export type IrbisResponse = {
 const numberOrNull = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null;
 
-export function foldIrbis(docs: IrbisDocument[], date: string, limit: number): IrbisResponse {
+export const IRBIS_CUTS = Array.from({length: 13}, (_, i) => {
+  const minutes = 600 + i * 5;
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+});
+export const IRBIS_DEFAULT_END = '11:00';
+
+export function foldIrbis(docs: IrbisDocument[], date: string, limit: number, end = IRBIS_DEFAULT_END): IrbisResponse {
   const selected = docs.filter(d => d.source === 'irbis' && String(d.sig_date) === date.replaceAll('-', '') &&
     (!d.kind || ['SNAPSHOT', 'HEALTH'].includes(d.kind)) &&
+    (d.kind === 'HEALTH' || Boolean(d.Cut && IRBIS_CUTS.includes(d.Cut) && d.Cut <= end)) &&
     Number.isFinite(Date.parse(d.Available_At)) && Date.parse(d.Available_At) <= limit &&
     Number.isFinite(Date.parse(d.Issued_At)) && Date.parse(d.Issued_At) <= limit)
     .sort((a, b) => Date.parse(a.Available_At) - Date.parse(b.Available_At));
@@ -52,8 +59,8 @@ export function foldIrbis(docs: IrbisDocument[], date: string, limit: number): I
     latest?.State ?? health?.State ?? 'PENDING';
   const available = latest?.Available_At ?? null;
   const nowDate = new Date(limit).toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'});
-  const stale = Boolean(available && latest?.Cut !== '10:15' && date === nowDate && limit - Date.parse(available) > 7 * 60_000 &&
-    limit >= Date.parse(`${date}T10:00:00+05:30`) && limit <= Date.parse(`${date}T10:30:00+05:30`));
+  const stale = Boolean(state !== 'CLOSED' && available && latest?.Cut !== end && date === nowDate && limit - Date.parse(available) > 7 * 60_000 &&
+    limit >= Date.parse(`${date}T10:00:00+05:30`) && limit <= Date.parse(`${date}T${end}:00+05:30`) + 15 * 60_000);
   const status = state === 'CLOSED' && latest ? 'Morning scanner closed · showing final captured ranking' :
     state === 'CLOSED' ? 'Scanner closed for this session' :
     state === 'HOLIDAY' ? 'Market holiday · no scanner session' :
@@ -61,8 +68,8 @@ export function foldIrbis(docs: IrbisDocument[], date: string, limit: number): I
     state === 'ERROR' ? (health?.State === 'ERROR' ? health.Reason : latest?.Reason) ?? 'Scanner unavailable' :
     !latest ? 'Waiting for the 10:00 scanner shortlist' :
     stale ? 'Latest scanner capture is delayed' :
-    latest.Cut === '10:15' ? 'Final morning rank · scanner frozen after 10:15' :
-    'Morning scanner active · rankings can change through 10:15';
+    latest.Cut === end ? `Final selected rank · cutoff ${end} IST` :
+    `Morning scanner active · rankings can change through ${end}`;
   return {date, asof: new Date(limit).toISOString(), state, status, stale,
     cut: latest?.Cut ?? null, decision_time: latest?.Decision_Time ?? latest?.Time ?? null,
     oi_cut: latest?.OI_Cut ?? null, issued_at: latest?.Issued_At ?? null,

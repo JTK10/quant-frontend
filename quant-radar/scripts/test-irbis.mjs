@@ -21,7 +21,18 @@ assert.equal(beforeHealth.total_candidates,8);
 const closed = foldIrbis([health,snapshot],date,at('10:28'));
 assert.equal(closed.state,'CLOSED');
 assert.equal(closed.candidates.length,1,'later HEALTH must not replace SNAPSHOT candidates');
-assert.equal(closed.stale,false,'completed 10:15 rank is final');
+assert.equal(closed.stale,false,'closed session has no active capture warning');
+assert.equal(foldIrbis([snapshot],date,at('10:28')).stale,true,'10:15 is no longer the final live cut');
+assert.equal(foldIrbis([snapshot],date,at('10:28'),'10:15').stale,false,'user-selected cutoff freezes that board');
+const final = {...snapshot,Doc_ID:'final-1100',Cut:'11:00',
+  Issued_At:`${date}T11:01:00+05:30`,Available_At:`${date}T11:01:00+05:30`,
+  Candidates:[{...candidate,price:2400}]};
+assert.equal(foldIrbis([snapshot,final],date,at('11:00')).cut,'10:15','future issue must not leak');
+const throughEleven = foldIrbis([snapshot,final],date,at('11:02'));
+assert.equal(throughEleven.cut,'11:00');
+assert.equal(throughEleven.candidates[0].price,2400);
+assert.match(throughEleven.status,/Final selected rank/);
+assert.equal(foldIrbis([snapshot,final],date,at('11:02'),'10:15').cut,'10:15','cutoff filters decision time, preserving delayed captures');
 
 const failedHealth = {...health,State:'ERROR',Reason:'OI capture delayed'};
 const failed = foldIrbis([snapshot,failedHealth],date,at('10:28'));
