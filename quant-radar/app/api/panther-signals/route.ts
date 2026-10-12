@@ -1,13 +1,22 @@
 import { requireApiSession } from "@/utils/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePantherSignals, getTodayIstDate } from "@/utils/backend";
+import {resultCache} from '@/utils/resultCache';
 
 export const dynamic = "force-dynamic";
 
 let cache = { token: null as string | null, exp: 0 };
+let tokenPending:Promise<string|null>|undefined;
+const payloadCache=resultCache<string>({maxEntries:32,maxBytes:16*1024*1024,size:s=>Buffer.byteLength(s)});
 
 async function getToken() {
   if (cache.token && Date.now() < cache.exp) return cache.token;
+  if(tokenPending)return tokenPending;
+  tokenPending=loadToken().finally(()=>{tokenPending=undefined;});
+  return tokenPending;
+}
+
+async function loadToken() {
   
   const clientId = process.env.PANTHER_CLIENT_ID;
   const clientSecret = process.env.PANTHER_CLIENT_SECRET;
@@ -27,6 +36,7 @@ async function getToken() {
     },
     body: "grant_type=client_credentials",
     cache: "no-store",
+    signal:AbortSignal.timeout(10000),
   });
   
   if (!r.ok) {
@@ -39,13 +49,8 @@ async function getToken() {
   return cache.token;
 }
 
-// NO result caching. Every request re-fetches upstream, because a cached page
-// that silently serves a stale cycle is worse than a slow one on a live desk --
-// during the session a 30s window can hide a whole 5-min cycle.
-//
-// The one thing kept is in-flight de-duplication: if several pages request the
-// same date in the same instant they share ONE upstream fetch rather than
-// firing N. That is not caching -- nothing is retained after it resolves.
+// Share simultaneous upstream reads. Completed serialized responses below have
+// a 10s live / 5m historical TTL, always behind session authentication.
 const rawInflight = new Map<string, Promise<any[]>>();
 
 async function getRawByDate(targetDate: string, sourcesParam: string | null): Promise<any[]> {
@@ -82,11 +87,19 @@ async function getRawByDate(targetDate: string, sourcesParam: string | null): Pr
     const r: Response = await fetch(u.toString(), {
       headers: { Authorization: `Bearer ${t}` },
       cache: "no-store",
+      signal:AbortSignal.timeout(40000),
     });
+    if(r.status===401)cache={token:null,exp:0};
     if (!r.ok) throw new Error(`Failed to fetch Panther signals: ${r.status}`);
 
-    const data: any = await r.json();
+    const reader=r.body?.getReader();if(!reader)throw new Error('Empty Panther feed');
+    const chunks:Uint8Array[]=[];let byteCount=0;
+    try{for(;;){const {done,value}=await reader.read();if(done)break;byteCount+=value.byteLength;if(byteCount>64*1024*1024)throw new Error('Panther feed size exceeded');chunks.push(value);}}
+    finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
+    const data: any = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    if(data.hasMore)throw new Error('Incomplete Panther feed');
     const allItems = data.items || [];
+    if(!Array.isArray(allItems)||allItems.length>10000)throw new Error('Invalid Panther feed items');
 
     const parsedSignals = allItems.map((it: any) => {
       let doc = {};
@@ -149,6 +162,9 @@ async function buildPayload(
   lastN: number,
   topN: number,
   rankBy: string | null,
+  after: string | null = null,
+  rustyView = false,
+  requestedCut: string | null = null,
 ) {
   const wantSources = sourcesParam
     ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
@@ -159,6 +175,14 @@ async function buildPayload(
   if (wantSources) {
     rows = rows.filter((s: any) => wantSources.has(String(s.source)));
   }
+  const availableCuts=rustyView?Array.from(new Set<string>(rows.map((s:any)=>String(s.cut||s.time||'')).filter(Boolean))).sort():[];
+  if(rustyView){
+    const latest=availableCuts.at(-1);
+    rows=rows.filter((s:any)=>{const cut=String(s.cut||s.time||'');return requestedCut?cut===requestedCut:cut===latest||(after!==null&&cut===after);});
+  }
+  // Rusty already holds earlier cuts in the browser. Filter before projection
+  // and normalization so incremental refreshes only process the returned cuts.
+  if(after)rows=rows.filter((s:any)=>String(s.cut||s.time||'')>=after);
 
   // lastN: keep only the newest N cycles. Sector Scope renders just the latest
   // snapshot plus one ~15min back, but afac2 publishes ~69 cycles/day, so
@@ -298,12 +322,12 @@ async function buildPayload(
     return { source: "rusty", cap: "RUSTY", cut: snapshot.cut, time: snapshot.time,
              bull: visible(snapshot.bull), bear: visible(snapshot.bear) };
   });
-  return normalizePantherSignals(rows);
+  const snapshots=normalizePantherSignals(rows);
+  return rustyView?{snapshots,cuts:availableCuts}:snapshots;
 }
 
-// buildPayload is called directly -- it was wrapped in unstable_cache with
-// revalidate:30, which persisted in Vercel's Data Cache and meant a reload
-// could return the previous cycle. Removed: correctness over latency here.
+// Process-local caches do not persist across deployments or share private
+// responses through a public CDN. Expired failures propagate to the caller.
 
 export async function GET(request: NextRequest) {
   const denied = await requireApiSession(request);
@@ -322,15 +346,31 @@ export async function GET(request: NextRequest) {
   // with the cross-cycle delta resolved server-side (see buildPayload).
   const topN = Number(request.nextUrl.searchParams.get("topN") ?? 0) || 0;
   const rankBy = request.nextUrl.searchParams.get("rankBy");
+  const after=request.nextUrl.searchParams.get('after');
+  const view=request.nextUrl.searchParams.get('view');
+  const requestedCut=request.nextUrl.searchParams.get('cut');
+  if(!/^\d{8}$/.test(targetDate)||!Number.isFinite(Date.parse(`${targetDate.slice(0,4)}-${targetDate.slice(4,6)}-${targetDate.slice(6,8)}`))||
+    (sourcesParam&&(!/^[a-zA-Z0-9_,.-]{1,256}$/.test(sourcesParam)))||
+    (after&&(sourcesParam!=='rusty'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(after)))||
+    (view&&(view!=='rusty'||sourcesParam!=='rusty'))||
+    (requestedCut&&(view!=='rusty'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(requestedCut)))){
+    return NextResponse.json({error:'Invalid session or source'},{status:400,headers:{'Cache-Control':'private, no-store'}});
+  }
 
   try {
-    const body = await buildPayload(targetDate, sourcesParam, latestCycle, lastN, topN, rankBy);
-    return NextResponse.json(body);
+    const historical=targetDate<getTodayIstDate().replaceAll('-','');
+    const ttl=historical?300000:10000;
+    const key=JSON.stringify([targetDate,sourcesParam,latestCycle,lastN,topN,rankBy,after,view,requestedCut]);
+    const body=await payloadCache(key,ttl,async()=>{
+      const rows=await buildPayload(targetDate,sourcesParam,latestCycle,lastN,topN,rankBy,after,view==='rusty',requestedCut);
+      return JSON.stringify(rows);
+    });
+    return new NextResponse(body,{headers:{'Content-Type':'application/json','Cache-Control':historical?'private, max-age=300':'private, max-age=10'}});
   } catch (error) {
     console.error("Panther API Error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unable to load panther signals." },
-      { status: 500 },
+      { status: 500,headers:{'Cache-Control':'private, no-store'} },
     );
   }
 }

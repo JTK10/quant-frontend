@@ -16,8 +16,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
   }
   const response = NextResponse.next({ request: { headers: forwarded } });
-  // Pallas authenticates again in its route and owns its private browser-cache TTL.
-  if (path !== "/api/pallas") response.headers.set("Cache-Control", "private, no-store");
+  // These routes authenticate again and own explicit private browser-cache TTLs.
+  if (!["/api/pallas","/api/panther-signals"].includes(path)) response.headers.set("Cache-Control", "private, no-store");
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
 }

@@ -6,11 +6,12 @@ import {getTodayIstDate} from '@/utils/backend';
 import {foldPallas,PALLAS_DATES,type PallasDocument} from '@/utils/pallas';
 import {readPallasFeed,newPallasReadBudget,pallasInflight} from '@/utils/pallasFeed';
 import {pallasAsOf} from '@/utils/pallasTime';
+import {resultCache} from '@/utils/resultCache';
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
 export const maxDuration=60;
 let authCache:{token:string;until:number}|undefined;
-const shareRead=pallasInflight<PallasDocument[]>();
+const shareRead=resultCache<PallasDocument[]>({maxEntries:12,maxBytes:16*1024*1024});
 const shareAuth=pallasInflight<void>();
 const json=(body:unknown,status=200,cacheHeaders?:Record<string,string>)=>NextResponse.json(body,{status,headers:cacheHeaders??{'Cache-Control':'private, no-store'}});
 export async function GET(request:NextRequest){
@@ -35,7 +36,7 @@ export async function GET(request:NextRequest){
         });
       }
       const accessToken=authCache?.token;if(!accessToken)throw new Error('Feed authorization unavailable');
-      docs=await shareRead(`${date}|${symbol??''}`,async()=>{
+      docs=await shareRead(`${date}|${symbol??''}`,date<getTodayIstDate()?300000:15000,async()=>{
         const collected:PallasDocument[]=[],budget=newPallasReadBudget(),deadline=AbortSignal.timeout(40000);
         let url:URL|undefined=new URL(feedUrl);
         const visited=new Set<string>();

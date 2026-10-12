@@ -28,6 +28,7 @@ const feedDeps={
   '@/utils/pallas':{PALLAS_DATES:['2026-10-08'],foldPallas:()=>({signals:[]})},
   '@/utils/pallasFeed':{pallasInflight:()=>async(_key,fn)=>fn(),newPallasReadBudget:()=>({}),readPallasFeed:async()=>({documents:[{}],next:undefined})},
   '@/utils/pallasTime':{pallasAsOf:()=>Date.now()},
+  '@/utils/resultCache':load('utils/resultCache.ts',{}),
 };
 const route=load('app/api/pallas/route.ts',feedDeps,{
   process:{cwd:()=>'.',env:{PANTHER_CLIENT_ID:'test',PANTHER_CLIENT_SECRET:'test',PANTHER_TOKEN_URL:'https://test.invalid/token',PANTHER_SIGNALS_URL:'https://test.invalid/feed'}},

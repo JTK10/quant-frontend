@@ -53,6 +53,7 @@ export function DatePicker() {
 }
 
 export function AutoRefresh({ interval = 30000 }: { interval?: number }) {
+  interval=Math.max(60000,interval);
   const router = useRouter();
   const sessionDate = useSearchParams().get("date") ?? undefined;
   const [enabled, setEnabled] = useState(true);
