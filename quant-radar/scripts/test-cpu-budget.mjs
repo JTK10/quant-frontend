@@ -127,6 +127,6 @@ const rollover=mountRusty(at('2026-10-13T23:59:30'),'2026-10-13',{followToday:tr
 const late=mountRusty(at('2026-10-13T10:00:30'),'2026-10-13',{cut:'09:55'});await late.flush();await late.advance(60000);assert.equal(late.requests,2);await late.advance(60000);assert.equal(late.requests,2,'Missing cut permits only one early retry');late.cleanup();
 const history=mountRusty(at('2026-10-13T10:00:30'),'2026-10-12');await history.flush();
 assert.equal(history.states[0].length,2,'Timeline keeps unloaded cut placeholders');
-await history.select('09:55');assert.equal(history.requests,2);assert.ok(history.options[1].url.includes('cut=09%3A55'));
+await history.select('09:55');await history.advance(200);assert.equal(history.requests,2);assert.ok(history.options[1].url.includes('cut=09%3A55'));
 await history.select('10:00');await history.select('09:55');assert.equal(history.requests,2,'Visited history reused in browser');history.cleanup();
 console.log('PASS: CPU result reuse/expiry/failures/bounds/auth, Rusty incremental corrections and actual component history/weekend/hidden/focus/inflight/rollover/stale handling.');

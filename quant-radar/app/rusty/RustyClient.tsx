@@ -29,6 +29,7 @@ export default function RustyClient({ snaps, dateStr, controls, emptyMessage, st
   const [selectedCut,setSelectedCut]=useState<string|null>(null);
   const chooseCut=(cut:string|null)=>{setSelectedCut(cut);onCutChange?.(cut);};
   const active=selectedCut===null?cuts.length-1:Math.max(0,cuts.findIndex(([c])=>c===selectedCut)), snap=cuts[active]?.[1];
+  const snapshotMissing=!!snap&&!Array.isArray(snap.bull)&&!Array.isArray(snap.bear);
   const [search,setSearch]=useState('');
   const [filters,setFilters]=useState<Record<Side,Filters>>({bull:{...defaults},bear:{...defaults}});
   const [watchlist,setWatchlist]=useState<string[]>([]);
@@ -52,7 +53,7 @@ export default function RustyClient({ snaps, dateStr, controls, emptyMessage, st
       <div className="scroll"><table><thead><tr><th className="symbol">STOCK / CLASSIFICATION</th><th className="candle">{sort('c_body','Candle')}</th><th className="num move-col">{sort('mv','Move')}</th><th className="num oi-col"><div className="dual-sort">{sort('ce_pct','CE')}{sort('pe_pct','PE')}</div>OI CHANGE</th><th className="num rusty-col">{sort('p','Rusty')}</th></tr></thead><tbody>{rows.length?rows.map(r=><tr className="stock" key={r.s} onClick={()=>setDetail(r.s)}>
         <td><div className="symbol-inner"><a className="stock-name" href={buildTradingViewUrl(r.s,r.s)} target="_blank" rel="noopener noreferrer" title={`Open ${r.s} on TradingView`}>{r.s}</a><button className={`watch-add ${watchlist.includes(r.s)?'added':''}`} disabled={watchlist.includes(r.s)} title={watchlist.includes(r.s)?`${r.s} is in the Charts watchlist`:`Add ${r.s} to the Charts watchlist`} aria-label={watchlist.includes(r.s)?`${r.s} is in the Charts watchlist`:`Add ${r.s} to the Charts watchlist`} onClick={e=>{e.stopPropagation();setWatchlist(addChartWatchlistSymbol(r.s))}}>{watchlist.includes(r.s)?'✓':'+'}</button>{r.entry_confirmed&&<span className="entry">ENTRY</span>}{r.is_new_discovery&&<span className="new">NEW</span>}</div><span className="flow-label" title={r.flow_label||'Unavailable'} style={{color:r.badge_color||'#8290a3',background:r.badge_bg||'#1c2737'}}>{r.flow_label||'Unavailable'}</span></td>
         <td><div className="candle-inline"><Candle row={r}/><div><div className="candle-main">{finite(r.c_body)?`${Math.round(r.c_body)}%`:'—'}</div><div className="candle-meta">{r.is_maru?'Marubozu':r.is_solid?'Solid':finite(r.c_body)?'Wicky':''}</div><div className="candle-meta">{r.c_time}</div></div></div></td><td className={`num ${(r.mv||0)>=0?'positive':'negative'}`}>{pct(r.mv)}</td><td className="num"><div className="oi-stack"><span className={(r.ce_pct||0)>=0?'oi-up':'oi-down'}><small>CE</small>{pct(r.ce_pct)}</span><span className={(r.pe_pct||0)>=0?'oi-up':'oi-down'}><small>PE</small>{pct(r.pe_pct)}</span></div></td><td className="num">{pct(r.p)}<span className="break">{r.brk?[r.bt,r.ls].filter(Boolean).join(' · ')||'BRK':'—'}</span></td>
-      </tr>):<tr><td colSpan={5} className="empty">No stocks match these filters.</td></tr>}</tbody></table></div>
+      </tr>):<tr><td colSpan={5} className="empty">{snapshotMissing?`Waiting for snapshot ${cuts[active][0]}…`:'No stocks match these filters.'}</td></tr>}</tbody></table></div>
     </section>;
   };
   return <div className="rusty-view"><main className="app">
