@@ -7,7 +7,7 @@ class History:
     def __init__(self,*args):self.calls=0
     def snapshot(self,*args):self.calls+=1;return []
 module.HistoryStore=History
-sys.modules['history_store']=module
+# Dependency is injected per hub so discovery import order cannot affect tests.
 from server import Hub
 from bar_aggregator import parse_feed_line
 class Socket:
@@ -20,7 +20,7 @@ class Socket:
         return json.dumps(self.commands.pop(0))
 class Tests(unittest.IsolatedAsyncioTestCase):
     async def test_history_false_does_not_load_files(self):
-        hub=Hub({});ws=Socket([{'type':'subscribe','symbols':[],'history':False}])
+        hub=Hub({});hub.history=History();ws=Socket([{'type':'subscribe','symbols':[],'history':False}])
         await hub.handler(ws)
         self.assertEqual(hub.history.calls,0)
         self.assertTrue(ws.messages[0]['receipt_timestamps'])
@@ -28,7 +28,7 @@ class Tests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(ws.messages[1]['bars'],[])
     async def test_overflow_does_not_block_other_client(self):
         hub=Hub({});slow,fast=Socket(),Socket()
-        for ws in (slow,fast):hub.clients[ws]=set();hub.queues[ws]=asyncio.Queue(maxsize=1)
+        for ws in (slow,fast):hub.clients[ws]={'TEST'};hub.queues[ws]=asyncio.Queue(maxsize=1)
         hub.queues[slow].put_nowait({})
         await asyncio.wait_for(hub.broadcast({'symbol':'TEST'}),timeout=.1)
         self.assertNotIn(slow,hub.clients)

@@ -56,6 +56,9 @@ class Hub:
         self.aggregator = CandleAggregator()
         self.names = names
         self.history = HistoryStore(HISTORY_DIRECTORY)
+        self.recovering = False
+        self.live_only = set()
+        self.wildcard_clients = set()
 
     async def send(self, websocket: Any, payload: dict[str, Any]) -> None:
         try:
@@ -74,8 +77,12 @@ class Hub:
             return
 
     async def broadcast(self, payload: dict[str, Any]) -> None:
+        if self.recovering:
+            return
         symbol = payload.get("symbol")
         for ws, subscriptions in list(self.clients.items()):
+            if not subscriptions and ws not in self.wildcard_clients:
+                continue
             if subscriptions and symbol not in subscriptions and payload.get("instrument_key") not in subscriptions:
                 continue
             queue = self.queues.get(ws)
@@ -104,20 +111,36 @@ class Hub:
                 except json.JSONDecodeError:
                     continue
                 if command.get("type") == "subscribe":
-                    subscriptions = {str(value) for value in command.get("symbols", [])}
+                    values = command.get("symbols", [])
+                    if not isinstance(values, list) or len(values) > 512:
+                        await websocket.close(code=1008, reason="Invalid subscriptions")
+                        return
+                    subscriptions = {str(value) for value in values}
                     self.clients[websocket] = subscriptions
+                    self.wildcard_clients.discard(websocket)
+                    if not subscriptions and command.get("history") is False:
+                        self.wildcard_clients.add(websocket)
                     if command.get("history") is False:
+                        self.live_only.add(websocket)
                         # Pallas reconstructs completed bars from VM2 exports.
                         # Do not load 20 days of files for a universe-wide client.
                         await self.send(websocket, {"type": "snapshot", "bars": [], "live_only": True})
+                    elif self.recovering:
+                        await self.send(websocket, {"type": "recovering"})
                     else:
                         history = self.history.snapshot(subscriptions, self.names)
                         active = self.aggregator.snapshot(subscriptions)
                         await self.send(websocket, {"type": "snapshot", "bars": history + active})
                 elif command.get("type") == "unsubscribe":
                     self.clients[websocket] = set()
+                    self.wildcard_clients.discard(websocket)
+        except Exception:
+            # A consumer disconnect must never crash the feed tail or flood logs.
+            pass
         finally:
             self.clients.pop(websocket, None)
+            self.live_only.discard(websocket)
+            self.wildcard_clients.discard(websocket)
             self.queues.pop(websocket, None)
             task = self.writers.pop(websocket, None)
             if task:
@@ -127,31 +150,68 @@ class Hub:
 async def tail_feed(hub: Hub) -> None:
     open_path: Path | None = None
     feed = None
-    while True:
-        desired_path = current_feed_path()
-        if desired_path != open_path:
-            if feed:
-                feed.close()
-            feed = None
-            open_path = desired_path
-            hub.aggregator.reset()
-        if feed is None:
-            if not desired_path.exists():
-                await asyncio.sleep(1)
+    recovery_end = 0
+    rows_since_yield = 0
+    try:
+        while True:
+            desired_path = current_feed_path()
+            if desired_path != open_path:
+                if feed:
+                    feed.close()
+                feed = None
+                open_path = desired_path
+                hub.aggregator.reset()
+                hub.recovering = False
+            if feed is None:
+                if not desired_path.exists():
+                    await asyncio.sleep(1)
+                    continue
+                feed = desired_path.open("r", encoding="utf-8")
+                recovery_end = desired_path.stat().st_size
+                hub.recovering = recovery_end > 0
+                print(f"chart stream tailing {desired_path}", flush=True)
+            offset = feed.tell()
+            line = feed.readline(2_000_001)
+            if line and not line.endswith("\n"):
+                # Recorder may be in the middle of writing one JSONL record. Re-read
+                # from its start only after the terminator is visible.
+                if len(line) <= 2_000_000:
+                    feed.seek(offset)
+                    await asyncio.sleep(0.2)
+                    continue
+                while line and not line.endswith("\n"):
+                    line = feed.readline(2_000_001)
+                print("chart stream skipped oversized record", flush=True)
                 continue
-            feed = desired_path.open("r", encoding="utf-8")
-            print(f"chart stream tailing {desired_path}", flush=True)
-        line = feed.readline()
-        if not line:
-            await asyncio.sleep(0.2)
-            continue
-        for key, epoch, ltp, vtt, trade_ts in parse_feed_line(line, include_metadata=True):
-            symbol = hub.names.get(key, key.split("|")[-1])
-            for event in hub.aggregator.push(instrument_key=key, symbol=symbol, epoch_seconds=epoch, ltp=ltp, vtt=vtt):
-                event["recv_ts"] = epoch
-                event["stream_ts"] = time.time()
-                event["trade_ts"] = trade_ts
-                await hub.broadcast(event)
+            if hub.recovering and offset >= recovery_end:
+                hub.recovering = False
+                # Recovered session bars are sent once, never replayed as live ticks.
+                for ws, subscriptions in list(hub.clients.items()):
+                    if subscriptions:
+                        bars = [] if ws in hub.live_only else hub.history.snapshot(subscriptions, hub.names) + hub.aggregator.snapshot(subscriptions)
+                        await hub.send(ws, {"type": "snapshot", "bars": bars, "live_only": ws in hub.live_only})
+            if not line:
+                await asyncio.sleep(0.2)
+                continue
+            try:
+                ticks = parse_feed_line(line, include_metadata=True)
+            except (ValueError, TypeError, AttributeError, OverflowError):
+                print("chart stream skipped malformed complete record", flush=True)
+                continue
+            rows_since_yield += 1
+            if rows_since_yield >= 100:
+                rows_since_yield = 0
+                await asyncio.sleep(0)
+            for key, epoch, ltp, vtt, trade_ts in ticks:
+                symbol = hub.names.get(key, key.split("|")[-1])
+                for event in hub.aggregator.push(instrument_key=key, symbol=symbol, epoch_seconds=epoch, ltp=ltp, vtt=vtt):
+                    event["recv_ts"] = epoch
+                    event["stream_ts"] = time.time()
+                    event["trade_ts"] = trade_ts
+                    await hub.broadcast(event)
+    finally:
+        if feed:
+            feed.close()
 
 
 async def main() -> None:

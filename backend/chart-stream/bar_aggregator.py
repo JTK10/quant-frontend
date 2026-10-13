@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any, Iterable
 
@@ -54,7 +55,7 @@ class CandleAggregator:
         self._resync_fraction = resync_fraction
 
     def push(self, *, instrument_key: str, symbol: str, epoch_seconds: float, ltp: float, vtt: float) -> list[dict[str, Any]]:
-        if ltp <= 0 or vtt < 0:
+        if not all(math.isfinite(v) for v in (epoch_seconds, ltp, vtt)) or ltp <= 0 or vtt < 0:
             return []
 
         bucket = bar_start(epoch_seconds)
@@ -64,6 +65,8 @@ class CandleAggregator:
             self._states[instrument_key] = state
             return [state.candle.as_dict()]
 
+        if bucket < state.candle.time:
+            return []  # Never rewind an active candle on a delayed record.
         delta = max(0.0, vtt - state.last_vtt)
         state.last_vtt = vtt
         # VM1 occasionally sends a VTT resync blob late in the session. It must
@@ -109,6 +112,8 @@ def parse_feed_line(line: str, *, include_metadata: bool = False) -> list:
     import json
 
     raw = json.loads(line)
+    if not isinstance(raw, dict):
+        return []
     recv_ts = raw.get("recv_ts")
     feeds = (raw.get("msg") or {}).get("feeds") or {}
     if recv_ts is None or not isinstance(feeds, dict):

@@ -1,0 +1,23 @@
+[Unit]
+Description=KAIROS9 isolated paper scanner using Irbis and existing option captures
+After=network-online.target irbis.service
+Wants=network-online.target
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/kairos9
+ExecStart=/usr/bin/python3 -u /home/ubuntu/kairos9/kairos9_live.py
+Restart=on-failure
+RestartSec=30
+MemoryHigh=48M
+MemoryMax=72M
+CPUQuota=15%
+Nice=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/kairos9
+Environment=TZ=Asia/Kolkata
+[Install]
+WantedBy=multi-user.target

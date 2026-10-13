@@ -19,6 +19,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import type { OIData } from "./oiTypes";
+import { subscribeCandles } from "@/utils/candleStream";
 
 export type Timeframe = "5m" | "15m" | "30m" | "1h" | "1D";
 
@@ -43,6 +44,7 @@ type CandleMessage = ChartBar & {
 type StreamMessage =
   | CandleMessage
   | { type: "snapshot"; bars: CandleMessage[] }
+  | { type: "recovering" }
   | { type: "ready"; interval: "5m" };
 
 type LinePoint = { time: UTCTimestamp; value: number };
@@ -90,7 +92,10 @@ function bucketStart(time: number, timeframe: Timeframe): number {
     const date = new Date(time * 1000);
     return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 1000;
   }
-  return Math.floor(time / INTERVAL_SECONDS[timeframe]) * INTERVAL_SECONDS[timeframe];
+  // NSE intraday bars start at 09:15 IST, including 30m and hourly bars.
+  const day = Math.floor((time + 19_800) / 86400) * 86400 - 19_800;
+  const open = day + 9 * 3600 + 15 * 60;
+  return open + Math.floor((time - open) / INTERVAL_SECONDS[timeframe]) * INTERVAL_SECONDS[timeframe];
 }
 
 export function normalizeFiveMinuteBar(bar: ChartBar): ChartBar {
@@ -510,52 +515,37 @@ export default function LiveCandleChart({
 
   useEffect(() => {
     if (!streamUrl) return;
-    let socket: WebSocket | undefined;
-    let reconnectTimer: number | undefined;
-    let stopped = false;
-
-    const storeBar = (bar: ChartBar) => {
-      const normalized = normalizeFiveMinuteBar(bar);
-      barsRef.current.set(normalized.time, normalized);
-      return normalized;
-    };
-    const updateLiveBar = (bar: ChartBar) => {
-      const normalized = storeBar(bar);
+    let renderTimer: ReturnType<typeof setTimeout> | undefined;
+    let latest: ChartBar | undefined;
+    let snapshot = false;
+    const dirty = new Set<number>();
+    const render = () => {
+      renderTimer = undefined;
       const bars = aggregateBars(sessionBars([...barsRef.current.values()]), timeframe);
-      const affectedTime = bucketStart(normalized.time, timeframe);
-      const affectedBar = bars.find((candidate) => candidate.time === affectedTime);
-      if (affectedBar) updateLiveBarRef.current(affectedBar, bars);
+      if (snapshot || dirty.size > 1) redrawRef.current(bars);
+      else if (latest) {
+        const affected = bars.find(b => b.time === bucketStart(latest!.time, timeframe));
+        if (affected) updateLiveBarRef.current(affected, bars);
+      }
+      latest = undefined; snapshot = false; dirty.clear();
     };
-    const redraw = () => redrawRef.current(aggregateBars(sessionBars([...barsRef.current.values()]), timeframe));
-    const connect = () => {
-      socket = new WebSocket(streamUrl);
-      setConnection("Connecting");
-      socket.onopen = () => { setConnection("Connected"); socket?.send(JSON.stringify({ type: "subscribe", symbols: [symbol] })); };
-      socket.onmessage = (event) => {
-        let message: StreamMessage;
-        try { message = JSON.parse(event.data) as StreamMessage; } catch { return; }
-        if (message.type === "candle" && message.symbol === symbol) {
-          updateLiveBar(message);
-        }
-        if (message.type === "snapshot") {
-          const matching = message.bars.filter((bar) => bar.symbol === symbol);
-          if (!matching.length) return;
-          matching.forEach(storeBar);
-          redraw();
-        }
-      };
-      socket.onclose = () => {
-        if (!stopped) setConnection("Reconnecting");
-        if (!stopped) reconnectTimer = window.setTimeout(connect, 2000);
-      };
-    };
-    connect();
-
-    return () => {
-      stopped = true;
-      if (reconnectTimer) window.clearTimeout(reconnectTimer);
-      socket?.close();
-    };
+    const unsubscribe = subscribeCandles(streamUrl, symbol, (value) => {
+      const message = value as StreamMessage;
+      if (message.type === "recovering") { setConnection("Recovering session"); return; }
+      const incoming = message.type === "snapshot" ? message.bars.filter(b => b.symbol === symbol)
+        : message.type === "candle" && message.symbol === symbol ? [message] : [];
+      for (const bar of incoming) {
+        if (![bar.time,bar.open,bar.high,bar.low,bar.close,bar.volume].every(Number.isFinite)) continue;
+        if (sessionDate && istDay(bar.time) > sessionDate) continue;
+        if (bar.time > Date.now()/1000 + 5) continue;
+        const normalized = normalizeFiveMinuteBar(bar);
+        barsRef.current.set(normalized.time, normalized); latest = normalized; dirty.add(bucketStart(normalized.time, timeframe));
+      }
+      snapshot ||= message.type === "snapshot";
+      if (message.type === "snapshot" || incoming.length) setConnection("Connected");
+      if (incoming.length && !renderTimer) renderTimer = setTimeout(render, 250);
+    }, setConnection, Boolean(asOf) || Boolean(sessionDate && sessionDate !== istDay(Date.now()/1000)));
+    return () => { unsubscribe(); if (renderTimer) clearTimeout(renderTimer); };
   }, [streamUrl, symbol, timeframe, sessionDate, sessionBars]);
 
   return (
