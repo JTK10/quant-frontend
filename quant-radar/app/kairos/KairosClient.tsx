@@ -24,7 +24,10 @@ export default function KairosClient({ events, engine, dateStr, asOf }: { events
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(now));
   const late = dateStr === today && healthTime !== null && now / 1000 - healthTime > (kairosNumber(health?.heartbeat_seconds) ?? 900) + 120;
   const healthClock = healthTime === null ? "" : new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(healthTime * 1000));
-  const warning = late || Boolean(health?.data_error || health?.publish_error);
+  const warning = late || Boolean(health?.data_error || health?.publish_error || (ninth && health?.last_error));
+  const lastFailure = ninth && health?.last_failure && typeof health.last_failure === "object" ? health.last_failure as KairosEvent : undefined;
+  const lastDecision = ninth && health?.last_decision && typeof health.last_decision === "object" ? health.last_decision as KairosEvent : undefined;
+  const lastSkip = ninth ? [...skips].sort((a,b)=>(kairosNumber(b.ts)??0)-(kairosNumber(a.ts)??0))[0] : undefined;
   const status = late ? "Service heartbeat overdue" : text(health?.status ?? (dateStr === today ? "Waiting for service heartbeat" : "Historical session"));
   const featured = open[0] ?? closed[0], entry = featured?.entry, exit = featured?.exit, mark = featured?.mtm;
   const score = kairosNumber(entry?.ai_score ?? exit?.ai_score), validScore = score !== null && score >= 0 && score <= 1;
@@ -60,6 +63,9 @@ export default function KairosClient({ events, engine, dateStr, asOf }: { events
         <dl className={styles.tradeDetails}><Detail label="MODEL OUTPUT">{ai(entry?.ai_score)}</Detail><Detail label="RANKING SCORE">{fmt(entry?.selection_score,3)}</Detail></dl>
         <div className={styles.rules}><span><ShieldCheck size={13}/>Whole lots · ₹35,000 premium budget · fees extra</span><span><Crosshair size={13}/>Initial stop −10% · two-bar profit trail</span><span><Clock3 size={13}/>1 entry / day · 45-minute stagnancy · 15:20 squareoff</span></div>
         <p className={styles.aiNote}>Five-minute observed quotes. Exit ML disabled. Feature spread remains imputed. Model output is uncalibrated; this is not validated live execution.</p>
+        <p className={styles.aiNote}>Entries: {text(health?.daily_entries)} · Metadata attempts: {text(health?.metadata_attempts)}{lastDecision ? ` · Latest decision ${text(lastDecision.symbol)} ${text(lastDecision.cut)}: ${text(lastDecision.reason)}` : ""}</p>
+        {lastSkip && <p className={styles.aiNote}>Latest skip {text(lastSkip.name)} · {time(lastSkip.time)} IST: {text(lastSkip.reason)}</p>}
+        {lastFailure && <p className={styles.aiNote}>Last failure {text(lastFailure.symbol)} · {text(lastFailure.cut)}: {text(lastFailure.reason)}</p>}
       </section>}
       {v2 && !rusty && !ninth && <section className={`${styles.panel} ${styles.aiPanel}`} aria-label="AI selection">
         <div className={styles.panelHeading}><span><BrainCircuit size={16}/>AI selection</span><span className={styles.aiBadge}>PALLAS AI</span></div>

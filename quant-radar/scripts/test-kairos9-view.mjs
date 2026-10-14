@@ -30,4 +30,7 @@ assert.ok(closed.includes('99.00'));assert.ok(closed.includes('10:15:00 → 10:3
 assert.ok(!open.includes('PALLAS AI'));assert.ok(!open.includes('70%'));assert.ok(!open.includes('11:30'));
 const summary=kairos.kairosSummary([entry,mark,exit,{...entry,source:'kairos2',kind:'EXIT',pnl:99999}],'kairos9');
 assert.equal(summary.realized,-380);assert.equal(summary.closed.length,1);
-console.log('PASS: Kairos9 ENTRY/MTM/EXIT rendered schema, own strategy rules, source isolation');
+const health={source:'kairos9',kind:'HEALTH',ts:asOf/1000,status:'Outside regular session',daily_entries:0,metadata_attempts:1,last_failure:{symbol:'DIVISLAB',cut:'10:10',reason:'Broker metadata HTTP 403'},last_decision:{symbol:'DIVISLAB',cut:'10:10',reason:'Metadata failed; cut skipped'}};
+const audited=render([health,{source:'kairos9',kind:'SKIP',name:'DIVISLAB',time:'10:10:30',ts:asOf/1000,reason:'Metadata failed; daily entry remains available'}]);
+assert.ok(audited.includes('Broker metadata HTTP 403'));assert.ok(audited.includes('Metadata attempts:'));assert.ok(audited.includes('Latest skip DIVISLAB'));
+console.log('PASS: Kairos9 ENTRY/MTM/EXIT schema, strategy/source isolation and failure/skip visibility');

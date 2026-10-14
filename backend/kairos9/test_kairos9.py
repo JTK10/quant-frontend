@@ -76,4 +76,60 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):p.send(doc,lambda:persist.append(True))
         self.assertEqual(len(posts),1);self.assertEqual(persist,[True])
         with patch.object(live,'request',return_value={'items':[{'doc':{'source':'kairos9','Doc_ID':'id'}}]}):p.send(doc,lambda:None)
+class EntryRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
+        self.root.joinpath('kairos9_model.json').write_bytes(Path(__file__).with_name('kairos9_model.json').read_bytes())
+        self.w=Worker(self.root);self.w.state['date']='2026-10-14'
+        self.meta=dict(lot_size=100,key='NSE_FO|TEST',name='TEST CE')
+    def tearDown(self):self.tmp.cleanup()
+    def run_cut(self,cut,offset=1,metadata=None,depth=10000,ask=100,bid=99):
+        t=live.epoch('2026-10-14',cut)
+        q=dict(strike=200.,leg='CE',ltp=ask,oi=10000,volume=100,bid=bid,ask=ask,bid_qty=depth,ask_qty=depth)
+        p=dict(date='2026-10-14',cut=cut,expiry='2026-10-27',degraded=False,exported_at=t,chain_received={'TEST':t},quotes={'TEST':[q]})
+        signal=dict(Symbol='TEST',Side='BULL',Cut=cut,Spot=200,Expiry='2026-10-27',Score=.8,Win_Prob=.5)
+        def source(path,*args):return {'documents':[{'Cut':cut}]} if Path(path).name=='2026-10-14.json' else p
+        outcome=self.meta if metadata is None else metadata
+        with patch.object(live,'INPUT',self.root),patch.object(Path,'exists',return_value=True),patch.object(live,'read',side_effect=source),patch.object(live,'candidates',return_value=[signal]),patch.object(live,'contract_metadata',side_effect=outcome if isinstance(outcome,Exception) else None,return_value=outcome) as api:
+            self.w.tick(t+offset)
+        return api
+    def restart(self):self.w=Worker(self.root)
+    def test_failed_metadata_does_not_consume_day(self):
+        self.run_cut('10:10',metadata=live.BrokerMetadataError('Broker metadata HTTP 403',403))
+        self.assertFalse(self.w.state['taken']);self.assertIsNone(self.w.state['pending_entry'])
+        self.restart();self.run_cut('10:15');self.assertFalse(self.w.state['taken'])
+        self.run_cut('10:20');self.assertTrue(self.w.state['taken']);self.assertEqual(self.w.state['daily_entries'],1)
+    def test_transient_retry_survives_restart(self):
+        self.run_cut('10:10',metadata=live.BrokerMetadataError('Broker metadata HTTP 503',503,True))
+        self.restart();api=self.run_cut('10:10',offset=20);self.assertFalse(api.called)
+        self.run_cut('10:10',offset=32);self.assertIsNotNone(self.w.state['pending_entry'])
+        self.assertEqual(self.w.state['metadata_attempts'],2);self.run_cut('10:15');self.assertTrue(self.w.state['taken'])
+    def test_retry_limit_survives_crash(self):
+        self.run_cut('10:10',metadata=live.BrokerMetadataError('Transport',retryable=True))
+        self.w.state['metadata_pending']['attempts']=3;self.w.persist();self.restart()
+        api=self.run_cut('10:10',offset=40);self.assertFalse(api.called);self.assertIsNone(self.w.state['metadata_pending']);self.assertFalse(self.w.state['taken'])
+    def test_missed_entry_never_retroactively_fills(self):
+        self.run_cut('10:10');self.restart()
+        with patch.object(live,'INPUT',self.root),patch.object(Path,'exists',return_value=False):self.w.tick(live.epoch('2026-10-14','10:19'))
+        self.assertIsNone(self.w.state['pending_entry']);self.assertFalse(self.w.state['taken']);self.assertIsNone(self.w.state['position'])
+        self.run_cut('10:20');self.assertEqual(self.w.state['pending_entry']['entry_time'],'10:25')
+    def test_budget_sizes_down_to_one_displayed_lot(self):
+        self.run_cut('10:10');self.run_cut('10:15',depth=100,ask=133.8,bid=133.25)
+        self.assertEqual(self.w.state['position']['lots'],1);self.assertEqual(self.w.state['position']['qty'],100)
+        self.assertAlmostEqual(self.w.state['position']['entry']*100,13380)
+    def test_insufficient_one_lot_skips_without_lock(self):
+        self.run_cut('10:10');self.run_cut('10:15',depth=50)
+        self.assertIsNone(self.w.state['position']);self.assertFalse(self.w.state['taken'])
+        self.run_cut('10:20');self.assertIsNotNone(self.w.state['pending_entry'])
+    def test_successful_entry_exit_restart_blocks_second_entry(self):
+        self.run_cut('10:10');self.run_cut('10:15');self.run_cut('10:20',ask=85,bid=80)
+        self.assertIsNone(self.w.state['position']);self.restart();api=self.run_cut('10:25');self.assertFalse(api.called)
+        self.assertEqual(sum(d['kind']=='ENTRY' for d in self.w.state['outbox']),1)
+    def test_closed_health_does_not_erase_failure_audit(self):
+        self.run_cut('10:10',metadata=live.BrokerMetadataError('Broker metadata HTTP 403',403));self.w.tick(live.epoch('2026-10-14','19:00'))
+        self.assertEqual(self.w.state['last_failure']['http_status'],403);self.assertEqual(self.w.state['decisions']['10:10']['status'],'SKIPPED')
+    def test_legacy_lock_never_silently_cleared(self):
+        self.w.state['taken']=True;self.w.persist();self.restart();self.assertTrue(self.w.state['taken'])
+    def test_broker_orders_not_permitted(self):
+        with self.assertRaises(ValueError):live.broker_get('https://api.upstox.com/v2/order/place',{})
 if __name__=='__main__':unittest.main()
