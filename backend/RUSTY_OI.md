@@ -1,0 +1,11 @@
+# Rusty flow panels and OI crossing enrichment
+
+The Rusty frontend uses five flow panels with independent bull/bear PDH/OR and OI filters. All matching rows scroll; Charts watchlist and TradingView arrows reuse existing helpers. Candle tier and target percentage replace the entry-confirmed column. The existing historical slider and five-minute polling/cache policy remain in use.
+
+`rusty_oi.py` consumes the existing `chart_oi_close` documents (same closing levels as Charts). It selects each symbol's three most recent available prior sessions within ten calendar days and excludes expired lines. Any prior CE or PE line may cross in either direction. The first candle compares open to completed close; subsequent candles compare consecutive closes. Exact touches do not qualify. Times are confirmation times, e.g. the 09:15 candle confirms at 09:20. A gap that opens and remains beyond a line is not an intraday crossing. Crossed means crossed at least once by the selected cut, not necessarily still beyond the line.
+
+All bars come from existing cash requests. No new subscriptions, broker calls or worker. Successful prior-session reads and same-day bars persist atomically in rusty_oi_state.json; the date resets state. Missing bars/levels are unknown, not No. Enrichment is bounded to ten seconds and isolated so errors retain the existing Rusty publication. Old published snapshots without these fields display Unavailable; this deployment does not republish retained history.
+
+The narrow integration diff is rusty_oi.patch. Apply only after comparing against the active VM file, compiling, backing up and following DEPLOYMENT_RULES.md. Only ocelot.service needs restart. Tests: python -m unittest discover -s backend -p test_rusty_oi.py.
+
+Initial cache: at most the weekdays in ten prior calendar days, one compact closing document query per date; successful results persist across restarts. Normal warm-cut enrichment has no network reads. Frontend adds zero requests; normal cadence remains 12 requests/hour per visible live tab plus the existing bounded delayed-publication retry. Historical filters are local and the existing slider only requests uncached selected cuts. Billing metrics are not inferred from this request budget.

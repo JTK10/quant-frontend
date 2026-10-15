@@ -42,7 +42,7 @@ const Feed=load('app/rusty/RustyFeed.tsx',{
 let root;
 await act(async()=>{root=create(React.createElement(Feed,{dateStr:'2026-10-12',followToday:false}));});
 const cuts=['09:15','09:20','09:25','09:30','09:35','09:40'];
-const snapshot=cut=>({source:'rusty',cut,bull:[{s:'BULL_'+cut,mv:1,pe_pct:20}],bear:[{s:'BEAR_'+cut,mv:-1,ce_pct:30}]});
+const snapshot=cut=>({source:'rusty',cut,bull:[{s:'BULL_'+cut,mv:1,pe_pct:20,flow_label:'PE OI Rising',oi_bias:20}],bear:[{s:'BEAR_'+cut,mv:-1,ce_pct:30,flow_label:'CE OI Rising',oi_bias:30}]});
 const respond=async(index,cut,{fail=false,wrong=false}={})=>act(async()=>{
  requests[index].resolve({ok:!fail,status:fail?503:200,json:async()=>fail?{error:'offline'}:{snapshots:[snapshot(wrong?'09:40':cut)],cuts}});
 });
