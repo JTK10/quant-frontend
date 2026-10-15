@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+let now=0;
+const exports={};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('utils/rustyHistory.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Date:{now:()=>now},Map,Set,Promise,Buffer});
+const {projectRustySnapshot,rustyHistoryCache,rustyHistoryResponse}=exports;
+const rows=Array.from({length:78},(_,i)=>{
+ const minute=555+i*5;const cut=String(Math.floor(minute/60)).padStart(2,'0')+':'+String(minute%60).padStart(2,'0');
+ return projectRustySnapshot({source:'rusty',cut,bull:Array.from({length:100},(_,j)=>({s:'STOCK_'+j,rusty_pct:i,secret_selection:'private',flow_type:'BULL_BUILD',ce_pct:-5,pe_pct:10})),bear:[]});
+});
+let reads=0,release;const cache=rustyHistoryCache();
+const loader=async()=>{reads++;return rows;};
+const first=cache('20261015',10000,null,()=>new Promise(r=>{reads++;release=r;}));
+const same=cache('20261015',10000,'09:45',loader);
+await Promise.resolve();assert.equal(reads,1);release(rows);await first;await same;
+let bytes=0;
+for(const row of rows){now+=2000;const history=await cache('20261015',10000,row.cut,loader);const body=rustyHistoryResponse(history,row.cut,null);const decoded=JSON.parse(body);
+ assert.equal(decoded.snapshots.length,1);assert.equal(decoded.snapshots[0].cut,row.cut);assert.equal(decoded.cuts.length,78);
+ assert.equal(body,JSON.stringify({snapshots:[row],cuts:rows.map(r=>r.cut)}),'One-cut payload is byte-for-byte unchanged');
+ assert.equal(body.includes('secret_selection'),false);bytes+=Buffer.byteLength(body);
+}
+assert.equal(reads,1,'All 78 different slider times reuse one upstream load, even after the live 10s TTL');
+const fresh=await cache('20261015',10000,null,loader);assert.equal(reads,2,'Latest refresh still honours its live TTL');
+const inc=JSON.parse(rustyHistoryResponse(fresh,null,'15:30'));assert.equal(inc.snapshots.length,2);
+assert.equal(inc.snapshots[0].cut,'15:30');assert.equal(inc.snapshots[1].cut,'15:40');
+await cache('20261015',0,null,loader);assert.equal(reads,3,'Explicit Refresh can force upstream correction');
+now+=300001;await assert.rejects(cache('20261015',300000,'09:45',async()=>{throw Error('offline');}),/offline/,'Expired historical data is not presented as fresh success');
+const bounded=rustyHistoryCache({maxEntries:1,maxBytes:50000});let evicted=0;
+const small=async()=>{evicted++;return [rows[0]];};
+await bounded('one',10000,null,small);await bounded('two',10000,null,small);await bounded('one',10000,null,small);assert.equal(evicted,3,'Date count is bounded');
+const tiny=rustyHistoryCache({maxBytes:1});let large=0;
+for(let i=0;i<2;i++)await tiny('large',10000,null,async()=>{large++;return rows;});assert.equal(large,2,'Oversized histories are not retained');
+console.log(`PASS: 78 slider cuts use one upstream read; single-cut bodies remain identical (${bytes} total fixture bytes); projection redaction, shared cold reads, live refresh, explicit refresh, expiry/errors and memory bounds verified.`);

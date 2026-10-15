@@ -2,11 +2,13 @@ import { requireApiSession } from "@/utils/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePantherSignals, getTodayIstDate } from "@/utils/backend";
 import {resultCache} from '@/utils/resultCache';
+import {projectRustySnapshot,rustyHistoryCache,rustyHistoryResponse} from '@/utils/rustyHistory';
 
 export const dynamic = "force-dynamic";
 
 let cache = { token: null as string | null, exp: 0 };
 let tokenPending:Promise<string|null>|undefined;
+const historyCache=rustyHistoryCache();
 const payloadCache=resultCache<string>({maxEntries:32,maxBytes:16*1024*1024,size:s=>Buffer.byteLength(s)});
 
 async function getToken() {
@@ -289,38 +291,7 @@ async function buildPayload(
   // the selection calculation remain redacted before serialization.
   rows = rows.map((snapshot: any) => {
     if (snapshot.source !== "rusty") return snapshot;
-    const visible = (side: unknown) => Array.isArray(side)
-      ? side.map((row: any) => ({ s: row.s, mv: row.mv, brk: row.brk, bt: row.bt, ls: row.ls,
-                                   p: row.rusty_pct, rr: row.rusty_rank, dr: row.rk ?? null,
-                                   pi: row.put_inc_rank, ci: row.call_inc_rank,
-                                   w: row.mr,
-                                   ce: row.ce_pct ?? null,
-                                   pe: row.pe_pct ?? null,
-                                   ce_pct: row.ce_pct ?? null,
-                                   pe_pct: row.pe_pct ?? null,
-                                   oi_bias: row.oi_bias ?? null,
-                                   flow_type: row.flow_type ?? null,
-                                   flow_label: row.flow_label ?? null,
-                                   badge_color: row.badge_color ?? null,
-                                   badge_bg: row.badge_bg ?? null,
-                                   conviction: row.conviction ?? null,
-                                   is_new_discovery: row.is_new_discovery ?? false,
-                                   c_time: row.c_time ?? null,
-                                   c_open: row.c_open ?? null,
-                                   c_close: row.c_close ?? null,
-                                   c_high: row.c_high ?? null,
-                                   c_low: row.c_low ?? null,
-                                   c_body: row.c_body ?? null,
-                                   c_uw: row.c_uw ?? null,
-                                   c_lw: row.c_lw ?? null,
-                                   c_mv: row.c_mv ?? null,
-                                   is_maru: row.is_maru ?? false,
-                                   is_solid: row.is_solid ?? false,
-                                   candle_tier: row.candle_tier ?? null,
-                                   entry_confirmed: row.entry_confirmed ?? false }))
-      : [];
-    return { source: "rusty", cap: "RUSTY", cut: snapshot.cut, time: snapshot.time,
-             bull: visible(snapshot.bull), bear: visible(snapshot.bear) };
+    return projectRustySnapshot(snapshot);
   });
   const snapshots=normalizePantherSignals(rows);
   return rustyView?{snapshots,cuts:availableCuts}:snapshots;
@@ -359,6 +330,17 @@ export async function GET(request: NextRequest) {
 
   try {
     const historical=targetDate<getTodayIstDate().replaceAll('-','');
+    if(view==='rusty'&&!latestCycle&&!lastN&&!topN&&!rankBy){
+      const forceRefresh=/\b(no-cache|max-age=0)\b/.test(request.headers?.get('cache-control')??'');
+      const history=await historyCache(targetDate,forceRefresh?0:historical?300000:10000,forceRefresh?null:requestedCut,async()=>{
+        const raw=await getRawByDate(targetDate,'rusty');
+        const rows=raw.filter(s=>s.source==='rusty').sort((a,b)=>(a.ts??0)-(b.ts??0));
+        return normalizePantherSignals(rows.map(projectRustySnapshot));
+      });
+      const body=rustyHistoryResponse(history,requestedCut,after);
+      // Published cuts can be reused privately during the live day; Refresh can revalidate.
+      return new NextResponse(body,{headers:{'Content-Type':'application/json','Cache-Control':historical||requestedCut?'private, max-age=300':'private, max-age=10'}});
+    }
     const ttl=historical?300000:10000;
     const key=JSON.stringify([targetDate,sourcesParam,latestCycle,lastN,topN,rankBy,after,view,requestedCut]);
     const body=await payloadCache(key,ttl,async()=>{

@@ -23,7 +23,7 @@ export default function RustyFeed({dateStr,followToday}:{dateStr:string;followTo
   const closed=dateStr==='2026-10-02';
   useEffect(()=>{
     if(closed)return;
-    let disposed=false,inFlight=false,done=hasLoaded.current,retried='',pendingCut:string|undefined;
+    let disposed=false,inFlight=false,done=hasLoaded.current,retried='',pendingCut:string|undefined,activeCut:string|undefined;
     let data=snapshots.current,latest=rustyCut(data.at(-1)??{});
     let timer:ReturnType<typeof setTimeout>|undefined,selectionTimer:ReturnType<typeof setTimeout>|undefined,controller:AbortController|undefined;
     const missing=(cut:string|null):cut is string=>!!cut&&!data.some(s=>rustyCut(s)===cut);
@@ -33,10 +33,10 @@ export default function RustyFeed({dateStr,followToday}:{dateStr:string;followTo
     };
     const load=async(manual=false,requestedCut?:string,bypassCache=false)=>{
       if(disposed||document.hidden)return;
-      if(inFlight){if(requestedCut)pendingCut=requestedCut;return;}
+      if(inFlight){if(requestedCut&&requestedCut!==activeCut){pendingCut=requestedCut;controller?.abort();}return;}
       if(followToday&&istSessionDate()!==dateStr){if(!movingDate.current){movingDate.current=true;router.replace('/rusty');}return;}
       if(done&&!manual&&(sessionPollingDelay(dateStr,300000)===null||Date.now()-lastRequested.current<15000)){schedule();return;}
-      clearTimeout(timer);inFlight=true;lastRequested.current=Date.now();controller=new AbortController();
+      clearTimeout(timer);inFlight=true;activeCut=requestedCut;lastRequested.current=Date.now();controller=new AbortController();
       if(requestedCut)setLoadingCut(requestedCut);
       try{
         const p=new URLSearchParams({date:dateStr,sources:'rusty',view:'rusty'});
@@ -62,7 +62,7 @@ export default function RustyFeed({dateStr,followToday}:{dateStr:string;followTo
           setError(e instanceof Error?e.message:'Rusty feed unavailable');
         }
       }finally{
-        inFlight=false;
+        inFlight=false;activeCut=undefined;
         if(disposed)return;
         setLoadingCut(missing(selectedCut.current)?selectedCut.current:'');
         if(pendingCut){const next=pendingCut;pendingCut=undefined;if(next===selectedCut.current&&missing(next)){void load(true,next);return;}}

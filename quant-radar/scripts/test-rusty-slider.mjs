@@ -23,7 +23,7 @@ const load=(file,deps={})=>{
   window:{addEventListener(){},removeEventListener(){},location:{assign(){}}},
   requestAnimationFrame:()=>0,cancelAnimationFrame(){},
   setTimeout:timer,clearTimeout:key=>timers.delete(key),setInterval:timer,clearInterval:key=>timers.delete(key),
-  fetch:(url,opt)=>new Promise(resolve=>requests.push({url,opt,resolve})),
+  fetch:(url,opt)=>new Promise((resolve,reject)=>{requests.push({url,opt,resolve});opt.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});}),
   require:name=>name in deps?deps[name]:require(name)});
  return exports;
 };
@@ -70,15 +70,16 @@ await respond(1,'09:25');assertBoard('09:25');
 
 // A slower old response cannot replace the user's final selection.
 await select(0);await step(200);assert.equal(requests.length,3);
-await select(1);await step(200);assert.equal(requests.length,3,'Only one request in flight');
-await respond(2,'09:15');assert.equal(labels().length,0,'09:15 cannot masquerade as selected 09:20');
+await select(1);await step(200);assert.equal(requests.length,4,'A newer cut starts immediately after aborting the old request');
+assert.equal(requests[2].opt.signal.aborted,true,'Slow old cut cannot block a new selection');
+await respond(2,'09:15');assert.equal(labels().length,0,'An aborted response cannot masquerade as selected 09:20');
 assert.equal(requests.length,4);assert.match(requests[3].url,/cut=09%3A20/);
 await respond(3,'09:20');assertBoard('09:20');
-await select(0);assertBoard('09:15');await select(2);assertBoard('09:25');
+await select(2);assertBoard('09:25');
 await step(200);assert.equal(requests.length,4,'Visited snapshots update immediately without a request');
 
 // Returning to a cached cut cancels a queued missing cut.
-await select(3);await step(200);await select(4);await step(200);
+await select(3);await step(200);await select(4);await step(50);
 await select(2);assertBoard('09:25');await respond(4,'09:30');assertBoard('09:25');
 assert.equal(requests.length,5,'No obsolete queued request after returning to a loaded cut');
 

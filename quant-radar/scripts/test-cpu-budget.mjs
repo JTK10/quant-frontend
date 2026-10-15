@@ -15,6 +15,7 @@ const load=(path,deps={},extra={})=>{
   return exports;
 };
 const {resultCache}=load('utils/resultCache.ts');
+const rustyHistory=load('utils/rustyHistory.ts');
 let calls=0,resolve;
 const cache=resultCache({maxEntries:2,maxBytes:20,size:s=>s.length});
 const blocked=()=>{calls++;return new Promise(r=>{resolve=r;});};
@@ -47,7 +48,7 @@ const raw=[{source:'rusty',sig_date:'20261013',time:'09:55',cut:'09:55',ts:1,bul
  {source:'rusty',sig_date:'20261013',time:'10:00',cut:'10:00',ts:2,bull:[{s:'B',rusty_pct:30,entry_confirmed:true,flow_type:'BULL_BUILD'}],bear:[]}];
 const env={PANTHER_CLIENT_ID:'test',PANTHER_CLIENT_SECRET:'test',PANTHER_TOKEN_URL:'https://test.invalid/token',PANTHER_SIGNALS_URL:'https://test.invalid/feed'};
 const route=load('app/api/panther-signals/route.ts',{'next/server':{NextResponse},'@/utils/auth':auth,
- '@/utils/backend':{getTodayIstDate:()=>policy.istSessionDate(now),normalizePantherSignals:s=>s},'@/utils/resultCache':{resultCache}},
+ '@/utils/backend':{getTodayIstDate:()=>policy.istSessionDate(now),normalizePantherSignals:s=>s},'@/utils/resultCache':{resultCache},'@/utils/rustyHistory':rustyHistory},
  {process:{env},fetch:async url=>{
   if(String(url).includes('/token')){tokenCalls++;return NextResponse.json({access_token:'test',expires_in:3600});}
   feedCalls++;if(outage)return NextResponse.json({error:'outage'},{status:503});
