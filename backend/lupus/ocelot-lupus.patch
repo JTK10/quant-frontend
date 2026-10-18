@@ -1,0 +1,26 @@
+--- ocelot.py
++++ ocelot.py
+@@ -770,6 +770,11 @@
+            "bull": [row(r, i + 1, "bull") for i, r in enumerate(bulls)],
+            "bear": [row(r, i + 1, "bear") for i, r in enumerate(bears)]}
+     try:
++        from lupus_export import export as export_lupus
++        export_lupus(doc, opp_rows)
++    except Exception as exc:
++        log(f'Lupus local adapter unavailable: {type(exc).__name__}')
++    try:
+         from rusty_oi import enrich
+         await asyncio.wait_for(enrich(client, cut_ts, doc, cfg, ords_token), timeout=10)
+     except Exception as exc:
+@@ -1002,6 +1007,11 @@
+         return sym, []
+ 
+     res = await asyncio.gather(*[one(s, k) for s, k in eq.items()])
++    try:
++        from lupus_export import export_close
++        export_close(res)
++    except Exception as exc:
++        log(f'Lupus EOD adapter unavailable: {type(exc).__name__}')
+     out = {}
+     for sym, c in res:
+         rows = []

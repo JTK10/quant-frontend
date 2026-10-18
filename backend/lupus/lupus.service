@@ -1,0 +1,22 @@
+[Unit]
+Description=Lupus scanner using existing Rusty snapshots and Ocelot archive
+After=network-online.target ocelot.service
+Wants=network-online.target
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/lupus
+ExecStart=/usr/bin/python3 -u /home/ubuntu/lupus/lupus_live.py
+Restart=on-failure
+RestartSec=30
+MemoryHigh=64M
+MemoryMax=96M
+CPUQuota=15%
+Nice=15
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/lupus
+PrivateTmp=true
+Environment=TZ=Asia/Kolkata
+[Install]
+WantedBy=multi-user.target

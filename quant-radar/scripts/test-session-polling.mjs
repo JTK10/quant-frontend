@@ -110,4 +110,13 @@ await liveIrbis.advance(300000);assert.equal(liveIrbis.requests.length,hiddenCou
 await liveIrbis.visibility(false);await liveIrbis.visibility(true);await liveIrbis.visibility(false);
 assert.equal(liveIrbis.timers.size,2,'One date clock and one network timer');
 liveIrbis.cleanup();assert.equal(liveIrbis.timers.size,0);
-console.log('PASS: actual component polling, weekend/history suppression, close transition, Pallas cache policy, live OI/Irbis and focus cleanup.');
+for(const start of [friday,saturday]){
+  const h=harness(start,{states:{0:'live',1:true}});
+  h.load('app/lupus/LupusClient.tsx').default();await h.mount();
+  assert.equal(h.requests.length,1,'Lupus makes one initial request');
+  await h.advance(60001);assert.equal(h.requests.length,start===friday?2:1,'Lupus reuses session polling policy');
+  await h.visibility(true);const count=h.requests.length;await h.advance(600000);
+  assert.equal(h.requests.length,count,'Hidden Lupus does not fetch');
+  h.cleanup();assert.equal(h.timers.size,0);
+}
+console.log('PASS: actual component polling, weekend/history suppression, close transition, Pallas cache policy, live OI/Irbis/Lupus and focus cleanup.');
