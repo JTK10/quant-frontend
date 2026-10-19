@@ -101,11 +101,42 @@ def kairos_alert(doc, now, enabled_at):
         return None
 
 
+def rusty_alerts(doc, now, enabled_at):
+    """Only the existing published Rusty classification; once per stock/session."""
+    try:
+        issued=epoch(doc['ts']);cut=doc['cut']
+        if (doc.get('source')!='rusty' or doc.get('sig_date')!=day(now).replace('-','')
+                or day(issued)!=day(now) or not enabled_at<=issued<=now or now-issued>MAX_AGE
+                or not re.fullmatch(r'(?:09|1[0-5]):[0-5][0-9]',cut)):
+            return []
+        cut_at=datetime.fromisoformat(day(now)+'T'+cut).replace(tzinfo=IST).timestamp()
+        if not 0<=now-cut_at<=600:return []
+        rows=doc.get('bull',[])
+        if not isinstance(rows,list) or len(rows)>1000:return []
+        alerts=[]
+        def number(value):
+            return f'{value:+.2f}%' if isinstance(value,(int,float)) and not isinstance(value,bool) and math.isfinite(value) else 'Unavailable'
+        for row in rows:
+            if not isinstance(row,dict) or row.get('flow_type')!='CE_OI_SHARP_DROP' or row.get('flow_label')!='CE OI Sharp Drop':continue
+            symbol=row.get('s');ce=row.get('ce_pct');move=row.get('mv')
+            if not isinstance(symbol,str) or not re.fullmatch(r'[A-Z0-9&_.-]{1,40}',symbol):continue
+            if any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) for v in (ce,move)) or ce>-5 or move<1:continue
+            broken='Yes' if row.get('oi_broken') is True else 'No' if row.get('oi_broken') is False else 'Unavailable'
+            text=(f"RUSTY · CE OI Sharp Drop\n{symbol} · {cut} IST\n"
+                  f"Move {number(move)} · CE {number(ce)} · PE {number(row.get('pe_pct'))}\n"
+                  f"OI broken: {broken} · Time: {str(row.get('oi_break_time') or 'Unavailable')[:30]}\n"
+                  "OI changes are from the opening baseline.\nhttps://quant-radar-ai.vercel.app/rusty")
+            alerts.append(dict(id='rusty-sharp|'+day(now)+'|'+symbol,issued=issued,text=text))
+        return alerts
+    except (KeyError,ValueError,TypeError,OverflowError):return []
+
+
 class Relay:
     def __init__(self, persist=True):
         if persist: ROOT.mkdir(parents=True, exist_ok=True)
         self.path = ROOT/'state.json'
         self.state = json.loads(self.path.read_text()) if self.path.exists() else {'enabled_at':time.time(),'date':day(time.time()),'seen':{}}
+        self.state.setdefault('rusty_enabled_at',time.time())
         self.token, self.token_until = None, 0
         self.cfg = json.loads(Path('/home/ubuntu/ocelot/ords.json').read_text())
         if persist: save(self.path,self.state)
@@ -169,6 +200,14 @@ class Relay:
                 alert=pallas_alert(json.loads(path.read_text()),now,cutoff)
                 if alert: alerts.append(alert)
             except (OSError,ValueError,TypeError): pass
+        rusty_error=None
+        try:
+            paths=sorted(Path('/home/ubuntu/lupus/input').glob(day(now).replace('-','')+'-????.json'))
+            if paths:
+                path=paths[-1]
+                if path.stat().st_size>500000:raise ValueError('Rusty snapshot exceeds budget')
+                alerts.extend(rusty_alerts(json.loads(path.read_text())['rusty'],now,self.state['rusty_enabled_at']))
+        except (OSError,ValueError,KeyError,TypeError) as exc:rusty_error=type(exc).__name__
         error=None
         try:
             for doc in self.kairos_docs(day(now)):
@@ -180,7 +219,7 @@ class Relay:
         for alert in sorted(alerts,key=lambda a:(a['issued'],a['id'])):
             self.send(alert)
         save(self.path,self.state)
-        save(ROOT/'health.json',{'date':day(now),'checked_at':datetime.fromtimestamp(now,IST).isoformat(),'status':'READY' if not error else 'ORDS_READ_ERROR','error':error,'pallas_threshold':'>0.70','seen':len(self.state['seen']),'delivery_statuses':{status:sum(x['status']==status for x in self.state['seen'].values()) for status in ('sent','uncertain','rejected','retry','sending')}})
+        save(ROOT/'health.json',{'date':day(now),'checked_at':datetime.fromtimestamp(now,IST).isoformat(),'status':'READY' if not error else 'ORDS_READ_ERROR','error':error,'rusty_error':rusty_error,'rusty_policy':'CE_OI_SHARP_DROP once per stock/day','pallas_threshold':'>0.70','seen':len(self.state['seen']),'delivery_statuses':{status:sum(x['status']==status for x in self.state['seen'].values()) for status in ('sent','uncertain','rejected','retry','sending')}})
 
 
 def main():
