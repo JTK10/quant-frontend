@@ -8,16 +8,18 @@ export default function LupusClient(){
   const frame=useRef<HTMLIFrameElement>(null);
   useEffect(()=>{
     if(mode!=='live'||!ready)return;
-    let stopped=false,inFlight=false,loaded=false,date=istSessionDate();
+    let stopped=false,inFlight=false,loaded=false,date=istSessionDate(),lastRequested=0;
     let timer:ReturnType<typeof setTimeout>;let controller:AbortController|undefined;
     const post=(data:unknown)=>frame.current?.contentWindow?.postMessage({type:'LUPUS_LIVE',...data as object},window.location.origin);
-    const schedule=()=>{clearTimeout(timer);if(stopped||document.hidden)return;const delay=sessionPollingDelay(date,60000);timer=setTimeout(()=>{
-      if(istSessionDate()!==date){date=istSessionDate();loaded=false;post({date,snapshot:null,message:'Waiting for current-session Rusty data'});}
-      if(sessionPollingDelay(date,60000)!==null)void load();else schedule();
+    const schedule=()=>{clearTimeout(timer);if(stopped||document.hidden)return;const delay=sessionPollingDelay(date,300000);timer=setTimeout(()=>{
+      if(istSessionDate()!==date){date=istSessionDate();lastRequested=0;loaded=false;post({date,snapshot:null,message:'Waiting for current-session Rusty data'});}
+      if(sessionPollingDelay(date,300000)!==null)void load();else schedule();
     },delay??60000);};
     const load=async()=>{
       if(stopped||document.hidden||inFlight)return;
-      inFlight=true;loaded=true;controller=new AbortController();clearTimeout(timer);
+      if(istSessionDate()!==date){date=istSessionDate();loaded=false;post({date,snapshot:null,message:'Waiting for current-session Rusty data'});}
+      if(loaded&&Date.now()-lastRequested<300000){schedule();return;}
+      lastRequested=Date.now();inFlight=true;loaded=true;controller=new AbortController();clearTimeout(timer);
       try{
         const response=await fetch('/api/panther-signals?'+new URLSearchParams({date,sources:'lupus,lupus_health',latestCycle:'1'}),{cache:'default',signal:controller.signal});
         if(response.status===401){window.location.assign('/login?next=%2Flupus');return;}
@@ -25,13 +27,13 @@ export default function LupusClient(){
         const docs=await response.json();if(!Array.isArray(docs))throw new Error('Invalid Lupus feed');
         const snapshot=docs.filter(d=>d.source==='lupus').sort((a,b)=>String(a.cut).localeCompare(String(b.cut))||a.ts-b.ts).at(-1)??null;
         const health=docs.filter(d=>d.source==='lupus_health').sort((a,b)=>a.ts-b.ts).at(-1);
-        const closed=health?.event==='CLOSED'||sessionPollingDelay(date,60000)===null;
+        const closed=health?.event==='CLOSED'||sessionPollingDelay(date,300000)===null;
         const stale=!!snapshot&&!closed&&Date.now()/1000-snapshot.ts>600;
         if(!stopped)post({date,snapshot,message:health?.event==='ERROR'?health.detail:stale?'Rusty/Lupus input delayed':health?.detail??(snapshot?'Current Rusty inputs':'Waiting for Lupus/Rusty data'),stale,health:health?.event});
       }catch(e){if(!stopped&&!(e instanceof DOMException&&e.name==='AbortError'))post({date,error:e instanceof Error?e.message:'Feed unavailable'});}
       finally{inFlight=false;schedule();}
     };
-    const visibility=()=>{clearTimeout(timer);if(!document.hidden&&(!loaded||sessionPollingDelay(date,60000)!==null))void load();else schedule();};
+    const visibility=()=>{clearTimeout(timer);if(!document.hidden&&(!loaded||sessionPollingDelay(date,300000)!==null))void load();else schedule();};
     document.addEventListener('visibilitychange',visibility);void load();
     return()=>{stopped=true;controller?.abort();clearTimeout(timer);document.removeEventListener('visibilitychange',visibility);};
   },[mode,ready]);

@@ -114,9 +114,19 @@ for(const start of [friday,saturday]){
   const h=harness(start,{states:{0:'live',1:true}});
   h.load('app/lupus/LupusClient.tsx').default();await h.mount();
   assert.equal(h.requests.length,1,'Lupus makes one initial request');
-  await h.advance(60001);assert.equal(h.requests.length,start===friday?2:1,'Lupus reuses session polling policy');
+  await h.advance(60001);assert.equal(h.requests.length,1,'Lupus does not poll every minute');
+  await h.advance(240000);assert.equal(h.requests.length,start===friday?2:1,'Lupus five-minute polling');
+  await h.visibility(true);await h.visibility(false);await h.visibility(true);await h.visibility(false);
+  assert.equal(h.requests.length,start===friday?2:1,'Lupus focus storms do not refetch');
   await h.visibility(true);const count=h.requests.length;await h.advance(600000);
   assert.equal(h.requests.length,count,'Hidden Lupus does not fetch');
   h.cleanup();assert.equal(h.timers.size,0);
 }
+const replayLupus=harness(friday,{states:{0:'replay',1:true}});
+replayLupus.load('app/lupus/LupusClient.tsx').default();await replayLupus.mount();
+await replayLupus.advance(3600000);assert.equal(replayLupus.requests.length,0,'Lupus replay has no live API polling');replayLupus.cleanup();
+const rolloverLupus=harness(at('2026-10-09T23:59:00'),{states:{0:'live',1:true}});
+rolloverLupus.load('app/lupus/LupusClient.tsx').default();await rolloverLupus.mount();
+await rolloverLupus.advance(300001);assert.equal(rolloverLupus.requests.length,1,'Weekend rollover suppresses network');
+rolloverLupus.cleanup();assert.equal(rolloverLupus.timers.size,0);
 console.log('PASS: actual component polling, weekend/history suppression, close transition, Pallas cache policy, live OI/Irbis/Lupus and focus cleanup.');
