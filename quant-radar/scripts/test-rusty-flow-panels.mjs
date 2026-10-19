@@ -42,7 +42,8 @@ let root;await act(async()=>{root=create(React.createElement(client,{snaps,dateS
 const names=()=>root.root.findAllByProps({className:'stock-name'}).map(n=>n.children.join(''));
 assert.equal(root.root.findAllByProps({className:'flow-panel'}).length,5);
 assert.equal(names().length,27,'No six-stock cap');
-assert.ok(root.root.findAllByType('th').some(n=>n.children.join('')==='Candle tier'));
+assert.ok(!root.root.findAllByType('th').some(n=>n.children.join('')==='Candle tier'),'Candle tier removed from compact flow boards');
+assert.equal(root.root.findAllByType('col').length,45,'Nine fitted columns per flow board');
 assert.ok(root.root.findAllByType('th').some(n=>n.children.join('')==='Target %'));
 assert.ok(!root.root.findAllByType('th').some(n=>n.children.join('').includes('confirmed')));
 await act(async()=>root.root.findByProps({'aria-label':'bull OI broken filter'}).props.onChange({target:{value:'Y'}}));

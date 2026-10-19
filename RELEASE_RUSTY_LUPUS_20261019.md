@@ -13,3 +13,6 @@ Validation: test-session-polling.mjs, test-pallas-cache.mjs, test-rusty-flow-pan
 Rollback: revert this release commit, retaining unrelated later changes. Previous files preserved in Git parent. No VM backup/restart needed.
 
 Rusty sorting: clickable CE %, PE % and OI break time (also OI bias/Move) headers sort each flow independently. Toggle direction; unavailable values remain last. Side-wide sort controls reset overrides on that side. Pure local sorting, no additional API calls. Regression verifies negative numbers, both directions, time ordering and missing values.
+
+## Compact-width follow-up
+User requested removal of horizontal scrolling and Candle tier. Removed Candle tier from the flow tables; nine percentage-sized columns now total100% with no minimum table width. Header labels wrap, stock/actions wrap within their own cell, and numeric cells remain contained. CE/PE/time sorting preserved. No polling/cache/backend changes. Flow regression passed; production build validated before push. Rollback: revert this follow-up commit. Production appearance left for user verification as requested earlier.
