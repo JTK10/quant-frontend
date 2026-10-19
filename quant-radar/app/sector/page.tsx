@@ -1,49 +1,19 @@
-import PageHeader from "@/components/PageHeader";
-import { AutoRefresh, DatePicker } from "@/components/Controls";
-import Afac2Client from "./Afac2Client";
-import { resolveDate, type DateSearchParams } from "@/utils/date";
-import { getInternalApiUrl, fetchInternalApi } from "@/utils/internalApi";
-
-export const dynamic = "force-dynamic";
-
-async function getSectorSnaps(dateStr: string) {
-  try {
-    // lastN=4: this page renders only the newest snapshot (rows + sectors) and
-    // one ~15min back for the score delta -- afac2 publishes ~69 cycles/day, so
-    // fetching them all downloaded ~1.7MB to use two of them.
-    const url = await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=sectorrd&lastN=4`);
-    const response = await fetchInternalApi(url, { cache: "no-store" });
-    if (!response.ok) throw new Error(`sectorrd route failed: ${response.status}`);
-    const data = await response.json();
-    // sectorrd snapshots: one doc per 5-min cut, source:"sectorrd", same shape
-    // AFAC.2 used -- rows (every mapped stock, multi-sector tagged) and sectors
-    // (net RD for the bar chart + breadth). RD is signed depth out of the
-    // prior-day range AT THAT CUT: + above the prior high, - below the prior
-    // low, 0 while still inside. Replaced AFAC on 2026-09-10.
-    return data.filter((s: any) => s.source === "sectorrd" || s.cap === "SECTORRD");
-  } catch (err) {
-    console.error("Error fetching sectorrd snapshots:", err);
-    return [];
-  }
-}
-
-export default async function SectorPage({ searchParams }: { searchParams: DateSearchParams }) {
-  const dateStr = await resolveDate(searchParams);
-  const snaps = await getSectorSnaps(dateStr);
-
-  return (
-    <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white">
-      <PageHeader
-        title="SECTOR SCOPE"
-        subtitle="ROLLING DEPTH vs PRIOR-DAY RANGE"
-        badge="LIVE"
-        dateStr={dateStr}
-        accentColor="#fce205"
-      >
-        <DatePicker />
-        <AutoRefresh interval={60000} />
-      </PageHeader>
-      <Afac2Client snaps={snaps} />
-    </div>
-  );
+import PageHeader from '@/components/PageHeader';
+import {AutoRefresh,DatePicker} from '@/components/Controls';
+import SectorOiClient from './SectorOiClient';
+import {resolveDate,type DateSearchParams} from '@/utils/date';
+import {getInternalApiUrl,fetchInternalApi} from '@/utils/internalApi';
+import {buildSectorOi,type SectorOiBoard} from '@/utils/sectorOi';
+export const dynamic='force-dynamic';
+export default async function SectorPage({searchParams}:{searchParams:DateSearchParams}){
+ const dateStr=await resolveDate(searchParams);let board:SectorOiBoard|null=null,error='';
+ try{
+  const url=await getInternalApiUrl(`/api/panther-signals?date=${encodeURIComponent(dateStr)}&sources=rusty&view=rusty`);
+  const response=await fetchInternalApi(url,{cache:'default'});
+  if(!response.ok)throw new Error('Rusty sector feed unavailable');
+  const data=await response.json();if(!Array.isArray(data.snapshots))throw new Error('Invalid Rusty sector feed');
+  const latest=data.snapshots.filter((s:Record<string,unknown>)=>s.source==='rusty'&&Array.isArray(s.bull)&&Array.isArray(s.bear)).sort((a:Record<string,unknown>,b:Record<string,unknown>)=>String(a.cut||a.time||'').localeCompare(String(b.cut||b.time||''))).at(-1);
+  if(latest)board=buildSectorOi(latest);else error='No Rusty snapshot available for this session yet.';
+ }catch{error='Refresh failed: Rusty sector feed unavailable.';}
+ return <div className="flex h-screen flex-col overflow-hidden bg-[#0A0A0B] text-white"><PageHeader title="SECTOR SCOPE" subtitle="RUSTY OI BULL / BEAR BREADTH" badge="OI 5M" dateStr={dateStr} accentColor="#fce205"><DatePicker/><AutoRefresh interval={300000}/></PageHeader><SectorOiClient key={dateStr} board={board} error={error} date={dateStr}/></div>;
 }
