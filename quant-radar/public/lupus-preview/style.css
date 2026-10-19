@@ -20,3 +20,5 @@ table td .minor,table td .pe{display:inline;margin:0 0 0 6px;font-size:8px}td{pa
 .ai-pick p{margin:6px 0;font-size:11px}.ai-pick summary{font-size:11px;cursor:pointer}.ai-pick .outcome{margin-top:5px}
 
 body.embedded .nav{display:none}body.embedded main{margin-left:0;padding-left:18px;padding-right:18px}
+
+.stock-watch{display:inline-grid;place-items:center;margin-left:5px;width:20px;height:20px;padding:0;border:1px solid #3b596d;border-radius:4px;background:#172938;color:#61dfb1;font-size:14px;vertical-align:middle;cursor:pointer}.stock-watch:disabled{opacity:.65;cursor:default}.stock-watch:focus-visible{outline:2px solid #61dfb1;outline-offset:2px}

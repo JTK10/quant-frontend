@@ -1,11 +1,25 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
+import {addChartWatchlistSymbol,readChartWatchlist,CHART_WATCHLIST_STORAGE_KEY,CHART_WATCHLIST_UPDATED_EVENT} from '@/utils/chartWatchlist';
 import {istSessionDate,sessionPollingDelay} from '@/utils/sessionPolling';
 
 export default function LupusClient(){
   const [mode,setMode]=useState<'live'|'replay'>('live');
   const [ready,setReady]=useState(false);
   const frame=useRef<HTMLIFrameElement>(null);
+  useEffect(()=>{
+    const sync=()=>frame.current?.contentWindow?.postMessage({type:'LUPUS_WATCHLIST',symbols:readChartWatchlist()},window.location.origin);
+    const receive=(event:MessageEvent)=>{
+      if(event.origin!==window.location.origin||event.source!==frame.current?.contentWindow||event.data?.type!=='LUPUS_ADD_WATCHLIST')return;
+      const symbol=event.data.symbol;
+      if(typeof symbol!=='string'||!/^\w[\w& .-]{0,39}$/.test(symbol))return;
+      addChartWatchlistSymbol(symbol);sync();
+    };
+    const storage=(event:StorageEvent)=>{if(event.key===CHART_WATCHLIST_STORAGE_KEY||event.key===null)sync();};
+    window.addEventListener('message',receive);window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.addEventListener('storage',storage);
+    if(ready)sync();
+    return()=>{window.removeEventListener('message',receive);window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.removeEventListener('storage',storage);};
+  },[ready,mode]);
   useEffect(()=>{
     if(mode!=='live'||!ready)return;
     let stopped=false,inFlight=false,loaded=false,date=istSessionDate(),lastRequested=0;
