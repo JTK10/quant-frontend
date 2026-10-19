@@ -235,14 +235,17 @@ function LiveClock() {
   );
 }
 
-export default function NavSidebar() {
+export default function NavSidebar({hidden=false}:{hidden?:boolean}) {
   const pathname = usePathname();
 
   return (
     <aside
+      id="main-navigation"
+      aria-hidden={hidden||undefined}
       data-rusty-navigation={pathname === "/rusty" ? "true" : undefined}
       className="w-full border-b px-3 py-3 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-56 lg:flex-col lg:border-b-0 lg:border-r lg:px-3 lg:py-4"
       style={{
+        display:hidden?"none":undefined,
         background: "linear-gradient(180deg, #11131a 0%, #080a0f 100%)",
         borderRight: "1px solid rgba(0, 240, 255, 0.1)",
       }}
