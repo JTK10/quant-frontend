@@ -1,6 +1,7 @@
 import { requireApiSession } from "@/utils/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePantherSignals, getTodayIstDate } from "@/utils/backend";
+import {projectLupusHistory} from '@/utils/lupusHistory';
 import {resultCache} from '@/utils/resultCache';
 import {projectRustySnapshot,rustyHistoryCache,rustyHistoryResponse} from '@/utils/rustyHistory';
 
@@ -167,6 +168,7 @@ async function buildPayload(
   after: string | null = null,
   rustyView = false,
   requestedCut: string | null = null,
+  lupusView = false,
 ) {
   const wantSources = sourcesParam
     ? new Set(sourcesParam.split(",").map((s) => s.trim()).filter(Boolean))
@@ -293,6 +295,7 @@ async function buildPayload(
     if (snapshot.source !== "rusty") return snapshot;
     return projectRustySnapshot(snapshot);
   });
+  if(lupusView)return projectLupusHistory(rows,targetDate.slice(0,4)+'-'+targetDate.slice(4,6)+'-'+targetDate.slice(6,8));
   const snapshots=normalizePantherSignals(rows);
   return rustyView?{snapshots,cuts:availableCuts}:snapshots;
 }
@@ -323,7 +326,7 @@ export async function GET(request: NextRequest) {
   if(!/^\d{8}$/.test(targetDate)||!Number.isFinite(Date.parse(`${targetDate.slice(0,4)}-${targetDate.slice(4,6)}-${targetDate.slice(6,8)}`))||
     (sourcesParam&&(!/^[a-zA-Z0-9_,.-]{1,256}$/.test(sourcesParam)))||
     (after&&(sourcesParam!=='rusty'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(after)))||
-    (view&&(view!=='rusty'||sourcesParam!=='rusty'))||
+    (view&&!((view==='rusty'&&sourcesParam==='rusty')||(view==='lupus'&&sourcesParam==='lupus'&&!latestCycle&&!lastN&&!topN&&!rankBy)))||
     (requestedCut&&(view!=='rusty'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(requestedCut)))){
     return NextResponse.json({error:'Invalid session or source'},{status:400,headers:{'Cache-Control':'private, no-store'}});
   }
@@ -344,7 +347,7 @@ export async function GET(request: NextRequest) {
     const ttl=historical?300000:10000;
     const key=JSON.stringify([targetDate,sourcesParam,latestCycle,lastN,topN,rankBy,after,view,requestedCut]);
     const body=await payloadCache(key,ttl,async()=>{
-      const rows=await buildPayload(targetDate,sourcesParam,latestCycle,lastN,topN,rankBy,after,view==='rusty',requestedCut);
+      const rows=await buildPayload(targetDate,sourcesParam,latestCycle,lastN,topN,rankBy,after,view==='rusty',requestedCut,view==='lupus');
       return JSON.stringify(rows);
     });
     return new NextResponse(body,{headers:{'Content-Type':'application/json','Cache-Control':historical?'private, max-age=300':'private, max-age=10'}});

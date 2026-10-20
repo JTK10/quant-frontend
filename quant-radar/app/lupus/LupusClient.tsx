@@ -54,7 +54,7 @@ export default function LupusClient(){
   return <section style={{height:'100dvh',display:'flex',flexDirection:'column',background:'#0a1018'}}>
     <div style={{display:'flex',gap:8,alignItems:'center',padding:'8px 14px',borderBottom:'1px solid #233143',color:'#9cadc0',fontSize:12}}>
       {(['live','replay'] as const).map(m=><button key={m} aria-pressed={mode===m} onClick={()=>{if(mode!==m){setReady(false);setMode(m);}}} style={{padding:'6px 12px',border:'1px solid '+(mode===m?'#487b66':'#233143'),borderRadius:6,color:mode===m?'#61dfb1':'#9cadc0',background:mode===m?'#153128':'transparent'}}>{m==='live'?'Live scanner':'Historical replay'}</button>)}
-      <span>{mode==='live'?'Uses current Rusty captures · five-minute signals':'11 saved October sessions'}</span>
+      <span>{mode==='live'?'Uses current Rusty captures · five-minute signals':'Select a session · cached production history'}</span>
     </div>
     <iframe ref={frame} key={mode} title={mode==='live'?'Lupus live scanner':'Lupus historical replay'} src={`/lupus-preview/index.html?embedded=1&mode=${mode}`} onLoad={()=>setReady(true)} style={{width:'100%',flex:1,minHeight:0,border:0}}/>
   </section>;

@@ -29,9 +29,27 @@ document.querySelectorAll('[data-scope]').forEach(b=>{b.classList.toggle('select
 document.title=`Lupus · ${state.date} ${state.cut} · Bull & Bear`;
 const url=new URL(location.href);url.searchParams.set('date',state.date);url.searchParams.set('cut',state.cut);url.searchParams.set('scope',state.scope);history.replaceState(null,'',url);
 }
-async function loadDate(day){const request=++state.request;state.date=day;$('status').textContent='Loading saved session…';$('error').hidden=true;$('download').disabled=true;
-try{let data=state.cache.get(day);if(!data){const response=await fetch(`data/${day}.json?v=ce3-1`);if(!response.ok)throw new Error(`Session could not be loaded (${response.status})`);data=await response.json();state.cache.set(day,data);}if(request!==state.request)return;state.data=data;render();$('download').disabled=false;}
-catch(error){if(request!==state.request)return;state.data=null;for(const side of ['bull','bear']){$(side+'Rows').innerHTML='<tr><td class="empty" colspan="6">Session unavailable.</td></tr>';$(side+'Count').textContent='—';}showError(error.message);}}
+async function loadDate(day){const request=++state.request;state.date=day;state.data=null;state.liveMessage=null;$('status').textContent='Loading selected session…';$('error').hidden=true;$('download').disabled=true;
+for(const side of ['bull','bear']){$(side+'Rows').innerHTML='<tr><td class="empty" colspan="7">Loading this session…</td></tr>';$(side+'Count').textContent='—';}
+try{
+ const production=new URLSearchParams(location.search).get('embedded')==='1';
+ let data=state.cache.get(day);
+ if(!data){
+   if(production){
+     data=await LupusHistory.load(day);
+     // Original research is a labelled fallback only for the eleven bundled sessions.
+     if(!Object.keys(data.cuts).length&&state.manifest.sessions.some(s=>s.date===day)){
+       const response=await fetch(`data/${day}.json?v=ce3-1`);if(!response.ok)throw new Error('Saved research unavailable');data=await response.json();data.origin='SAVED_RESEARCH';
+     }
+   }else{const response=await fetch(`data/${day}.json?v=ce3-1`);if(!response.ok)throw new Error(`Session unavailable (${response.status})`);data=await response.json();data.origin='SAVED_RESEARCH';}
+   if(Object.keys(data.cuts??{}).length){state.cache.set(day,data);while(state.cache.size>8)state.cache.delete(state.cache.keys().next().value);}
+ }
+ if(request!==state.request)return;
+ if(data.date!==day||!Object.keys(data.cuts??{}).length)throw new Error('No recorded Lupus snapshots for '+day+'. No other date has been substituted.');
+ state.data=data;state.liveMessage=`${day} · ${Object.keys(data.cuts).length} cuts · ${data.origin==='RECORDED_LUPUS'?'recorded production scanner':'saved research replay'} · last cut ${Object.keys(data.cuts).sort().at(-1)} IST`;
+ render();$('download').disabled=false;
+}catch(error){if(request!==state.request||error.name==='AbortError')return;state.data=null;for(const side of ['bull','bear']){$(side+'Rows').innerHTML='<tr><td class="empty" colspan="7">Session unavailable.</td></tr>';$(side+'Count').textContent='—';}$('timeLabel').textContent='—';$('status').textContent=day+' · unavailable';showError(error.message);}}
+
 function showError(message){$('error').textContent=message;$('error').hidden=false;}
 function moveCut(step){if(!state.data)return;const cuts=Object.keys(state.data.cuts).sort();const index=Math.min(cuts.length-1,Math.max(0,cuts.indexOf(state.cut)+step));state.cut=cuts[index];render();}
 const ruleContent={bull:{title:'Bull reclaim',version:'OI line reclaim + PDH + CE ≤ −3% (research)',rules:[['Historical failure','An OI line was known before a prior failed move above it. Opening and wick failures count. Both support and resistance lines are considered.'],['Reclaim the line','A completed candle crosses or reclaims the historical OI line. The old move’s peak is not required.'],['Price confirmation','Latest completed price remains above the line, today’s open and recorded PDH.'],['OI confirmation','Cumulative CE% must be at or below −3%. PE% is unrestricted.'],['Ranking','Original most-negative-CE ranks are retained. Top 3 applies the CE ≤ −3% filter without promoting lower ranks to fill empty slots. Ties retain the same rank.']]},bear:{title:'Bear rejection',version:'Locked Bear V1',rules:[['Historical failure','A known S1/S2/R1/R2 OI line had a failed move above it in a preceding session. Historical levels can persist after their contract expires.'],['Price confirmation','Latest completed price is below a qualifying failed line and today’s session open. Opens below and intraday breaks qualify.'],['OI confirmation','Cumulative CE% is positive and has increased versus exactly five minutes earlier. PE% is unrestricted.'],['Ranking','Largest percentage decline from the session open ranks first. This is the existing V1 selector; CE-momentum alternatives have not replaced it.']]}};
@@ -48,7 +66,9 @@ document.querySelectorAll('[data-scope]').forEach(b=>b.onclick=()=>{state.scope=
 document.querySelectorAll('[data-help]').forEach(b=>b.onclick=()=>showRules(b.dataset.help));$('rulesButton').onclick=()=>showRules();$('closeDetail').onclick=()=>$('detail').close();$('detail').addEventListener('click',e=>{if(e.target===$('detail')){$('detail').close();}});
 for(const side of ['bull','bear']){$(side+'Rows').addEventListener('click',e=>{if(e.target.closest('a,button'))return;const row=e.target.closest('tr[data-symbol]');if(row)detail(row.dataset.side,row.dataset.symbol);});$(side+'Rows').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset.symbol){e.preventDefault();detail(e.target.dataset.side,e.target.dataset.symbol);}});}
 document.addEventListener('keydown',e=>{if($('detail').open||['INPUT','SELECT','BUTTON'].includes(document.activeElement.tagName))return;if(e.key==='ArrowLeft')moveCut(-1);if(e.key==='ArrowRight')moveCut(1);});
-(async()=>{try{const response=await fetch('data/manifest.json');if(!response.ok)throw new Error('Research manifest unavailable.');state.manifest=await response.json();const params=new URLSearchParams(location.search);if(['all','top3'].includes(params.get('scope')))state.scope=params.get('scope');if(params.get('date'))state.date=params.get('date');if(/^\d\d:\d\d$/.test(params.get('cut')||''))state.cut=params.get('cut');$('session').innerHTML=state.manifest.sessions.map(s=>`<option value="${s.date}">${new Date(s.date+'T00:00:00+05:30').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</option>`).join('');if(!state.manifest.sessions.some(s=>s.date===state.date))state.date=state.manifest.sessions.at(-1).date;$('session').value=state.date;if(new URLSearchParams(location.search).get('mode')!=='live')await loadDate(state.date);}catch(error){showError(error.message+' Start the local preview server before opening this page.');}})();
+(async()=>{try{const response=await fetch('data/manifest.json');if(!response.ok)throw new Error('Research manifest unavailable.');state.manifest=await response.json();const params=new URLSearchParams(location.search);if(['all','top3'].includes(params.get('scope')))state.scope=params.get('scope');if(params.get('date'))state.date=params.get('date');if(/^\d\d:\d\d$/.test(params.get('cut')||''))state.cut=params.get('cut');const production=params.get('embedded')==='1';const dates=production?LupusHistory.dates(state.manifest.sessions):state.manifest.sessions.map(s=>s.date);$('session').innerHTML=dates.map(day=>`<option value="${day}">${new Date(day+'T00:00:00+05:30').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</option>`).join('');if(!params.get('date')||!dates.includes(state.date))state.date=dates.filter(d=>!production||d<LupusHistory.istDate()).at(-1)??dates.at(-1);$('session').value=state.date;if(new URLSearchParams(location.search).get('mode')!=='live')await loadDate(state.date);}catch(error){showError(error.message+' Start the local preview server before opening this page.');}})();
 
 
 
+
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!state.data&&state.manifest&&new URLSearchParams(location.search).get('mode')!=='live')void loadDate(state.date);});
