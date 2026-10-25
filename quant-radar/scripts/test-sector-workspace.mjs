@@ -18,5 +18,7 @@ run('live=false;schedule()');assert.equal(timers.size,0);
 run('date=istSessionDate();live=true;schedule()');assert(timers.size<=1);document.hidden=true;listeners.visibilitychange();assert.equal(timers.size,0);
 const before=calls;document.hidden=false;for(let i=0;i<10;i++)listeners.visibilitychange();assert.equal(calls,before);assert(timers.size<=1);
 assert(!template.includes('PACK['));assert(!template.includes('router.refresh'));assert(template.includes('cache.size>8'));
+assert(!template.includes('<th>Chart review</th>'));assert(template.includes('data-add='));assert(template.includes('SECTOR_ADD_WATCHLIST'));
+assert(!read('workspace/route.ts').includes('.reduce('));assert(read('workspace/route.ts').includes('htmlCache.size>4'));
 assert(read('workspace/route.ts').includes('filter(d=>d<date)'));assert(read('workspace/route.ts').includes('requireApiSession'));
 console.log('PASS: actual deployed script renders; shared classification, missing OB, PD/OR semantics, stale retention, bounded cache, hidden/history/focus guards, strict prior-only baseline.');

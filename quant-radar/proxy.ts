@@ -17,7 +17,7 @@ export async function proxy(request: NextRequest) {
   }
   const response = NextResponse.next({ request: { headers: forwarded } });
   // These routes authenticate again and own explicit private browser-cache TTLs.
-  if (!["/api/pallas","/api/panther-signals"].includes(path)) response.headers.set("Cache-Control", "private, no-store");
+  if (!["/api/pallas","/api/panther-signals","/sector/workspace"].includes(path)) response.headers.set("Cache-Control", "private, no-store");
   if (path.startsWith('/lupus-preview/')) response.headers.set('Cache-Control','private, max-age=300');
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;

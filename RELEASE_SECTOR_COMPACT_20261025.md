@@ -7,3 +7,10 @@ Network: one snapshot per read, maximum 12 scheduled reads/hour per visible elig
 Validation: Next production build passed; session-polling, Pallas-cache, sector-oi and new actual workspace-script regression passed. Tests cover classified direction, OR/PD semantics, missing OB, prior-only baseline, rendering, stale retention, history/hidden/focus guards and cache bound. Closed weekend cannot demonstrate current live market flow.
 
 Backup: previous Git commit 56a586a3c2eaead9389b25b306a0034c62906b56. Rollback: revert this release commit and push main (only sector files and tests). No dependent service changes. Post-release evidence recorded locally after Vercel check.
+
+## Watchlist and compute follow-up
+Removed manual chart-review controls; + uses the existing chartWatchlist helper through a same-origin/source-checked iframe bridge, matching Lupus. Deduplication, cross-tab storage sync and same-tab notifications are shared. No network request on add.
+
+Previous-session aggregates now precomputed locally in baselinePrepared.json. Vercel selects the last strictly earlier archive entry; no per-request averaging. Workspace HTML cache bounded to four dates; authenticated private browser TTL 300 seconds, proxy preserves that route policy. Authentication precedes server-cache reads. Existing Rusty API still uses its normal ORDS source/date retrieval and bounded caches: this is not zero ORDS/Vercel CPU. No new ORDS query path, scanner worker or VM mutation. Rankings and flow grouping happen in browser. Five-minute polling unchanged. Billing savings not measured.
+
+Rollback: revert follow-up commit; preceding release de1bb07bf353c967f99b22b0ce6795da545af47a. Tests: workspace, session-polling and Pallas-cache pass; production build checked before push.
