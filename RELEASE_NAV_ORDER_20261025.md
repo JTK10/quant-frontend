@@ -1,0 +1,2 @@
+# Navigation order — 2026-10-25
+Requested first five: Rusty, Nifty Signals, Sector Scope, Charts, Kairos. Remaining items preserve their relative order. Only NavSidebar array order changes; no new requests, prefetch, caches, API or VM changes. Previous commit e3909d31f3a6a073c2f7954c8aeef65f6ac40fab is rollback reference; revert this release commit to restore. Production build checked before push. No live data behavior changed.
