@@ -16,7 +16,7 @@ export async function GET(request:NextRequest){
  const days=baseline as Record<string,Record<string,Record<string,number[]>>>;
  const earlier=Object.keys(days).filter(d=>d<date).sort();
  const history=days[earlier.at(-1)||'']||{};
- const fields=['sector','symbol','direction','classification','ce_pct','pe_pct','move_pct','price','oi_bias','pdh_pdl_broken','pdh_pdl_break_time','rusty_level_source','oi_line_broken','oi_line_break_time','ob_state','ob_broken_time','ob_retest_breakout_time'];
+ const fields=['sector','symbol','direction','classification','ce_pct','pe_pct','move_pct','price','oi_bias','pdh_pdl_broken','pdh_pdl_break_time','rusty_level_source','ob_state','ob_broken_time','ob_retest_breakout_time'];
  const safe=(v:unknown)=>JSON.stringify(v).replace(/</g,'\\u003c');
  const payload=`const META=${safe({date,fields,dates:earlier,baselineThrough:earlier.at(-1)||'none'})};const MEMBERS=${safe(members)};const BASELINE=${safe(history)};\n${runtime}`;
  const html=template.replace('/*__PAYLOAD__*/',()=>payload);htmlCache.set(date,html);while(htmlCache.size>4)htmlCache.delete(htmlCache.keys().next().value!);

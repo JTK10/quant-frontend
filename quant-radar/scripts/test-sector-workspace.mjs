@@ -2,7 +2,7 @@ import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:asser
 const read=p=>fs.readFileSync('app/sector/'+p,'utf8');
 const decode=p=>JSON.parse(read(p).slice(read(p).indexOf('export default ')+15).trim().replace(/;$/,''));
 const template=decode('workspaceTemplate.ts'),runtime=decode('workspaceRuntime.ts');
-const fields=['sector','symbol','direction','classification','ce_pct','pe_pct','move_pct','price','oi_bias','pdh_pdl_broken','pdh_pdl_break_time','rusty_level_source','oi_line_broken','oi_line_break_time','ob_state','ob_broken_time','ob_retest_breakout_time'];
+const fields=['sector','symbol','direction','classification','ce_pct','pe_pct','move_pct','price','oi_bias','pdh_pdl_broken','pdh_pdl_break_time','rusty_level_source','ob_state','ob_broken_time','ob_retest_breakout_time'];
 const elements=new Map(),listeners={},timers=new Map();let seq=0,calls=0,fail=false;
 const element=id=>{if(!elements.has(id))elements.set(id,{value:id==='sectorSort'?'bias':id==='side'?'ALL':'',checked:false,innerHTML:'',textContent:'',addEventListener(){}});return elements.get(id);};
 const document={hidden:false,getElementById:element,querySelector:()=>element('thead'),addEventListener:(n,f)=>listeners[n]=f};
