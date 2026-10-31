@@ -70,7 +70,7 @@ export default function RustyClient({ snaps, dateStr, controls, emptyMessage, st
   const compare=(a:Row,b:Row,key:Sort,descending:boolean)=>{const av=sortValue(a,key),bv=sortValue(b,key);if(av===null)return bv===null?a.s.localeCompare(b.s):1;if(bv===null)return -1;return (descending?bv-av:av-bv)||a.s.localeCompare(b.s)};
   const board=(side:Side,onlyLabel?:string,slot?:number)=>{
     const f=filters[side],source=snap?.[side]||[];
-    const levelMatches=(r:Row)=>{if(!f.level)return true;if(f.level==='PDL_ONLY')return r.ls==='PDL'&&r.brk===true;if(f.level==='PDH_ONLY')return r.ls==='PDH'&&r.brk===true;const target=f.level.replace('_BROKEN','');return (r.ls===target||(r.ls==='OR'&&side===(target==='PDH'?'bull':'bear')))&&(!f.level.endsWith('_BROKEN')||r.brk===true)};
+    const levelMatches=(r:Row)=>{if(!f.level)return true;if(f.level==='PDL_ONLY')return side==='bear'&&r.brk===true;if(f.level==='PDH_ONLY')return side==='bull'&&r.brk===true;const target=f.level.replace('_BROKEN','');return (r.ls===target||(r.ls==='OR'&&side===(target==='PDH'?'bull':'bear')))&&(!f.level.endsWith('_BROKEN')||r.brk===true)};
     const rows=source.filter(r=>(!search||r.s.toUpperCase().includes(search.trim().toUpperCase()))&&levelMatches(r)&&(!f.oi||r.oi_broken===true)&&(!f.sector||sectorMap[f.sector]?.includes(r.s))).sort((a,b)=>{const av=a[f.sort],bv=b[f.sort];if(!finite(av))return finite(bv)?1:0;if(!finite(bv))return -1;return (f.descending?bv-av:av-bv)||a.s.localeCompare(b.s)});
     const labels=onlyLabel?[onlyLabel]:flowViews.filter(v=>v.side===side).map(v=>v.label);
     return <section className={`flow-side ${side}`} key={slot??side} aria-label={`${slot===undefined?'':slot===2?'Bottom ':slot===0?'Left ':'Right '}${side==='bull'?'Bull':'Bear'} board`}>
