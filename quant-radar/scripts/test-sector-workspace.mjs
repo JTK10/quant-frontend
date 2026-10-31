@@ -13,6 +13,15 @@ run(template.replace('/*__PAYLOAD__*/',`const META=${JSON.stringify({date:'2026-
 await run("session(date,'','TEST')");
 assert.equal(run('visible.length'),1);assert.equal(run('visible[0].oi_bias'),5);assert.equal(run('visible[0].pdh_pdl_broken'),'YES');assert.equal(run('visible[0].pdh_pdl_break_time'),'');assert.equal(run('visible[0].ob_state'),'UNAVAILABLE');
 assert(element('stocks').innerHTML.includes('A'));assert.equal(run('comparison(3,"MARKET|BULL").badge'),'No baseline');
+assert(element('towerChart').innerHTML.includes('100.0'));
+assert.equal(element('towerStamp').textContent,'2026-10-23 · 10:00 IST');
+// Towers must match the previous OI breadth board, including neutral denominator.
+const originalRows=run('JSON.stringify(rows)');
+run("rows=[{sector:'TEST',direction:'BULL'},{sector:'TEST',direction:'BEAR'},{sector:'TEST',direction:'BEAR'},{sector:'TEST',direction:'NEUTRAL'},{sector:'TEST',direction:'UNAVAILABLE'}];renderTowers()");
+assert(element('towerChart').innerHTML.includes('-25.0'));
+run("rows=[{sector:'TEST',direction:'UNAVAILABLE'}];renderTowers()");
+assert(element('towerChart').innerHTML.includes('TEST: unavailable'));
+run(`rows=${originalRows};renderTowers()`);
 fail=true;await run("session(date,'','TEST',true)");assert.equal(run('visible.length'),1);assert(element('feedStatus').textContent.includes('stale'));fail=false;
 run('live=false;schedule()');assert.equal(timers.size,0);
 run('date=istSessionDate();live=true;schedule()');assert(timers.size<=1);document.hidden=true;listeners.visibilitychange();assert.equal(timers.size,0);
