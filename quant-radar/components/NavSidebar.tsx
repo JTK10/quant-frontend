@@ -137,12 +137,13 @@ const NAV_ITEMS: any[] = [
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
   { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
-  { href: "/pallas", icon: Cat, label: "Pallas", color: "#5ad9ee", rgb: "90,217,238" },
-  { href: "/irbis", icon: Radar, label: "Irbis", color: "#5ee4c0", rgb: "94,228,192" },
-  { href: "/lupus", icon: Radar, label: "Lupus", color: "#e7ba71", rgb: "231,186,113" },
   { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
-  { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
-  { href: "/ocelot", icon: Activity, label: "Ocelot", color: "#f97316", rgb: "249,115,22" },
+// Hidden from navigation at user request (2026-11-01). Routes and services remain available.
+// { href: "/pallas", icon: Cat, label: "Pallas", color: "#5ad9ee", rgb: "90,217,238" },
+// { href: "/irbis", icon: Radar, label: "Irbis", color: "#5ee4c0", rgb: "94,228,192" },
+// { href: "/lupus", icon: Radar, label: "Lupus", color: "#e7ba71", rgb: "231,186,113" },
+// { href: "/caracal", icon: CaracalIcon, label: "Caracal", color: "#f59e0b", rgb: "245,158,11" },
+// { href: "/ocelot", icon: Activity, label: "Ocelot", color: "#f97316", rgb: "249,115,22" },
 // -- Dropped from the nav 2026-09-08 (RK). The PAGES and their publishers are
 // untouched -- /afac, /serval and /margay still render and still receive data,
 // they just are not linked from here any more. Unlike the 2026-08-05 RFAC and
