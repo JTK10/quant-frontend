@@ -560,7 +560,7 @@ export default function LiveCandleChart({
       }}
       onClick={() => contextMenu && setContextMenu(null)}
     >
-      <MovementRuler key={`${symbol}-${timeframe}-${sessionDate}-${asOf}`} series={candleRef} />
+      <MovementRuler key={`${symbol}-${timeframe}-${sessionDate}-${asOf}`} series={candleRef} chart={chartRef} interval={({"5m":5,"15m":15,"30m":30,"1h":60,"1D":1440})[timeframe]} />
       <div ref={hostRef} className="h-full w-full" aria-label={`${symbol} live price chart`} />
       <div className="pointer-events-none absolute left-2 bottom-8 z-10 text-[9px] text-slate-400">{streamUrl ? connection : "Session chart"}{!hasBars ? " · No candles received for this session" : ""}</div>
       <div className="absolute right-2 top-2 z-10 flex overflow-hidden rounded border text-xs shadow-lg" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>
