@@ -845,6 +845,18 @@ export type PantherRow = {
   first3_level?: any;
   // KAIROS / FABLE bot fields
   mode?: any;
+  score_threshold?: any;
+  ai_threshold?: any;
+  accepted_model_ids?: any;
+  trained_through?: any;
+  last_cut?: any;
+  last_error?: any;
+  last_decision?: any;
+  last_failure?: any;
+  daily_entries?: any;
+  metadata_attempts?: any;
+  selection_score?: any;
+  runner_exit_buffer_seconds?: any;
   n_top3?: any;
   lynx_cut?: any;
   order_id?: any;
@@ -980,6 +992,20 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       // Kairos 2.0 paper accounting and health; preserve independently of Kairos 1.
       ai_score: row.ai_score,
       model_id: row.model_id,
+      // Kairos10 uses the same ledger and quoted fills with an Aurum model.
+      // Preserve its actual threshold/readiness and concise decision evidence.
+      score_threshold: row.score_threshold,
+      ai_threshold: row.ai_threshold,
+      accepted_model_ids: row.accepted_model_ids,
+      trained_through: row.trained_through,
+      last_cut: row.last_cut,
+      last_error: row.last_error,
+      last_decision: row.last_decision,
+      last_failure: row.last_failure,
+      daily_entries: row.daily_entries,
+      metadata_attempts: row.metadata_attempts,
+      selection_score: row.selection_score,
+      runner_exit_buffer_seconds: row.runner_exit_buffer_seconds,
       // Rusty paper bot: preserve native OI and confirmation evidence.
       signal_source: row.signal_source,
       entry_policy: row.entry_policy,

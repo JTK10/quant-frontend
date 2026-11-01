@@ -1,0 +1,26 @@
+[Unit]
+Description=Kairos 10 powered by Aurum PAPER execution
+After=network-online.target aurum.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/kairos10
+ExecStart=/home/ubuntu/ocelot/venv/bin/python -u /home/ubuntu/kairos10/kairos10_live.py
+Restart=on-failure
+RestartSec=20
+MemoryHigh=96M
+MemoryMax=128M
+CPUQuota=15%
+Nice=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/kairos10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
