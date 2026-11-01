@@ -12,7 +12,9 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from aurum_engine import ENGINE, evaluate, number
+from aurum_engine import (ENGINE, evaluate, number, compact_history, BAR_START_FIRST,
+                          BAR_START_LAST, SIGNAL_FIRST, SIGNAL_LAST, INPUT_FIRST,
+                          STREAM_END, SIGNAL_CUTS, MORNING)
 
 IST = ZoneInfo('Asia/Kolkata')
 ROOT = Path(os.environ.get('AURUM_ROOT', '/home/ubuntu/aurum'))
@@ -91,10 +93,11 @@ class Worker:
         self.publication = {'status':'PENDING'}
 
     def start(self, day):
-        self.path = self.root/'state'/f'{day}.json'
-        self.state = read(self.path, 12_000_000) if self.path.exists() else dict(date=day, bars={}, ingested=[], evaluated=[], signals=[], last_cut=None, coverage={})
-        if self.state.get('date') != day:
-            raise ValueError('Stored state date mismatch')
+        self.state_directory = self.root/'state'/ENGINE
+        self.path = self.state_directory/f'{day}.json'
+        self.state = read(self.path, 12_000_000) if self.path.exists() else dict(engine=ENGINE, date=day, bars={}, ingested=[], evaluated=[], signals=[], last_cut=None, coverage={})
+        if self.state.get('date') != day or self.state.get('engine') != ENGINE:
+            raise ValueError('Stored state date/engine mismatch')
         self.error = None
 
     def persist(self):
@@ -113,9 +116,7 @@ class Worker:
             self.state['ingested'].append(cut)
             self.state['last_cut'] = max(cut, self.state['last_cut'] or cut)
             self.persist()
-        if not '09:35' <= cut <= '10:25' or cut in self.state['evaluated']:
-            if cut == '15:30':
-                self.advance_history(day)
+        if not SIGNAL_FIRST <= cut <= SIGNAL_LAST or cut in self.state['evaluated']:
             return
         if p.get('degraded'):
             raise ValueError('Degraded upstream chain capture; cash retained separately')
@@ -149,7 +150,7 @@ class Worker:
             rusty = (aux.get('rusty') or {}).get(symbol)
             matched = isinstance(rusty, dict) and all(number(rusty.get(k)) for k in ('ce_pct', 'pe_pct', 'oi_bias'))
             recovered = p['exported_at'] < self.startup or now-instant > 180 or bool(nifty.get('recovered'))
-            self.state['signals'].append(dict(id=f'aurum-v1|{day}|{symbol}', symbol=symbol, side=f['direction'],
+            self.state['signals'].append(dict(id=f'{ENGINE}|{day}|{symbol}', symbol=symbol, side=f['direction'],
                 bar_start=f['time_ist'], signal_time=cut, entry_time=cut, entry=None,
                 reference_price=f['Close'], issued_at=stamp(now), recovered=recovered,
                 ce_pct=rusty['ce_pct'] if matched else None, pe_pct=rusty['pe_pct'] if matched else None,
@@ -175,7 +176,7 @@ class Worker:
         """
         states = {}
         changed = False
-        expected = [f'{m//60:02}:{m%60:02}' for m in range(555, 621, 5)]
+        expected = list(MORNING)
         for symbol, baseline in baselines.items():
             prior_day = baseline.get('prior_day')
             if not isinstance(prior_day, str) or not prior_day < day:
@@ -187,63 +188,37 @@ class Worker:
             if any(not number(baseline.get(k)) for k in ('pdh', 'pdl', 'pdc')) or not 0 < baseline['pdl'] <= baseline['pdc'] <= baseline['pdh']:
                 continue
             if prior_day not in states:
-                path = self.root/'state'/f'{prior_day}.json'
+                path = self.state_directory/f'{prior_day}.json'
                 states[prior_day] = read(path, 12_000_000) if path.exists() else {}
-            bars = [b for b in states[prior_day].get('bars', {}).get(symbol, []) if b['hm'] <= '10:20']
+            if states[prior_day].get('engine') != ENGINE:
+                continue
+            bars = [b for b in states[prior_day].get('bars', {}).get(symbol, []) if b['hm'] <= BAR_START_LAST]
             if [b['hm'] for b in bars] != expected:
                 continue
             cv = 0
             slots = []
             for b in bars:
                 cv += b['v']
-                if b['hm'] >= '09:30':
+                if b['hm'] >= BAR_START_FIRST:
                     slots.append([b['hm'], b['v'], cv])
             record = dict(date=prior_day, bars=slots, high=baseline['pdh'], low=baseline['pdl'], close=baseline['pdc'],
                           complete=True, daily_source='existing_ocelot_next_session_daily_baseline',
                           volume_source='saved_completed_pallas_morning_cash', received_on=day)
             days[:] = sorted([d for d in days if d['date'] != prior_day]+[record], key=lambda d:d['date'])[-40:]
+            compact_history(days)
             changed = True
         if changed:
             self.history['through'] = max(d['date'] for days in self.history['symbols'].values() for d in days)
             save(self.root/'history.json', self.history)
 
-    def advance_history(self, day):
-        """Keep missing bars explicit; never treat partial close as full daily context."""
-        expected = [f'{m//60:02}:{m%60:02}' for m in range(555, 926, 5)]
-        updated = 0
-        partial = 0
-        for symbol, bars in self.state['bars'].items():
-            if not bars:
-                continue
-            complete = [b['hm'] for b in bars] == expected
-            cv = 0
-            slots = []
-            for b in bars:
-                cv += b['v']
-                if '09:30' <= b['hm'] <= '10:20':
-                    slots.append([b['hm'], b['v'], cv])
-            record = dict(date=day, bars=slots, high=max(b['h'] for b in bars), low=min(b['l'] for b in bars),
-                          close=bars[-1]['c'], complete=complete)
-            days = self.history.setdefault('symbols', {}).setdefault(symbol, [])
-            previous = next((d for d in days if d['date'] == day), None)
-            if previous is not None and previous.get('complete'):
-                continue
-            days[:] = sorted([d for d in days if d['date'] != day]+[record], key=lambda d:d['date'])[-40:]
-            updated += int(complete)
-            partial += int(not complete)
-        self.history['through'] = day
-        save(self.root/'history.json', self.history)
-        self.state['history_rollover'] = dict(date=day, complete=updated, partial=partial)
-        self.persist()
-
     def document(self, now):
         local = datetime.fromtimestamp(now, IST)
         regular = self.calendar.regular_day(local.date()) if self.calendar is not None else local.weekday() < 5
-        closed = not regular or not '09:14' <= local.strftime('%H:%M') <= '10:30'
+        closed = not regular or not '09:14' <= local.strftime('%H:%M') <= STREAM_END
         minute = local.hour*60+local.minute
         overdue = []
         if regular and minute >= 578:
-            latest_expected = min(625, ((minute-3)//5)*5)
+            latest_expected = min(690, ((minute-3)//5)*5)
             overdue = [f'{m//60:02}:{m%60:02}' for m in range(575, latest_expected+1, 5)
                        if f'{m//60:02}:{m%60:02}' not in self.state['evaluated']]
         error = self.error or ('Missing overdue completed cuts: '+', '.join(overdue) if overdue else None)
@@ -285,7 +260,7 @@ async def run():
         delay = 5
         while True:
             local = datetime.now(IST)
-            if not nse_calendar.regular_day(local.date()) or not '09:14' <= local.strftime('%H:%M') <= '10:30':
+            if not nse_calendar.regular_day(local.date()) or not '09:14' <= local.strftime('%H:%M') <= STREAM_END:
                 await asyncio.sleep(30)
                 continue
             try:
@@ -299,7 +274,7 @@ async def run():
                     delay = 5
                     while True:
                         local = datetime.now(IST)
-                        if not nse_calendar.regular_day(local.date()) or not '09:14' <= local.strftime('%H:%M') <= '10:30':
+                        if not nse_calendar.regular_day(local.date()) or not '09:14' <= local.strftime('%H:%M') <= STREAM_END:
                             break
                         try:
                             raw = await asyncio.wait_for(ws.recv(), timeout=30)
@@ -333,12 +308,12 @@ async def run():
             failures = {}
         for path in sorted(INPUT.glob(day.replace('-', '')+'-????.json')):
             cut = path.stem[-4:-2]+':'+path.stem[-2:]
-            if not '09:20' <= cut <= '10:25' or not nse_calendar.regular_day(day):
+            if not INPUT_FIRST <= cut <= SIGNAL_LAST or not nse_calendar.regular_day(day):
                 continue
-            if cut in worker.state['ingested'] and (not '09:35' <= cut <= '10:25' or cut in worker.state['evaluated']):
+            if cut in worker.state['ingested'] and (not SIGNAL_FIRST <= cut <= SIGNAL_LAST or cut in worker.state['evaluated']):
                 continue
             context = CONTEXT/path.name
-            nifty_context = nifty_cache.context(day, cut) if '09:35' <= cut <= '10:25' else None
+            nifty_context = nifty_cache.context(day, cut) if SIGNAL_FIRST <= cut <= SIGNAL_LAST else None
             key = (path.stat().st_mtime_ns, context.stat().st_mtime_ns if context.exists() else None,
                    nifty_context.get('available_at') if nifty_context else None)
             if failures.get(cut) == key:
@@ -359,7 +334,7 @@ async def run():
             if latest:
                 publisher.enqueue_snapshot(document, latest)
             local = datetime.fromtimestamp(now, IST)
-            morning = nse_calendar.regular_day(day) and '09:14' <= local.strftime('%H:%M') <= '10:30'
+            morning = nse_calendar.regular_day(day) and '09:14' <= local.strftime('%H:%M') <= STREAM_END
             health_key = (day, document['status'], int(now//900) if morning else 'outside-window')
             if health_key != last_health:
                 publisher.enqueue_health(document, now)

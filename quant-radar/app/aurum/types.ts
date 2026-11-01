@@ -29,6 +29,7 @@ export type AurumResponse = {
   mode?: 'historical' | 'live';
   stale?: boolean;
   engine?: string;
+  coverage?: {window_end?: string; [key:string]:unknown};
   signals: AurumSignal[];
   available_dates?: string[];
 };

@@ -25,14 +25,14 @@ def main():
         worker.start(args.date)
         for path in sorted(args.input.glob(args.date.replace('-','')+'-????.json')):
             hm=path.stem[-4:-2]+':'+path.stem[-2:]
-            if not '09:20'<=hm<='10:25':continue
+            if not '09:20'<=hm<='11:30':continue
             payload=read(path)
             bytes_read+=path.stat().st_size
             aux=dict(date=args.date,cut=hm,nifty=nifty.get(args.date,{}).get(hm),rusty={})
             try:worker.ingest(payload,aux,max(payload['exported_at'],epoch(args.date,hm)+1))
             except ValueError as exc:worker.error=str(exc)
             cuts+=1
-        worker.output(epoch(args.date,'10:26'))
+        worker.output(epoch(args.date,'11:31'))
         result=dict(date=args.date,cuts=cuts,bytes_read=bytes_read,signals=len(worker.state['signals']),
                     evaluated_cuts=len(worker.state['evaluated']),coverage=worker.state['coverage'],
                     snapshot_bytes=(target/'snapshots'/f'{args.date}.json').stat().st_size,
@@ -42,7 +42,7 @@ def main():
             result['peak_rss_kib']=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         except ImportError:pass
     print(json.dumps(result,indent=2))
-    if cuts!=14 or worker.error:raise SystemExit('Probe did not cover all14 expected morning cuts')
+    if cuts!=27 or worker.error:raise SystemExit('Probe did not cover all27 expected morning cuts')
 
 
 if __name__=='__main__':main()

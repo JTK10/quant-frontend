@@ -17,11 +17,12 @@ from datetime import datetime, timedelta, timezone
 from urllib.error import HTTPError
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
+from aurum_engine import ENGINE, SIGNAL_CUTS
 
 IST = timezone(timedelta(hours=5, minutes=30))
 STREAM_URL = "wss://140.238.241.210.sslip.io"
 RUSTY_INPUT = Path("/home/ubuntu/lupus/input")
-SNAPSHOT_CUTS = tuple(f"{m//60:02d}:{m%60:02d}" for m in range(575, 626, 5))
+SNAPSHOT_CUTS = SIGNAL_CUTS
 MAX_FEED_BYTES = 1_000_000
 MAX_FEED_ROWS = 300
 
@@ -234,7 +235,7 @@ class Publisher:
             raise ValueError("Invalid Aurum ORDS path")
         self.base, self.url = base, base + path
         self.root = Path(root)
-        self.outbox, self.sent = self.root / "outbox", self.root / "sent"
+        self.outbox, self.sent = self.root / "outbox" / ENGINE, self.root / "sent" / ENGINE
         self.outbox.mkdir(parents=True, exist_ok=True)
         self.sent.mkdir(parents=True, exist_ok=True)
         self.request = request or self._request
@@ -307,7 +308,7 @@ class Publisher:
 
     def _enqueue(self, document, kind, slot, now):
         day = validate_day(document.get("date"))
-        if document.get("source") != "aurum" or document.get("engine") != "aurum-v1":
+        if document.get("source") != "aurum" or document.get("engine") != ENGINE:
             raise ValueError("Aurum publication source/engine mismatch")
         doc = dict(document)
         if kind == "HEALTH":
@@ -315,8 +316,8 @@ class Publisher:
                 doc.pop(field, None)
         elif not isinstance(doc.get("signals"), list) or len(doc["signals"]) > 300:
             raise ValueError("Aurum snapshot exceeds signal limit")
-        identifier = "aurum|" + day.replace("-", "") + "|" + kind + "|" + slot.replace(":", "")
-        doc.update(source="aurum", engine="aurum-v1", kind=kind, Doc_ID=identifier,
+        identifier = "aurum|" + ENGINE + "|" + day.replace("-", "") + "|" + kind + "|" + slot.replace(":", "")
+        doc.update(source="aurum", engine=ENGINE, kind=kind, Doc_ID=identifier,
                    sig_date=day.replace("-", ""), cap="AURUM", name="", side="NEUTRAL", ts=now,
                    available_at=iso(now), time=datetime.fromtimestamp(now, IST).strftime("%H:%M:%S"))
         if kind == "SNAPSHOT":

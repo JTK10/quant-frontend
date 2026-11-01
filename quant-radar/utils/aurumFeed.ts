@@ -47,16 +47,18 @@ export async function readAurumFeed(date:string,today:string):Promise<Doc[]> {
 
 const time=(d:Doc)=>Number.isFinite(d.ts)?Number(d.ts)*1000:Date.parse(d.checked_at??d.asof??'');
 export function foldAurum(docs:Doc[],date:string,today:string,available_dates:string[],now=Date.now()):AurumResponse {
-  const valid=docs.filter(d=>d.source==='aurum'&&d.date===date&&String(d.sig_date)===date.replaceAll('-','')&&Number.isFinite(time(d))&&time(d)<=now+2000).sort((a,b)=>time(a)-time(b));
+  const dated=docs.filter(d=>d.source==='aurum'&&d.date===date&&String(d.sig_date)===date.replaceAll('-','')&&Number.isFinite(time(d))&&time(d)<=now+2000).sort((a,b)=>time(a)-time(b));
+  const engine=dated.some(d=>d.engine==='aurum-v1.1')?'aurum-v1.1':'aurum-v1';
+  const valid=dated.filter(d=>(d.engine??'aurum-v1')===engine);
   const snapshots=valid.filter(d=>d.kind==='SNAPSHOT'&&Array.isArray(d.signals));
   const board=snapshots.at(-1),health=valid.filter(d=>d.kind==='HEALTH').at(-1);
   const signals:AurumSignal[]=[];const seen=new Set<string>();
   // Health never replaces a successful board. Immutable signal IDs prevent a
   // later compact snapshot or uncertain publication from erasing prior rows.
   for(const snapshot of snapshots)for(const row of snapshot.signals??[]){
-    if(!row||typeof row.id!=='string'||!row.id.startsWith('aurum-v1|'+date+'|')||seen.has(row.id))continue;
+    if(!row||typeof row.id!=='string'||!row.id.startsWith(engine+'|'+date+'|')||seen.has(row.id))continue;
     if(signals.length>=250)throw Error('Aurum signal budget exceeded');
-    if(typeof row.symbol!=='string'||!/^[A-Z0-9 &_.-]{1,40}$/.test(row.symbol)||!['BULL','BEAR'].includes(row.side)||typeof row.signal_time!=='string'||!/^\d{2}:\d{2}$/.test(row.signal_time)||row.signal_time<'09:35'||row.signal_time>'10:25'||Number(row.signal_time.slice(3))%5!==0)throw Error('Invalid Aurum signal');
+    if(typeof row.symbol!=='string'||!/^[A-Z0-9 &_.-]{1,40}$/.test(row.symbol)||!['BULL','BEAR'].includes(row.side)||typeof row.signal_time!=='string'||!/^\d{2}:\d{2}$/.test(row.signal_time)||row.signal_time<'09:35'||row.signal_time>(engine==='aurum-v1.1'?'11:30':'10:25')||Number(row.signal_time.slice(3))%5!==0)throw Error('Invalid Aurum signal');
     const signalAt=Date.parse(`${date}T${row.signal_time}:00+05:30`);
     if(!Number.isFinite(signalAt))throw Error('Invalid Aurum signal time');
     if(signalAt>now)continue;
@@ -77,5 +79,5 @@ export function foldAurum(docs:Doc[],date:string,today:string,available_dates:st
   const stale=date===today&&(!latest||(latest.status!=='CLOSED'&&now-time(latest)>20*60*1000)||['ERROR','DEGRADED'].includes(latest.status??'')||!!latest.stale);
   const state=latest?.status??'PENDING';
   const message=latest?.error??(state==='CLOSED'?'Morning scan closed · saved signals remain available':state==='ERROR'?'Input unavailable · last successful signals retained':state==='DEGRADED'?'Incomplete input coverage · available signals retained':state==='PENDING'?'Waiting for completed cash and option-chain captures':state==='READY'?'Confirmed Aurum signals · completed candles':state);
-  return {source:'aurum',date,asof:board?.asof??latest?.asof??null,state,status:state,message,mode:date<today?'historical':'live',stale,engine:'aurum-v1',signals,available_dates} as AurumResponse;
+  return {source:'aurum',date,asof:board?.asof??latest?.asof??null,state,status:state,message,mode:date<today?'historical':'live',stale,engine,signals,available_dates} as AurumResponse;
 }

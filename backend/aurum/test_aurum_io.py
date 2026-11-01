@@ -7,6 +7,7 @@ import unittest
 import uuid
 
 from aurum_io import NiftyCache, Publisher, atomic_save, build_context, context_from_rusty, instant
+from aurum_engine import ENGINE
 
 DAY = "2026-10-30"
 
@@ -108,7 +109,7 @@ class IOTests(unittest.TestCase):
 
     @staticmethod
     def document():
-        return dict(source="aurum", engine="aurum-v1", date=DAY, status="READY", signals=[], coverage={})
+        return dict(source="aurum", engine=ENGINE, date=DAY, status="READY", signals=[], coverage={})
 
     def test_publication_stable_duplicate_health_and_window(self):
         transport = Transport()
@@ -126,7 +127,11 @@ class IOTests(unittest.TestCase):
         self.assertNotIn("signals", transport.docs[h])
         self.assertIn("signals", transport.docs[a])
         with self.assertRaises(ValueError):
-            pub.enqueue_snapshot(self.document(), "10:30", now)
+            pub.enqueue_snapshot(self.document(), "11:35", now)
+        late=pub.enqueue_snapshot(self.document(), "11:30", now)
+        self.assertIn(ENGINE, late)
+        self.assertEqual(pub.outbox.parent.name, 'outbox')
+        self.assertEqual(pub.outbox.name, ENGINE)
 
     def test_uncertain_insert_read_back_never_duplicates(self):
         transport = Transport()

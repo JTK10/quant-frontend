@@ -106,6 +106,17 @@ assert.throws(() => foldAurum([doc(date, 'SNAPSHOT', {signals: [{...signal(date)
 const full = Array.from({length: 250}, (_, i) => signal(date, 'S' + i));
 assert.equal(foldAurum([doc(date, 'SNAPSHOT', {signals: full}), doc(date, 'SNAPSHOT', {signals: full})], date, date, [], now).signals.length, 250, 'Repeated IDs do not consume the unique-signal budget');
 
+const extendedNow=at(date+'T11:31:00');
+const late={...signal(date,'LATE'),id:`aurum-v1.1|${date}|LATE`,signal_time:'11:30',entry_time:'11:30'};
+const extended=foldAurum([
+  doc(date,'SNAPSHOT',{signals:[first]}),
+  doc(date,'SNAPSHOT',{engine:'aurum-v1.1',ts:extendedNow/1000-10,signals:[late]})
+],date,date,[],extendedNow);
+assert.equal(extended.engine,'aurum-v1.1');
+assert.deepEqual(Array.from(extended.signals,r=>r.symbol),['LATE'],'New live engine is isolated from old engine rows');
+assert.throws(()=>foldAurum([doc(date,'SNAPSHOT',{engine:'aurum-v1.1',signals:[{...late,signal_time:'11:35'}]})],date,date,[],at(date+'T12:00:00')),/Invalid Aurum signal/);
+assert.equal(foldAurum([doc(date,'SNAPSHOT',{engine:'aurum-v1.1',signals:[late]})],date,date,[],at(date+'T11:29:00')).signals.length,0);
+
 const proxy = load('proxy.ts', {'next/server': {NextResponse}, '@/utils/auth': auth}).proxy;
 assert.equal((await proxy(request('/api/aurum'))).headers.get('Cache-Control'), null, 'Proxy preserves Aurum private TTL');
 assert.equal((await proxy(request('/api/nifty-signals'))).headers.get('Cache-Control'), 'private, no-store', 'Existing unrelated proxy policy remains');

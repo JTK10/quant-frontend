@@ -1,13 +1,25 @@
 import {istSessionDate, sessionPollingDelay} from '@/utils/sessionPolling';
-import type {AurumResponse} from './types';
+import type {AurumResponse, AurumSignal} from './types';
 
 export const AURUM_POLL_MS = 300000;
+export const AURUM_CUTS = Array.from({length:24},(_,i)=>{const m=575+i*5;return `${Math.floor(m/60).toString().padStart(2,'0')}:${(m%60).toString().padStart(2,'0')}`;});
+
+export function aurumRowsAtCut(board:AurumResponse|null,cut:string):AurumSignal[] {
+  if(!board)return [];
+  if(cut==='latest')return board.signals;
+  if(!AURUM_CUTS.includes(cut))return [];
+  const deadline=Date.parse(`${board.date}T${cut}:00+05:30`);
+  return board.signals.filter(row=>row.signal_time<=cut &&
+    // Shipped research only records nominal candle-close availability. Actual
+    // issued/recovered events must also have been received by the chosen cut.
+    (!row.issued_at||Date.parse(row.issued_at)<=deadline));
+}
 const morningClock = new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Kolkata', hourCycle: 'h23', hour: '2-digit', minute: '2-digit'});
 
 export function aurumPollingDelay(date: string, now = Date.now()): number | null {
   if (sessionPollingDelay(date, AURUM_POLL_MS, now) === null) return null;
   const hm = morningClock.format(new Date(now));
-  return hm >= '09:14' && hm <= '10:40' ? AURUM_POLL_MS : null;
+  return hm >= '09:14' && hm <= '11:40' ? AURUM_POLL_MS : null;
 }
 
 export function preserveAurumBoard(previous: AurumResponse | null, next: AurumResponse): AurumResponse {

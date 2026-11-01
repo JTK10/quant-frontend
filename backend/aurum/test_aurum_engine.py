@@ -7,13 +7,13 @@ import uuid
 import shutil
 from pathlib import Path
 
-from aurum_engine import evaluate, gate
+from aurum_engine import evaluate, gate, ENGINE, MORNING, SIGNAL_CUTS, compact_history
 from aurum_live import Worker, epoch, save, validate_capture
 
 
 def history():
     return dict(schema_version=1, symbols={'TEST':[dict(date=day, high=103, low=96, close=100, complete=True,
-        bars=[[f'{m//60:02}:{m%60:02}',100,(m-555)//5*100+100] for m in range(570,621,5)])
+        bars=[[f'{m//60:02}:{m%60:02}',100,(m-555)//5*100+100] for m in range(570,686,5)])
         for day in ('2026-10-22','2026-10-23','2026-10-26','2026-10-27','2026-10-28','2026-10-29','2026-10-30')]})
 
 
@@ -108,7 +108,7 @@ class Tests(unittest.TestCase):
 
     def test_next_session_daily_baseline_with_saved_morning_volume(self):
         bars=copy.deepcopy(BARS)
-        for m in range(575,621,5):bars.append(dict(hm=f'{m//60:02}:{m%60:02}',o=103.6,h=103.7,l=103.5,c=103.6,v=100))
+        for m in range(575,686,5):bars.append(dict(hm=f'{m//60:02}:{m%60:02}',o=103.6,h=103.7,l=103.5,c=103.6,v=100))
         self.worker.state['bars']={'TEST':bars};self.worker.persist()
         self.worker.start('2026-11-03')
         self.worker.hydrate_prior_baselines({'TEST':dict(prior_day='2026-11-02',pdh=110,pdl=99,pdc=108)},'2026-11-03')
@@ -116,13 +116,13 @@ class Tests(unittest.TestCase):
         self.assertTrue(prior['complete'])
         self.assertEqual(prior['high'],110)
         self.assertEqual(prior['close'],108)
-        self.assertEqual(len(prior['bars']),11)
+        self.assertEqual(len(prior['bars']),24)
         self.assertEqual(prior['bars'][0][2],600)
 
     def test_holiday_gap_uses_explicit_prior_day_and_missing_prefix_fails(self):
         self.worker.start('2026-10-19')
         bars=copy.deepcopy(BARS)
-        for m in range(575,621,5):bars.append(dict(hm=f'{m//60:02}:{m%60:02}',o=103.6,h=103.7,l=103.5,c=103.6,v=100))
+        for m in range(575,686,5):bars.append(dict(hm=f'{m//60:02}:{m%60:02}',o=103.6,h=103.7,l=103.5,c=103.6,v=100))
         self.worker.state['bars']={'TEST':bars};self.worker.persist()
         self.worker.start('2026-10-21')
         self.worker.hydrate_prior_baselines({'TEST':dict(prior_day='2026-10-19',pdh=110,pdl=99,pdc=108)},'2026-10-21')
@@ -154,9 +154,30 @@ class Tests(unittest.TestCase):
         self.assertEqual(late['status'],'ERROR')
         self.assertEqual(late['missing_overdue_cuts'],['09:35'])
         self.assertTrue(late['stale'])
-        closed=self.worker.document(epoch('2026-11-02','10:40'))
+        closed=self.worker.document(epoch('2026-11-02','11:40'))
         self.assertEqual(closed['status'],'ERROR')
-        self.assertEqual(len(closed['missing_overdue_cuts']),11)
+        self.assertEqual(len(closed['missing_overdue_cuts']),24)
+
+    def test_extended_gate_boundary_and_version_isolation(self):
+        passed,f=evaluate(BARS,history()['symbols']['TEST'],CHAIN,dict(open=22000,close=22000))
+        self.assertTrue(passed)
+        f['time_ist']='11:25'
+        self.assertTrue(gate(f))
+        f['time_ist']='11:30'
+        self.assertFalse(gate(f))
+        self.assertEqual(SIGNAL_CUTS[-1],'11:30')
+        self.assertEqual(len(SIGNAL_CUTS),24)
+        self.assertEqual(MORNING[-1],'11:25')
+        self.assertEqual(self.worker.path.parent.name,ENGINE)
+
+    def test_history_compaction_preserves_twenty_prior_samples(self):
+        days=[dict(date=f'2026-10-{i:02}',high=103,low=96,close=100,complete=True,
+                   bars=[['09:30',i,i*4],['11:25',i,i*27]]) for i in range(1,31)]
+        compact_history(days)
+        self.assertEqual(len(days),30)
+        self.assertEqual(sum(bool(x['bars']) for x in days),21)
+        self.assertTrue(all(x['complete'] for x in days))
+        self.assertEqual(sum(bool(x['bars']) for x in days[:-1]),20)
 
     def test_holiday_has_no_overdue_regular_session_cuts(self):
         class HolidayCalendar:

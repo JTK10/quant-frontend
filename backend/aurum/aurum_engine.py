@@ -1,4 +1,4 @@
-"""Frozen Aurum v1 gates and cash/chain features. Standard library only.
+"""Aurum v1.1 extended-window gates and cash/chain features. Stdlib only.
 
 No outcome, option-return or whole-day rank enters eligibility. Prices are
 completed-candle references, not fills. The locked research directory is read
@@ -6,8 +6,15 @@ only; this module is a separately deployable implementation of its rules.
 """
 import math
 
-ENGINE = 'aurum-v1'
-MORNING = tuple(f'{m//60:02}:{m%60:02}' for m in range(555, 626, 5))
+ENGINE = 'aurum-v1.1'
+BAR_START_FIRST = '09:30'
+BAR_START_LAST = '11:25'
+SIGNAL_FIRST = '09:35'
+SIGNAL_LAST = '11:30'
+INPUT_FIRST = '09:20'
+STREAM_END = '11:35'
+SIGNAL_CUTS = tuple(f'{m//60:02}:{m%60:02}' for m in range(575, 691, 5))
+MORNING = tuple(f'{m//60:02}:{m%60:02}' for m in range(555, 686, 5))
 
 
 def number(x):
@@ -29,7 +36,7 @@ def gate(f):
         return False
     bull = f.get('direction') == 'BULL'
     return bool(
-        '09:30' <= f.get('time_ist', '') <= '10:20'
+        BAR_START_FIRST <= f.get('time_ist', '') <= BAR_START_LAST
         and f.get('brk_or15') and f.get('brk_pd') and f.get('vwap_aligned')
         and (f['Close'] > f['prior_max_close'] if bull else f['Close'] < f['prior_min_close'])
         and f['vwap_dist_pct'] <= 1.25
@@ -39,6 +46,26 @@ def gate(f):
         and f['c_body'] >= 50 and f['adverse_wick_pct'] <= 30
         and f['rvol_5m'] >= 2 and f['rvol_cum'] >= 1.5
         and f['oi_dom_contemp'] >= (-.30 if f.get('wall_breached') else -.05))
+
+
+def compact_history(days, observations=21):
+    """Keep40 daily summaries and latest21 observed rows for each eligible slot.
+
+    Twenty rows support live RVOL; the extra observation preserves20 earlier
+    samples when an isolated benchmark replays the seed's final historical day.
+    Daily OHLC/complete flags remain available even when their old bars are empty.
+    """
+    days[:] = sorted(days, key=lambda d:d['date'])[-40:]
+    counts = {}
+    for day in reversed(days):
+        kept = []
+        for bar in day['bars']:
+            hm = bar[0]
+            if BAR_START_FIRST <= hm <= BAR_START_LAST and counts.get(hm, 0) < observations:
+                kept.append(bar)
+                counts[hm] = counts.get(hm, 0)+1
+        day['bars'] = kept
+    return days
 
 
 def cash_features(bars, history, nifty):

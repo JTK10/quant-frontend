@@ -13,7 +13,7 @@ vm.runInNewContext(compile('app/aurum/feed.ts'), {exports: feedExports, require:
   assert.equal(name, '@/utils/sessionPolling'); return policyExports;
 }, AbortController, DOMException, Date, Error});
 const {createAurumFeed, AURUM_POLL_MS, aurumPollingDelay} = feedExports;
-const {preserveAurumBoard} = feedExports;
+const {preserveAurumBoard, aurumRowsAtCut, AURUM_CUTS} = feedExports;
 const at = time => Date.parse(time + '+05:30');
 const flush = async () => {for (let i = 0; i < 10; i++) await Promise.resolve();};
 
@@ -50,8 +50,8 @@ function harness(start, {live = true, date = policyExports.istSessionDate(start)
 assert.equal(AURUM_POLL_MS, 300000);
 assert.equal(aurumPollingDelay('2026-10-30', at('2026-10-30T09:13:00')), null);
 assert.equal(aurumPollingDelay('2026-10-30', at('2026-10-30T09:14:00')), 300000);
-assert.equal(aurumPollingDelay('2026-10-30', at('2026-10-30T10:40:00')), 300000);
-assert.equal(aurumPollingDelay('2026-10-30', at('2026-10-30T10:41:00')), null);
+assert.equal(aurumPollingDelay('2026-10-30', at('2026-10-30T11:40:00')), 300000);
+assert.equal(aurumPollingDelay('2026-10-30', at('2026-10-30T11:41:00')), null);
 const successful = {date: '2026-10-30', status: 'READY', asof: '10:00', signals: [{symbol: 'KEPT'}]};
 const heartbeat = {date: '2026-10-30', status: 'PENDING', signals: []};
 const preserved = preserveAurumBoard(successful, heartbeat);
@@ -96,7 +96,7 @@ const weekendCount = rollover.requests.length; await rollover.advance(3600000);
 assert.equal(rollover.requests.length, weekendCount, 'New weekend board loads only once');
 rollover.feed.stop();
 
-const close = harness(at('2026-10-30T10:39:50')); await flush();
+const close = harness(at('2026-10-30T11:39:50')); await flush();
 await close.advance(300000); assert.equal(close.requests.length, 1, 'Scanner close transition stops network checks');
 await close.advance(3600000); await close.focus(true); await close.focus(false);
 assert.equal(close.requests.length, 1, 'Finished morning board does not poll or refetch on focus');
@@ -107,7 +107,7 @@ await opening.advance(2 * 60000); assert.equal(opening.requests.length, 2, 'Loca
 await opening.advance(26 * 3600000);
 assert.ok(opening.resets.includes('2026-10-30'), 'Next weekday rolls the session using the local clock');
 assert.ok(opening.requests.filter(row => row.date === '2026-10-30').length > 1, 'Next morning resumes five-minute checks');
-assert.ok(opening.requests.filter(row => row.date === '2026-10-30').length <= 20, 'No overnight API loop');
+assert.ok(opening.requests.filter(row => row.date === '2026-10-30').length <= 33, 'No overnight API loop');
 opening.feed.stop();
 
 // Render the actual desk with an existing frozen day. Flow labels outside the five
@@ -154,3 +154,14 @@ assert.ok(recovered.includes('Recovered'));
 assert.ok(recovered.includes('not issued live at the signal time'), 'Recovered captures cannot masquerade as live issued signals');
 
 console.log('Aurum client: history/weekend, five-minute cadence, visibility/focus, one in-flight, stale board, IST rollover, close transition, cleanup and actual all-flow desk rendering passed.');
+
+const replay={date:'2026-10-27',status:'READY',mode:'historical',signals:[{symbol:'EARLY',signal_time:'09:35'},{symbol:'LATER',signal_time:'10:05'}]};
+assert.deepEqual(Array.from(aurumRowsAtCut(replay,'10:00'),r=>r.symbol),['EARLY']);
+assert.equal(aurumRowsAtCut(replay,'10:05').length,2);
+assert.equal(aurumRowsAtCut(replay,'latest').length,2);
+assert.equal(aurumRowsAtCut(replay,'11:31').length,0);
+assert.equal(AURUM_CUTS.at(-1),'11:30');
+const recorded={...replay,mode:'live',signals:[{symbol:'DELAYED',signal_time:'10:00',issued_at:'2026-10-27T10:00:02+05:30'}]};
+assert.equal(aurumRowsAtCut(recorded,'10:00').length,0);
+assert.equal(aurumRowsAtCut(recorded,'10:05').length,1);
+console.log('PASS: local cutoff rewind, cumulative signals and actual receipt boundaries.');
