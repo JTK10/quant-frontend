@@ -1,0 +1,25 @@
+[Unit]
+Description=Aurum causal scanner on retained cash and option exports
+After=network-online.target ocelot.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/aurum
+ExecStart=/home/ubuntu/ocelot/venv/bin/python -u /home/ubuntu/aurum/aurum_live.py
+Environment=TZ=Asia/Kolkata
+Environment=PYTHONPATH=/home/ubuntu/pallas/deps
+Restart=on-failure
+RestartSec=30
+MemoryHigh=96M
+MemoryMax=128M
+CPUQuota=15%
+Nice=15
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/aurum
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
