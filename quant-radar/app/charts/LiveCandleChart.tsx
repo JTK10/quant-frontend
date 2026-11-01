@@ -1,6 +1,7 @@
 "use client";
 
 import MovementRuler from "./MovementRuler";
+import { computeRelativeVolume } from "./relativeVolume";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CandlestickSeries,
@@ -245,6 +246,7 @@ export default function LiveCandleChart({
   strictSession = false,
   includePreviousSession = false,
   mutedOI = false,
+  relativeVolume = false,
 }: {
   symbol: string;
   streamUrl: string;
@@ -261,6 +263,7 @@ export default function LiveCandleChart({
   strictSession?: boolean;
   includePreviousSession?: boolean;
   mutedOI?: boolean;
+  relativeVolume?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -285,6 +288,7 @@ export default function LiveCandleChart({
   const [connection, setConnection] = useState("Connecting");
   const [barRevision, setBarRevision] = useState(0);
   const [hasBars, setHasBars] = useState(false);
+  const [rvolLabel, setRvolLabel] = useState("Waiting for volume history");
   const quoteRef = useRef(onQuote);
   useEffect(() => { quoteRef.current = onQuote; }, [onQuote]);
   const sessionBars = useCallback((bars: ChartBar[]) => filterChartSession(bars, sessionDate, strictSession, includePreviousSession, asOf), [sessionDate, asOf, strictSession, includePreviousSession]);
@@ -334,8 +338,40 @@ export default function LiveCandleChart({
       upColor: "#089981", downColor: "#F23645", borderVisible: false,
       wickUpColor: "#089981", wickDownColor: "#F23645",
     });
-    const volume = chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "", lastValueVisible: symbol !== "NIFTY 50", priceLineVisible: symbol !== "NIFTY 50" });
-    volume.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    const volume = relativeVolume ? null : chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "", lastValueVisible: symbol !== "NIFTY 50", priceLineVisible: symbol !== "NIFTY 50" });
+    volume?.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    const rvol = relativeVolume ? chart.addSeries(LineSeries, {
+      color: "#3b82f6", lineWidth: 2, title: "RVOL", priceLineVisible: false,
+      priceFormat: { type: "custom", minMove: 0.01, formatter: (value: number) => `${value.toFixed(2)}×` },
+      autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => {
+        const info = original();
+        return info?.priceRange ? { ...info, priceRange: { minValue: 0, maxValue: Math.max(3, info.priceRange.maxValue) } } : null;
+      },
+    }, 1) : null;
+    if (rvol) {
+      rvol.createPriceLine({ price: 2, color: "#ef4444", lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: "2×" });
+      chart.panes()[0].setStretchFactor(4);
+      chart.panes()[1].setStretchFactor(1);
+    }
+    let rvolValues = new Map<number, { value: number | null; samples: number }>();
+    const rebuildRvol = () => {
+      if (!rvol) return;
+      // Keep earlier sessions for the baseline even when replay displays one day.
+      const history = filterChartSession([...barsRef.current.values()], sessionDate, false, false, asOf);
+      rvolValues = computeRelativeVolume(aggregateBars(history, timeframe));
+    };
+    const labelRvol = (time?: number) => {
+      const latest = time === undefined ? lastRenderedTimeRef.current : time;
+      const point = latest == null ? undefined : rvolValues.get(latest);
+      setRvolLabel(point?.value != null ? `${point.value.toFixed(2)}× · ${point.samples}/20 sessions${point.samples < 20 ? " · partial history" : ""}` : "Unavailable · no positive same-slot volume baseline");
+    };
+    const rvolCandle = (bar: ChartBar) => {
+      const value = rvolValues.get(bar.time)?.value;
+      const color = value != null && value > 3 ? "#22c55e" : value != null && value > 2 ? "#f59e0b" : undefined;
+      return { ...asCandle(bar), ...(color ? { color, wickColor: color, borderColor: color } : {}) };
+    };
+    const crosshairRvol = (event: { time?: Time }) => labelRvol(event.time === undefined ? undefined : timeToEpochSeconds(event.time));
+    if (rvol) chart.subscribeCrosshairMove(crosshairRvol);
     const ema = chart.addSeries(LineSeries, { color: "#fbbf24", lineWidth: 2, title: "EMA 9", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
     const superBull = chart.addSeries(LineSeries, { color: "#22c55e", lineWidth: 2, lineStyle: LineStyle.Solid, title: "Supertrend 10,3", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
     const superBear = chart.addSeries(LineSeries, { color: "#ef4444", lineWidth: 2, lineStyle: LineStyle.Solid, title: "Supertrend 10,3", lastValueVisible: false, priceLineVisible: false, crosshairMarkerVisible: false });
@@ -366,9 +402,15 @@ export default function LiveCandleChart({
     };
 
     redrawRef.current = (bars) => {
-      candles.setData(bars.map(asCandle));
-      volume.setData(bars.map(asVolume));
+      rebuildRvol();
+      candles.setData(bars.map(rvolCandle));
+      volume?.setData(bars.map(asVolume));
+      rvol?.setData(bars.map(bar => {
+        const value = rvolValues.get(bar.time)?.value;
+        return value == null ? { time: bar.time as UTCTimestamp } : { time: bar.time as UTCTimestamp, value };
+      }));
       lastRenderedTimeRef.current = bars.length ? bars[bars.length - 1].time : null;
+      if (rvol) labelRvol();
       updateRecentRange(bars);
       indicatorRedrawRef.current(bars);
       setHasBars(bars.some(b => includePreviousSession || !sessionDate || istDay(b.time) === sessionDate));
@@ -382,9 +424,15 @@ export default function LiveCandleChart({
         redrawRef.current(bars);
         return;
       }
-      candles.update(asCandle(bar));
-      volume.update(asVolume(bar));
+      rebuildRvol();
+      candles.update(rvolCandle(bar));
+      volume?.update(asVolume(bar));
+      if (rvol) {
+        const value = rvolValues.get(bar.time)?.value;
+        rvol.update(value == null ? { time: bar.time as UTCTimestamp } : { time: bar.time as UTCTimestamp, value });
+      }
       lastRenderedTimeRef.current = bar.time;
+      if (rvol) labelRvol();
       updateRecentRange(bars);
       indicatorRedrawRef.current(bars);
       quoteRef.current?.(symbol, bar.close);
@@ -424,6 +472,7 @@ export default function LiveCandleChart({
       redrawRef.current = () => {};
       updateLiveBarRef.current = () => {};
       indicatorRedrawRef.current = () => {};
+      if (rvol) chart.unsubscribeCrosshairMove(crosshairRvol);
       chart.remove();
       chartRef.current = null;
       candleRef.current = null;
@@ -437,7 +486,7 @@ export default function LiveCandleChart({
       initialViewSetRef.current = false;
       lastRenderedTimeRef.current = null;
     };
-  }, [timeframe, symbol, sessionDate, sessionBars, includePreviousSession]);
+  }, [timeframe, symbol, sessionDate, sessionBars, includePreviousSession, relativeVolume, asOf]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -562,6 +611,7 @@ export default function LiveCandleChart({
     >
       <MovementRuler key={`${symbol}-${timeframe}-${sessionDate}-${asOf}`} series={candleRef} chart={chartRef} interval={({"5m":5,"15m":15,"30m":30,"1h":60,"1D":1440})[timeframe]} />
       <div ref={hostRef} className="h-full w-full" aria-label={`${symbol} live price chart`} />
+      {relativeVolume && <div className="pointer-events-none absolute left-2 bottom-10 z-10 rounded bg-slate-950/80 px-2 py-1 font-mono text-[10px] text-blue-300" title="Volume / average of this time slot in the previous 20 loaded trading sessions. Current session excluded. Orange candles >2×; green >3×. Live candle volume is provisional.">RVOL 20 · {rvolLabel}</div>}
       <div className="pointer-events-none absolute left-2 bottom-8 z-10 text-[9px] text-slate-400">{streamUrl ? connection : "Session chart"}{!hasBars ? " · No candles received for this session" : ""}</div>
       <div className="absolute right-2 top-2 z-10 flex overflow-hidden rounded border text-xs shadow-lg" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>
         <button type="button" onClick={(event) => { event.stopPropagation(); zoom(1.45); }} className="px-2 py-1 hover:bg-white/10">−</button><button type="button" onClick={(event) => { event.stopPropagation(); resetView(); }} className="border-x px-2 py-1 font-mono text-[10px] hover:bg-white/10" style={{ borderColor: "var(--color-border)" }}>RESET</button><button type="button" onClick={(event) => { event.stopPropagation(); zoom(0.7); }} className="px-2 py-1 hover:bg-white/10">+</button>
