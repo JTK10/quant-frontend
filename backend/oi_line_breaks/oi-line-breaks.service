@@ -1,0 +1,24 @@
+[Unit]
+Description=OI Line Breaks live scanner on retained VM2 five-minute captures
+After=network-online.target ocelot.service pallas.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/oi-line-breaks
+ExecStart=/usr/bin/python3 -u /home/ubuntu/oi-line-breaks/live.py
+Environment=TZ=Asia/Kolkata
+Restart=on-failure
+RestartSec=30
+MemoryHigh=96M
+MemoryMax=160M
+CPUQuota=20%
+Nice=15
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/oi-line-breaks
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

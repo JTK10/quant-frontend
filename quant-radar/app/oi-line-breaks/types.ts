@@ -11,8 +11,8 @@ export type LineRow = {
   fresh_oi_share_pct: number;
   move_pct: number | null;
   qualified: boolean;
-  pdh_broken: boolean;
-  pdl_broken: boolean;
+  pdh_broken: boolean|null;
+  pdl_broken: boolean|null;
 };
 
 export type LineEvidence = {
@@ -28,6 +28,12 @@ export type LineEvidence = {
 export type LineSession = {date:string; cuts:number; coverage:string; last_cut:string; bytes:number};
 export type LineBoard = {
   source: 'oi-line-breaks';
+  mode?: 'live'|'historical';
+  status?: string;
+  stale?: boolean;
+  recovered?: boolean;
+  asof?: string|null;
+  coverage_counts?: {eligible:number;cash:number;ranked:number;wicks_complete:boolean;status:string};
   date: string;
   cut: string;
   cuts: string[];

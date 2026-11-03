@@ -1,25 +1,32 @@
-# OI Line Breaks research page
+# Korat live OI line scanner
 
-The authenticated `/oi-line-breaks` page shows the validated five-minute
-exact-strike ranking archive. `/api/oi-line-breaks` returns one date and one
-completed cut, with both OI-setup and movement rankings and evidence for the
-selected rows. Rank mode, PDH/PDL, search, and sort operate in the browser and
-never refetch the archive. The historical view has no polling or VM worker.
+Authenticated `/korat` is the live exact-strike scanner. The isolated VM2
+`oi-line-breaks.service` reads existing Pallas completed five-minute option/cash
+captures, Rusty prior OI sessions, and Aurum cash history. It makes no broker
+subscriptions or direct live database reads. Each completed cut is ranked by
+prior defended OI setup and separately by directional cash movement after its
+first break. A line remains ranked for the rest of the session. PDH/PDL flags
+come from completed cash candle extremes; `?` denotes unavailable late wicks.
 
-The dated `.json.gz` files in `data/oi-line-breaks` are compact derived ranking
-snapshots, packaged from the local research outputs with
-`python scripts/package-oi-line-breaks.py --source PATH`. Raw cash candles,
-chain captures, credentials, and VM state are not shipped. `manifest.json`
-lists coverage; early sessions and 2 November use all nearby strikes, while
-some October sessions use the saved chart lines only. The page labels those
-limitations and does not present archive rows as live scanner alerts.
+The worker durably saves local state and a two-document outbox per cut. It
+publishes a source-isolated snapshot followed by a small daily index through
+the existing ORDS client. The authenticated API reads the index and one
+snapshot with bounded byte, row, and source/date validation. The live browser
+polls at most every five minutes in the IST session, suspends while hidden,
+and shows stale, degraded, or recovered status. Server responses use private
+30-second caching. With an observed ~83 KB JSON snapshot, one open tab has a
+budget of 12 requests/hour and about 1 MB/hour before transport compression.
 
-Run `python scripts/test-oi-line-break-archive.py` and
-`node scripts/test-oi-line-break-feed.mjs` before deployment. The historical
-API has private one-hour browser caching, loads at most one 2.5 MB expanded
-archive per date in the server process, and keeps two archives in a bounded
-process cache. A date/cut request returns at most 400 rows per mode plus their
-evidence; the largest measured latest-cut API response across 28 sessions is
-223 KB before transport compression, roughly 29 KB gzipped. No new broker
-subscriptions, VM processes, or database readers
-are introduced.
+Saved historical dates use the frozen archives in `data/oi-line-breaks` and
+load once. They were packaged with `python scripts/package-oi-line-breaks.py`.
+Archive coverage is displayed per date; some October dates contain only the
+four prior chart lines. The live scanner uses all nearby front-expiry strikes
+from the previous three completed sessions. The prior-day cash baseline for
+recent days comes from the next session's first existing Pallas capture.
+
+Run `python -m unittest discover -s backend/oi_line_breaks -p 'test_*.py' -v`,
+`python scripts/test-oi-line-break-archive.py`, and
+`node scripts/test-oi-line-break-feed.mjs` from their respective repository
+or `quant-radar` directories. The service unit is in
+`backend/oi_line_breaks/oi-line-breaks.service`. Its state and rollback are
+isolated under `/home/ubuntu/oi-line-breaks`.

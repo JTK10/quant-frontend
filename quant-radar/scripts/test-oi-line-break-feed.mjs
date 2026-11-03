@@ -2,11 +2,18 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import ts from 'typescript';
 
-const code=readFileSync(new URL('../app/oi-line-breaks/feed.ts',import.meta.url),'utf8');
-const transpiled=ts.transpileModule(code,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-const exports={};
-new Function('exports',transpiled)(exports);
-const {createLineArchiveFeed}=exports;
+const load=(relative,imports={})=>{
+  const code=readFileSync(new URL(relative,import.meta.url),'utf8');
+  const transpiled=ts.transpileModule(code,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+  const exports={};
+  new Function('exports','require',transpiled)(exports,name=>{
+    if(!(name in imports))throw Error('Unexpected import: '+name);
+    return imports[name];
+  });
+  return exports;
+};
+const polling=load('../utils/sessionPolling.ts');
+const {createLineArchiveFeed,createLineLiveFeed,koratPollingDelay}=load('../app/oi-line-breaks/feed.ts',{'@/utils/sessionPolling':polling});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const deferred=()=>{let resolve,reject;const promise=new Promise((ok,bad)=>{resolve=ok;reject=bad;});return {promise,resolve,reject};};
 
@@ -37,4 +44,32 @@ const pendingStop=deferred();
 const stopped=createLineArchiveFeed({hidden:()=>false,read:signal=>{signal.addEventListener('abort',()=>{aborted=true;pendingStop.reject(new DOMException('Aborted','AbortError'));});return pendingStop.promise;},
   onData:()=>late++,onError:()=>late++,onSettled:()=>late++});
 stopped.stop();await tick();assert.equal(aborted,true);assert.equal(late,0,'unmounted/date-changed feed must not publish');
-console.log('PASS: hidden tab, focus storms, one in flight, history/weekend/rollover/close, retry, abort cleanup');
+
+const ist=(hm,date='2026-11-03')=>Date.parse(`${date}T${hm}:00+05:30`);
+assert.equal(koratPollingDelay('2026-11-03',ist('09:20')),300000);
+assert.equal(koratPollingDelay('2026-11-03',ist('16:00')),null);
+assert.equal(koratPollingDelay('2026-11-02',ist('09:20')),null);
+assert.equal(koratPollingDelay('2026-11-07',ist('09:20','2026-11-07')),null);
+let now=ist('09:20'),liveHidden=true,liveReads=0,liveData=0,liveErrors=0;
+let timerId=0;const timers=new Map();
+const livePending=deferred();
+const live=createLineLiveFeed({date:'2026-11-03',now:()=>now,hidden:()=>liveHidden,
+  setTimer:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,ms});return id;},
+  clearTimer:id=>timers.delete(id),
+  read:()=>{liveReads++;return liveReads===1?livePending.promise:Promise.resolve({date:'2026-11-03',setup:[],move:[]});},
+  onDate:()=>{},onData:()=>liveData++,onError:()=>liveErrors++,onSettled:()=>{}});
+assert.equal(liveReads,0);
+liveHidden=false;for(let i=0;i<50;i++)live.visibility();
+assert.equal(liveReads,1,'focus storm starts only one live read');
+livePending.reject(Error('temporary'));await tick();
+assert.equal(liveErrors,1);
+assert.equal(timers.size,1,'only one live timer after error');
+for(let i=0;i<50;i++)live.visibility();
+assert.equal(liveReads,1,'error/focus must respect five-minute budget');
+now+=300000;live.visibility();await tick();
+assert.equal(liveReads,2);assert.equal(liveData,1);
+now=ist('15:41');for(let i=0;i<50;i++)live.visibility();
+assert.equal(liveReads,2,'close transition stops network reads');
+liveHidden=true;live.visibility();assert.equal(timers.size,0,'hidden tab clears timer');
+live.stop();assert.equal(timers.size,0,'unmount clears timer');
+console.log('PASS: archive and live hidden/focus/in-flight/retry/weekend/rollover/close/cleanup');

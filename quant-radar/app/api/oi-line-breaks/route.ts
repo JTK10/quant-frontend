@@ -5,6 +5,9 @@ import path from 'node:path';
 import {requireApiSession} from '@/utils/auth';
 import {resultCache} from '@/utils/resultCache';
 import manifest from '@/data/oi-line-breaks/manifest.json';
+import {istSessionDate} from '@/utils/sessionPolling';
+import {koratSessions} from '@/utils/oiLineDates';
+import {readLiveKorat} from '@/utils/oiLineLive';
 import type {LineBoard,LineEvidence,LineRow} from '@/app/oi-line-breaks/types';
 import {lineKey} from '@/app/oi-line-breaks/types';
 
@@ -16,7 +19,7 @@ type PackedRow=[number,number,string,'BULL'|'BEAR',number,'CE'|'PE',string,numbe
 type PackedEvidence=[string,string,number,number,string,number,number];
 type Archive={version:number;date:string;prior_day:string;coverage:string;setup:Record<string,PackedRow[]>;move:Record<string,PackedRow[]>;evidence:Record<string,PackedEvidence>};
 const archives=resultCache<Archive>({maxEntries:2,maxBytes:20*1024*1024});
-const reply=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{'Cache-Control':status===200?'private, max-age=3600, stale-while-revalidate=86400':'private, no-store'}});
+const reply=(body:unknown,status=200,live=false)=>NextResponse.json(body,{status,headers:{'Cache-Control':status===200?(live?'private, max-age=30, stale-while-revalidate=30':'private, max-age=3600, stale-while-revalidate=86400'):'private, no-store'}});
 
 async function readArchive(date:string):Promise<Archive>{
   return archives(date,3600000,async()=>{
@@ -41,12 +44,18 @@ function unpack(row:PackedRow):LineRow{
 
 export async function GET(request:NextRequest){
   const denied=await requireApiSession(request);if(denied)return denied;
-  const sessions=manifest.sessions;
-  const date=request.nextUrl.searchParams.get('date')??sessions.at(-1)?.date;
+  const today=istSessionDate();
+  const sessions=koratSessions(today);
+  const date=request.nextUrl.searchParams.get('date')??today;
   const session=sessions.find(item=>item.date===date);
   if(!session)return reply({error:'No validated OI line board for this session'},404);
   const requestedCut=request.nextUrl.searchParams.get('cut')??'latest';
+  if(requestedCut!=='latest'&&!/^\d{2}:\d{2}$/.test(requestedCut))return reply({error:'Invalid Korat cut'},400);
   try{
+    if(!manifest.sessions.some(item=>item.date===date)){
+      const live=await readLiveKorat(session.date,requestedCut,sessions);
+      return reply({...live,mode:date===today?'live':'historical'},200,date===today);
+    }
     const archive=await readArchive(session.date);
     const cuts=Object.keys(archive.setup).sort();
     const cut=requestedCut==='latest'?cuts.at(-1):requestedCut;
@@ -61,7 +70,7 @@ export async function GET(request:NextRequest){
       evidence[identity]={respected_dates:saved[0],trapped_dates:saved[1],fresh_oi_added:saved[2],
         net_oi_change:saved[3],prior_day_evidence:saved[4],first_oi:saved[5],last_oi:saved[6]};
     }
-    const board:LineBoard={source:'oi-line-breaks',date:session.date,cut,cuts,prior_day:archive.prior_day,
+    const board:LineBoard={source:'oi-line-breaks',mode:'historical',status:'READY',date:session.date,cut,cuts,prior_day:archive.prior_day,
       coverage:archive.coverage,sessions,setup,move,evidence};
     return reply(board);
   }catch{return reply({error:'Saved OI line board could not be read'},503);}

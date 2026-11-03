@@ -6,7 +6,7 @@ let auth:{token:string;until:number}|undefined;
 let authPending:Promise<string>|undefined;
 const reads=resultCache<Doc[]>({maxEntries:16,maxBytes:2*1024*1024});
 
-async function token() {
+export async function getSharedOrdsToken() {
   if(auth && auth.until>Date.now())return auth.token;
   if(authPending)return authPending;
   authPending=(async()=>{
@@ -22,12 +22,14 @@ async function token() {
   try{return await authPending;}finally{authPending=undefined;}
 }
 
+export function invalidateSharedOrdsToken(){auth=undefined;}
+
 export async function readAurumFeed(date:string,today:string):Promise<Doc[]> {
   return reads(date,date===today?60000:3600000,async()=>{
     const endpoint=process.env.PANTHER_SIGNALS_URL;
     if(!endpoint)throw Error('Aurum feed configuration unavailable');
     const url=new URL(endpoint);url.searchParams.set('src','aurum');url.searchParams.set('sig_date',date.replaceAll('-',''));
-    const access=await token();
+    const access=await getSharedOrdsToken();
     const response=await fetch(url,{headers:{Authorization:'Bearer '+access},cache:'no-store',signal:AbortSignal.timeout(15000)});
     if(response.status===401)auth=undefined;
     if(!response.ok||!response.body)throw Error('Aurum feed unavailable');
