@@ -53,7 +53,9 @@ export async function GET(request:NextRequest){
   if(requestedCut!=='latest'&&!/^\d{2}:\d{2}$/.test(requestedCut))return reply({error:'Invalid Korat cut'},400);
   try{
     if(!manifest.sessions.some(item=>item.date===date)){
-      const live=await readLiveKorat(session.date,requestedCut,sessions);
+      const after=request.nextUrl.searchParams.get('after')??undefined;
+      if(after&&!/^\d{2}:\d{2}$/.test(after))return reply({error:'Invalid Korat cursor'},400);
+      const live=await readLiveKorat(session.date,requestedCut,sessions,Date.now(),after);
       return reply({...live,mode:date===today?'live':'historical'},200,date===today);
     }
     const archive=await readArchive(session.date);

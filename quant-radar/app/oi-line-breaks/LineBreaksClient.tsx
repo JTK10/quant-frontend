@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowDownUp,Check,ChevronLeft,ChevronRight,ExternalLink,Plus,Search} from 'lucide-react';
 import {buildTradingViewUrl} from '@/utils/backend';
 import {addChartWatchlistSymbol,readChartWatchlist,CHART_WATCHLIST_STORAGE_KEY,CHART_WATCHLIST_UPDATED_EVENT} from '@/utils/chartWatchlist';
@@ -34,6 +34,7 @@ export default function LineBreaksClient({initialDate,initialCut,sessions}:{init
   const [query,setQuery]=useState(''),[qualified,setQualified]=useState(false);
   const [sort,setSort]=useState<Sort>('rank'),[descending,setDescending]=useState(true);
   const [detail,setDetail]=useState<LineRow|null>(null);
+  const dialog=useRef<HTMLDialogElement>(null);
   const [watchlist,setWatchlist]=useState<string[]>([]),[notice,setNotice]=useState('');
   const key=`${date}|${cut}`;
   const live=date===istSessionDate()&&cut==='latest';
@@ -46,17 +47,27 @@ export default function LineBreaksClient({initialDate,initialCut,sessions}:{init
     return()=>{window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);window.removeEventListener('storage',storage);};
   },[]);
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),2500);return()=>clearTimeout(timer);},[notice]);
+  useEffect(()=>{if(detail&&!dialog.current?.open)dialog.current?.showModal();
+    if(!detail&&dialog.current?.open)dialog.current.close();},[detail]);
 
   useEffect(()=>{
     const saved=live?null:readCached(key);
     if(saved){setBoard(saved);setError('');setLoading(false);return;}
     setLoading(true);setError('');
+    let latestBoard:LineBoard|null=null;
     const read=async(session:string,signal:AbortSignal)=>{
-        const url=`/api/oi-line-breaks?${new URLSearchParams({date:session,cut})}`;
+        const params=new URLSearchParams({date:session,cut});
+        if(live&&latestBoard?.cut)params.set('after',latestBoard.cut);
+        const url=`/api/oi-line-breaks?${params}`;
         const response=await fetch(url,{cache:'default',signal});
         if(response.status===401){window.location.assign(`/login?next=${encodeURIComponent('/korat')}`);throw Error('Session expired');}
         const data=await response.json();
         if(!response.ok)throw Error(typeof data.error==='string'?data.error:'Korat board unavailable');
+        if(data.unchanged===true){
+          if(!latestBoard||data.date!==session||data.cut!==latestBoard.cut||!Array.isArray(data.cuts))
+            throw Error('Invalid Korat cursor response');
+          return {...latestBoard,status:data.status,stale:data.stale,cuts:data.cuts};
+        }
         if(data.source!=='oi-line-breaks'||data.date!==session||!Array.isArray(data.setup)||!Array.isArray(data.move)||
           !Array.isArray(data.cuts)||data.cut!==''&&!data.cuts.includes(data.cut)||cut!=='latest'&&data.cut!==cut||
           data.setup.length>400||data.move.length>400)throw Error('Invalid Korat board');
@@ -66,7 +77,7 @@ export default function LineBreaksClient({initialDate,initialCut,sessions}:{init
       setTimer:setTimeout,clearTimer:clearTimeout,read,
       onDate:next=>{setDate(next);setBoard(null);setError('');setLoading(true);
         window.history.replaceState(null,'',`/korat?${new URLSearchParams({date:next})}`);},
-      onData:data=>{setBoard(data);setError('');},
+      onData:data=>{latestBoard=data;setBoard(data);setError('');},
       onError:message=>setError(message),onSettled:()=>setLoading(false),
     }):createLineArchiveFeed({hidden:()=>document.hidden,
       read:signal=>read(date,signal),
@@ -94,14 +105,6 @@ export default function LineBreaksClient({initialDate,initialCut,sessions}:{init
   const evidence=selectedDetail?current?.evidence[lineKey(selectedDetail)]:null;
   const cuts=current?.cuts??[];
   const cutIndex=cuts.indexOf(current?.cut??'');
-  const coverage=current?.coverage??sessions.find(session=>session.date===date)?.coverage;
-  const coverageText=coverage==='live_capture'||current?.mode==='live'
-    ? 'Live from existing VM2 captures · exact front-expiry strikes from three prior OI closes.'
-    : coverage==='all_nearby_strikes'
-    ? 'Full nearby front-expiry strikes from three previous chain closes (within 6% of prior spot).'
-    : date==='2026-10-27'||date==='2026-10-28'
-      ? 'Saved chart lines only; one or two previous OI sources, so two-day buildup cannot qualify.'
-      : 'Saved chart OI lines only; other strikes may be absent.';
   const changeSort=(field:Sort)=>{
     if(sort!==field){setSort(field);setDescending(true);}
     else if(descending)setDescending(false);
@@ -113,24 +116,21 @@ export default function LineBreaksClient({initialDate,initialCut,sessions}:{init
 
   function table(rows:LineRow[],side:'BULL'|'BEAR'){
     return <section className={`line-panel ${side==='BULL'?'bull':'bear'}`} aria-label={`${side==='BULL'?'Bullish':'Bearish'} OI line breaks`}>
-      <div className="line-panel-head"><h2>{side==='BULL'?'Bullish · CE line crossed upward':'Bearish · PE line crossed downward'}</h2><span>{rows.length} shown</span></div>
-      <div className="line-table-wrap"><table><thead><tr><th>Side #</th><th>All #</th><th>Stock</th><th><button type="button" onClick={()=>changeSort('move_pct')} aria-label="Sort by movement after break">Move % <ArrowDownUp size={11}/></button></th><th>Strike</th><th>Broke</th><th>{side==='BULL'?'PDH':'PDL'}</th><th>Defended<br/>days</th><th>OI build<br/>days</th><th><button type="button" onClick={()=>changeSort('fresh_oi_share_pct')} aria-label="Sort by fresh OI percent">Fresh OI % <ArrowDownUp size={11}/></button></th><th>Charts</th></tr></thead>
+      <div className="line-panel-head"><h2>{side==='BULL'?'BULLISH SIGNALS':'BEARISH SIGNALS'}</h2><span>{rows.length} names</span></div>
+      <div className="line-table-wrap"><table><thead><tr><th>#</th><th>Symbol</th><th><button type="button" onClick={()=>changeSort('move_pct')} aria-label="Sort by movement after break">Move % <ArrowDownUp size={11}/></button></th><th>Strike</th><th>Broke</th><th>{side==='BULL'?'PDH':'PDL'}</th><th>Days</th><th><button type="button" onClick={()=>changeSort('fresh_oi_share_pct')} aria-label="Sort by fresh OI percent">Fresh OI % <ArrowDownUp size={11}/></button></th><th>Links</th></tr></thead>
         <tbody>{rows.map(row=><tr key={lineKey(row)} className={selectedDetail&&lineKey(selectedDetail)===lineKey(row)?'selected':''}>
-          <td>{row.direction_rank}</td><td>{row.rank}</td><td className="stock"><button type="button" onClick={()=>setDetail(row)} title="Show earlier cash and OI evidence">{row.symbol}</button>{row.qualified&&<span title="Two or more defended days with fresh OI">●</span>}</td>
-          <td className={row.move_pct!=null&&row.move_pct>=0?'positive':'negative'}>{percent(row.move_pct)}</td><td>₹{row.strike.toLocaleString('en-IN')}</td><td>{row.break_cut}</td><td>{levelFlag(side==='BULL'?row.pdh_broken:row.pdl_broken)}</td><td>{row.respected_days}</td><td>{row.trapped_buildup_days}</td><td>{row.fresh_oi_share_pct.toFixed(2)}%</td>
-          <td><div className="line-actions"><button type="button" title={watchlist.includes(row.symbol)?'Already in Charts watchlist':'Add to Charts watchlist'} aria-label={`Add ${row.symbol} to Charts watchlist`} disabled={watchlist.includes(row.symbol)} onClick={()=>{setWatchlist(addChartWatchlistSymbol(row.symbol));setNotice(`${row.symbol} added to Charts watchlist`);}}>{watchlist.includes(row.symbol)?<Check size={13}/>:<Plus size={13}/>}</button><a href={`/charts?${new URLSearchParams({symbol:row.symbol,date})}`} target="_blank" rel="noopener noreferrer" title={`Open ${row.symbol} in Charts`}>Chart</a><a href={buildTradingViewUrl(row.symbol,row.symbol)} target="_blank" rel="noopener noreferrer" title={`Open ${row.symbol} on TradingView`} aria-label={`Open ${row.symbol} on TradingView`}><ExternalLink size={13}/></a></div></td>
+          <td>{row.rank}</td><td className="stock"><div className="line-stock"><button type="button" onClick={()=>setDetail(row)} title="Show cash and OI evidence">{row.symbol}</button>{row.qualified&&<span title="Two or more defended days with fresh OI">●</span>}<button className="line-watch" type="button" title={watchlist.includes(row.symbol)?'Already in Charts watchlist':'Add to Charts watchlist'} aria-label={`Add ${row.symbol} to Charts watchlist`} disabled={watchlist.includes(row.symbol)} onClick={()=>{setWatchlist(addChartWatchlistSymbol(row.symbol));setNotice(`${row.symbol} added to Charts watchlist`);}}>{watchlist.includes(row.symbol)?<Check size={11}/>:<Plus size={11}/>}</button></div></td>
+          <td className={row.move_pct!=null&&row.move_pct>=0?'positive':'negative'}>{percent(row.move_pct)}</td><td>₹{row.strike.toLocaleString('en-IN')}</td><td>{row.break_cut}</td><td>{levelFlag(side==='BULL'?row.pdh_broken:row.pdl_broken)}</td><td title={`Defended ${row.respected_days} days · fresh OI build ${row.trapped_buildup_days} days`}>{row.respected_days} / {row.trapped_buildup_days}</td><td>{row.fresh_oi_share_pct.toFixed(2)}%</td>
+          <td><div className="line-actions"><a href={`/charts?${new URLSearchParams({symbol:row.symbol,date})}`} target="_blank" rel="noopener noreferrer" title={`Open ${row.symbol} in Charts`}>Chart</a><a href={buildTradingViewUrl(row.symbol,row.symbol)} target="_blank" rel="noopener noreferrer" title={`Open ${row.symbol} on TradingView`} aria-label={`Open ${row.symbol} on TradingView`}><ExternalLink size={13}/></a></div></td>
         </tr>)}</tbody></table>{!rows.length&&<div className="line-empty">No lines match these filters at this cut.</div>}</div>
     </section>;
   }
 
-  return <main className="line-page">
-    <header className="line-header"><div><div className="line-eyebrow">NSE F&amp;O · LIVE EXACT-STRIKE SCANNER</div><h1>Korat</h1><p>Previously defended option lines, ranked at each completed five-minute candle.</p></div><label>Session · IST<select aria-label="Korat session" value={date} onChange={event=>chooseDate(event.target.value)}>{[...availableSessions].reverse().map(session=><option key={session.date} value={session.date}>{session.date}{session.date===istSessionDate()?' · Today':''}</option>)}</select></label></header>
-    <div className="line-context"><strong>{date}</strong><span>{live?'LIVE · AUTO 5 MIN':'SAVED SESSION'}</span><span>{coverageText}</span><span>{current?.prior_day?`Previous cash session ${current.prior_day} · Latest completed cut ${cuts.at(-1)} IST`:live?'Waiting for first published completed cut':'Saved research replay'}</span></div>
-    <div className="line-controls"><label>Cut · IST<select aria-label="Five-minute cut" value={cut} onChange={event=>chooseCut(event.target.value)}><option value="latest">Latest {live?'live':'saved'}</option>{cuts.map(value=><option key={value} value={value}>{value}</option>)}</select></label><button type="button" aria-label="Previous cut" disabled={cutIndex<=0} onClick={()=>chooseCut(cuts[cutIndex-1])}><ChevronLeft size={16}/></button><button type="button" aria-label="Next cut" disabled={cutIndex<0||cutIndex>=cuts.length-1} onClick={()=>chooseCut(cuts[cutIndex+1])}><ChevronRight size={16}/></button><label>Rank by<select aria-label="Ranking mode" value={mode} onChange={event=>{setMode(event.target.value as Mode);setDetail(null);}}><option value="setup">OI setup</option><option value="move">Move after break</option></select></label><label>PDH / PDL<select aria-label="PDH PDL filter" value={level} onChange={event=>setLevel(event.target.value as Level)}><option value="all">All lines</option><option value="pdh">PDH broken · bullish</option><option value="pdl">PDL broken · bearish</option><option value="either">Either matching break</option></select></label><label className="line-search"><Search size={14}/><input aria-label="Find stock or strike" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Stock or strike"/></label><label className="line-check"><input type="checkbox" checked={qualified} onChange={event=>setQualified(event.target.checked)}/>Two-day OI build only</label></div>
-    <div className="line-status" role="status">{error?`${error}${current?.cut?' · Showing the last successful same-session board (stale).':''}`:loading?'Loading Korat…':current?.status==='PENDING'?'Waiting for the first completed VM2 cash and option capture.':current?`${current.cut} IST · ${visible.length} / ${source.length} stocks · ${current.status??'READY'}${current.stale?' · stale':''}${current.recovered?' · recovered after the cut':''}${current.coverage_counts&&!current.coverage_counts.wicks_complete?' · later PDH/PDL wicks unavailable':''} · ${mode==='setup'?'OI setup rank':'move-after-break rank'}`:'No board for this session.'}</div>
+  return <div className="line-page"><main className="line-app">
+    <header className="line-header"><div className="line-brand"><span className="line-logo">K</span><h1>KORAT</h1></div><div className="line-header-actions"><span className={`line-live ${live?'active':''}`}>{live?'LIVE · AUTO 5M':'SAVED'}</span><label>DATE<select aria-label="Korat session" value={date} onChange={event=>chooseDate(event.target.value)}>{[...availableSessions].reverse().map(session=><option key={session.date} value={session.date}>{session.date}{session.date===istSessionDate()?' · Today':''}</option>)}</select></label><a href="/charts">Charts ↗</a></div></header>
+    <div className="line-toolbar"><div className="line-timebox"><span>CUT</span><button type="button" aria-label="Previous cut" disabled={cutIndex<=0} onClick={()=>chooseCut(cuts[cutIndex-1])}><ChevronLeft size={16}/></button><select aria-label="Five-minute cut" value={cut} onChange={event=>chooseCut(event.target.value)}><option value="latest">Latest {current?.cut??''}</option>{cuts.map(value=><option key={value} value={value}>{value}</option>)}</select><button type="button" aria-label="Next cut" disabled={cutIndex<0||cutIndex>=cuts.length-1} onClick={()=>chooseCut(cuts[cutIndex+1])}><ChevronRight size={16}/></button></div><label>RANK<select aria-label="Ranking mode" value={mode} onChange={event=>{setMode(event.target.value as Mode);setDetail(null);}}><option value="setup">OI setup</option><option value="move">Move after break</option></select></label><label>PDH / PDL<select aria-label="PDH PDL filter" value={level} onChange={event=>setLevel(event.target.value as Level)}><option value="all">All lines</option><option value="pdh">PDH broken · bullish</option><option value="pdl">PDL broken · bearish</option><option value="either">Either matching break</option></select></label><label className="line-search"><Search size={14}/><input aria-label="Find stock or strike" value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search stock or strike"/></label><label className="line-check"><input type="checkbox" checked={qualified} onChange={event=>setQualified(event.target.checked)}/>2-day OI build</label>{cut!=='latest'&&<button className="line-jump" type="button" onClick={()=>chooseCut('latest')}>Jump to latest</button>}</div>
+    {(error||loading||!current||current.status==='PENDING'||current.stale||current.status==='DEGRADED'||current.recovered)&&<div className="line-status" role="status">{error?`${error}${current?.cut?' · Last successful cut retained':''}`:loading?'Loading Korat…':current?.status==='PENDING'?'Waiting for the first completed cut':!current?'No board for this session':`${current.cut} IST · ${current.status}${current.recovered?' · recovered':''}${current.coverage_counts&&!current.coverage_counts.wicks_complete?' · PDH/PDL wicks unavailable':''}`}</div>}
     <div className="line-panels">{table(bulls,'BULL')}{table(bears,'BEAR')}</div>
-    <section className="line-detail" aria-label="Exact strike evidence"><h2>{selectedDetail?`${selectedDetail.symbol} · ${selectedDetail.leg} ₹${selectedDetail.strike.toLocaleString('en-IN')}`:'Exact-strike evidence'}</h2>{selectedDetail&&evidence?<><div className="line-detail-metrics"><span>First break <b>{selectedDetail.break_cut} IST</b></span><span>Defended days <b>{selectedDetail.respected_days}</b></span><span>Fresh OI days <b>{selectedDetail.trapped_buildup_days}</b></span><span>Fresh OI <b>{selectedDetail.fresh_oi_share_pct.toFixed(2)}%</b></span><span>OI added on defended days <b>{evidence.fresh_oi_added.toLocaleString('en-IN')}</b></span><span>Net OI first→last <b>{evidence.net_oi_change.toLocaleString('en-IN')}</b></span></div><p>Respected: {evidence.respected_dates||'none'} · Fresh build: {evidence.trapped_dates||'none'}</p><div className="line-evidence">{evidence.prior_day_evidence.split(' | ').map((entry,i)=><span key={i}>{entry.replaceAll(',', ' · ')}</span>)}</div></>:<p>Select a stock to inspect its prior cash and OI observations.</p>}</section>
-    <footer className="line-footer">A CE close above the exact strike or PE close below it starts the line. It stays on the board after its first break. “Move %” is the directional stock move since that break. Fresh OI % is positive OI added on defended prior days divided by the stock&apos;s four displayed line OI at the latest prior close. A zero means no positive addition on defended days. PDH/PDL uses prior complete-session extremes and completed-candle wicks when available; ? means late wicks were unavailable. Live cuts reuse VM2&apos;s existing producers. Saved dates replay frozen results.</footer>
     {notice&&<div className="line-toast" role="status">{notice}</div>}
-  </main>;
+  </main><dialog ref={dialog} className="line-dialog" aria-label="Stock OI details" onCancel={()=>setDetail(null)} onClick={event=>{if(event.target===event.currentTarget)setDetail(null);}}><aside className="line-drawer"><div className="line-drawer-head"><h2>{selectedDetail?`${selectedDetail.symbol} · ${selectedDetail.leg} ₹${selectedDetail.strike.toLocaleString('en-IN')}`:detail?.symbol}</h2><button type="button" aria-label="Close stock details" onClick={()=>setDetail(null)}>×</button></div>{selectedDetail&&evidence&&<><div className="line-detail-metrics"><span>First break <b>{selectedDetail.break_cut} IST</b></span><span>Defended days <b>{selectedDetail.respected_days}</b></span><span>Fresh OI days <b>{selectedDetail.trapped_buildup_days}</b></span><span>Fresh OI <b>{selectedDetail.fresh_oi_share_pct.toFixed(2)}%</b></span><span>OI added <b>{evidence.fresh_oi_added.toLocaleString('en-IN')}</b></span><span>Net OI <b>{evidence.net_oi_change.toLocaleString('en-IN')}</b></span></div><p>Respected: {evidence.respected_dates||'none'}<br/>Fresh build: {evidence.trapped_dates||'none'}</p><div className="line-evidence">{evidence.prior_day_evidence.split(' | ').map((entry,i)=><span key={i}>{entry.replaceAll(',', ' · ')}</span>)}</div></>}</aside></dialog></div>;
 }

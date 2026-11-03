@@ -56,7 +56,7 @@ function validTime(doc:Doc,date:string,now:number){
     Number.isFinite(doc.ts)&&doc.ts*1000<=now+2000&&Number.isFinite(available)&&available<=now+2000;
 }
 
-export async function readLiveKorat(date:string,cutRequest:string,sessions:LineSession[],now=Date.now()):Promise<LineBoard>{
+export async function readLiveKorat(date:string,cutRequest:string,sessions:LineSession[],now=Date.now(),after?:string){
   const indexes=await sourceDocs('oi_line_breaks_index',date,20_000);
   const good=indexes.filter(doc=>doc.kind==='INDEX'&&doc.version===1&&
     doc.Doc_ID===`oi-line-breaks|v1|${date.replaceAll('-','')}|INDEX|${doc.decision_cut.replace(':','')}`&&
@@ -69,6 +69,12 @@ export async function readLiveKorat(date:string,cutRequest:string,sessions:LineS
     return {source:'oi-line-breaks',mode:'live',status:'PENDING',date,cut:'',cuts,prior_day:'',
       coverage:'pending',sessions,setup:[],move:[],evidence:{},asof:null,stale:false};
   }
+  const currentTime=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(now));
+  const market=currentTime>='09:20'&&currentTime<='15:35';
+  const stale=market&&now-Date.parse(`${date}T${chosen.decision_cut}:00+05:30`)>11*60*1000;
+  if(cutRequest==='latest'&&after===chosen.decision_cut)
+    return {source:'oi-line-breaks',date,cut:chosen.decision_cut,cuts,unchanged:true,
+      status:stale?'STALE':chosen.coverage_counts?.status??'READY',stale};
   const source='oi_line_breaks_'+chosen.decision_cut.replace(':','');
   const snapshots=await sourceDocs(source,date,cutRequest==='latest'?20_000:3_600_000);
   const doc=snapshots.find(item=>item.kind==='SNAPSHOT'&&item.version===1&&
@@ -86,9 +92,6 @@ export async function readLiveKorat(date:string,cutRequest:string,sessions:LineS
     evidence[lineKey(row)]={respected_dates:item[0],trapped_dates:item[1],fresh_oi_added:item[2],
       net_oi_change:item[3],prior_day_evidence:item[4],first_oi:item[5],last_oi:item[6]};
   }
-  const currentTime=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(now));
-  const market=currentTime>='09:20'&&currentTime<='15:35';
-  const stale=market&&now-Date.parse(`${date}T${chosen.decision_cut}:00+05:30`)>11*60*1000;
   return {source:'oi-line-breaks',mode:'live',status:stale?'STALE':doc.coverage_counts?.status??'READY',
     date,cut:chosen.decision_cut,cuts,prior_day:doc.prior_day??'',coverage:doc.coverage??'all_nearby_strikes',
     sessions,setup,move,evidence,asof:doc.available_at,stale,coverage_counts:doc.coverage_counts,recovered:doc.recovered===true};
