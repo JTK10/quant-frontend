@@ -1,12 +1,12 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,type ComponentType,type ComponentProps} from 'react';
 import {useRouter} from 'next/navigation';
 import {DatePicker} from '@/components/Controls';
 import {istSessionDate,sessionPollingDelay} from '@/utils/sessionPolling';
 import {mergeRustySnapshots,rustyCut,rustyExpectedCut,rustyNextPoll} from '@/utils/rustyFeed';
 import RustyClient,{type Snap} from './RustyClient';
 
-export default function RustyFeed({dateStr,followToday}:{dateStr:string;followToday:boolean}){
+export default function RustyFeed({dateStr,followToday,Board=RustyClient,pagePath='/rusty'}:{dateStr:string;followToday:boolean;Board?:ComponentType<ComponentProps<typeof RustyClient>>;pagePath?:'/rusty'|'/sol'}){
   const router=useRouter();
   const [snaps,setSnaps]=useState<Snap[]>([]);
   const snapshots=useRef<Snap[]>([]),hasLoaded=useRef(false),lastRequested=useRef(0);
@@ -34,7 +34,7 @@ export default function RustyFeed({dateStr,followToday}:{dateStr:string;followTo
     const load=async(manual=false,requestedCut?:string,bypassCache=false)=>{
       if(disposed||document.hidden)return;
       if(inFlight){if(requestedCut&&requestedCut!==activeCut){pendingCut=requestedCut;controller?.abort();}return;}
-      if(followToday&&istSessionDate()!==dateStr){if(!movingDate.current){movingDate.current=true;router.replace('/rusty');}return;}
+      if(followToday&&istSessionDate()!==dateStr){if(!movingDate.current){movingDate.current=true;router.replace(pagePath);}return;}
       if(done&&!manual&&(sessionPollingDelay(dateStr,300000)===null||Date.now()-lastRequested.current<15000)){schedule();return;}
       clearTimeout(timer);inFlight=true;activeCut=requestedCut;lastRequested.current=Date.now();controller=new AbortController();
       if(requestedCut)setLoadingCut(requestedCut);
@@ -43,7 +43,7 @@ export default function RustyFeed({dateStr,followToday}:{dateStr:string;followTo
         // Include the last cut again so corrected/re-published snapshots replace it.
         if(requestedCut)p.set('cut',requestedCut);else if(latest)p.set('after',latest);
         const response=await fetch('/api/panther-signals?'+p,{cache:bypassCache?'reload':'default',signal:controller.signal});
-        if(response.status===401){window.location.assign('/login?next=%2Frusty');return;}
+        if(response.status===401){window.location.assign('/login?next='+encodeURIComponent(pagePath));return;}
         const body=await response.json();
         if(!response.ok||!Array.isArray(body.snapshots)||!Array.isArray(body.cuts))throw new Error(body.error||'Rusty feed unavailable');
         if(disposed)return;
@@ -85,15 +85,15 @@ export default function RustyFeed({dateStr,followToday}:{dateStr:string;followTo
     document.addEventListener('visibilitychange',visibility);
     return()=>{disposed=true;clearTimeout(timer);clearTimeout(selectionTimer);controller?.abort();document.removeEventListener('visibilitychange',visibility);requestRefresh.current=()=>{};requestCut.current=()=>{};};
   // Date changes remount this component; toggling auto does not discard board data.
-  },[dateStr,followToday,closed,enabled,router]);
+  },[dateStr,followToday,closed,enabled,router,pagePath]);
   useEffect(()=>{
     if(!followToday)return;
-    const timer=setInterval(()=>{if(!document.hidden&&istSessionDate()!==dateStr&&!movingDate.current){movingDate.current=true;router.replace('/rusty');}},60000);
+    const timer=setInterval(()=>{if(!document.hidden&&istSessionDate()!==dateStr&&!movingDate.current){movingDate.current=true;router.replace(pagePath);}},60000);
     return()=>clearInterval(timer);
-  },[dateStr,followToday,router]);
-  return <RustyClient snaps={snaps} dateStr={dateStr}
+  },[dateStr,followToday,router,pagePath]);
+  return <Board snaps={snaps} dateStr={dateStr}
     onCutChange={cut=>requestCut.current(cut)}
     controls={<><DatePicker/>{!closed&&<><button type="button" className="latest" onClick={()=>setEnabled(v=>!v)}>{enabled?'AUTO 5M':'AUTO OFF'}</button><button type="button" className="latest" onClick={()=>requestRefresh.current()}>Refresh</button></>}</>}
     status={error?`Refresh failed: ${error} · Use Refresh to retry${selectedCut.current?` ${selectedCut.current}`:''}.`:loadingCut?`Loading snapshot ${loadingCut}…`:undefined}
-    emptyMessage={closed?<><strong>Market closed — Gandhi Jayanti</strong><p>October 2, 2026 is an NSE trading holiday.</p><a href="/rusty?date=2026-10-01">View October 1 snapshots ↗</a></>:!loaded?'Loading Rusty snapshots…':undefined}/>;
+    emptyMessage={closed?<><strong>Market closed — Gandhi Jayanti</strong><p>October 2, 2026 is an NSE trading holiday.</p><a href={`${pagePath}?date=2026-10-01`}>View October 1 snapshots ↗</a></>:!loaded?'Loading Rusty snapshots…':undefined}/>;
 }
