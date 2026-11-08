@@ -44,6 +44,20 @@
 .sol-view .stock-actions .stock-name{max-width:100%;overflow-wrap:anywhere;white-space:normal;text-align:left}
 
 /* Local two-board layout */
+.sol-view .stock-identity{flex:1;min-width:0;text-align:left}
+.sol-view .selection-badges{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.sol-view .selection-badges>span{display:inline-flex;align-items:center;border-radius:4px;padding:2px 4px;font-size:8px;font-weight:700;line-height:1.15;white-space:nowrap;letter-spacing:.15px}
+.sol-view .selection-ce{color:#7dd3fc;background:#0c3045;border:1px solid #237499}
+.sol-view .selection-pe{color:#d8b4fe;background:#302246;border:1px solid #7957a2}
+.sol-view .selection-ce-row>td:first-child{box-shadow:inset 2px 0 #38bdf8}
+.sol-view .selection-pe-row>td:first-child{box-shadow:inset 2px 0 #c084fc}
+.sol-view .selection-both-row>td:first-child{background-image:linear-gradient(to bottom,#38bdf8 50%,#c084fc 50%);background-size:2px 100%;background-position:left;background-repeat:no-repeat}
+.sol-view .shortlist-legend{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:9px}
+.sol-view .shortlist-legend>span{display:inline-flex;align-items:center;gap:6px;border-radius:5px;padding:4px 6px;font-size:10px;line-height:1;border:1px solid #354456}
+.sol-view .shortlist-legend b{font-variant-numeric:tabular-nums;padding:2px 4px;border-radius:3px;background:#ffffff10}
+.sol-view .legend-ce{color:#7dd3fc;background:#0c3045;border-color:#237499!important}
+.sol-view .legend-pe{color:#d8b4fe;background:#302246;border-color:#7957a2!important}
+.sol-view .legend-overlap{color:#cbd5e1;background:#1e293b}
 .sol-view .flow-side .flow-panels{grid-template-rows:minmax(0,1fr)!important;}.sol-view .boards{grid-template-columns:1fr 1fr!important;}
 
 .sol-view .shortlist-lab{background:linear-gradient(120deg,#142936,#131d30);border:1px solid #294454;border-radius:10px;margin:6px 8px;padding:10px;color:#dce7f0}.sol-view .shortlist-heading{display:flex;align-items:center;gap:10px;margin-bottom:8px}.sol-view .shortlist-heading strong{font-size:13px;color:#70e1bd}.sol-view .shortlist-heading span{font-size:10px;color:#9aaec0}.sol-view .shortlist-heading>button{margin-left:auto;font-size:11px;color:#b9cad7}.sol-view .shortlist-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.sol-view .shortlist-presets button{padding:8px 6px;text-align:left;border:1px solid #324351;border-radius:7px;background:#111c2b;color:#c5d2de;cursor:pointer}.sol-view .shortlist-presets button.chosen{border-color:#57dbb1;background:#174338}.sol-view .shortlist-presets b{display:block;font-size:11px}.sol-view .shortlist-presets small{display:block;font-size:9px;color:#9dafbf;margin-top:3px}.sol-view .shortlist-count{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:11px}.sol-view .shortlist-count label{white-space:nowrap}.sol-view .shortlist-count label b{color:#6ce0bb;margin-left:5px}.sol-view .shortlist-count input{flex:1;min-width:60px;accent-color:#5bd8ad}.sol-view .shortlist-count span{font-size:10px;white-space:nowrap}.sol-view .shortlist-note{display:block;font-size:9px;color:#90a6b7;margin-top:6px}

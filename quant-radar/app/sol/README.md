@@ -37,3 +37,9 @@ RVOL values are packaged; no full offline replay or old-document rewrite. Local-
 CSS is scoped to .sol-view; no original RustyClient or Rusty CSS changes.
 Verify with node scripts/test-sol.mjs and existing Rusty slider/history/panels,
 session-polling, Pallas-cache regressions plus TypeScript/Next build.
+
+Combine sorting: shortlist membership is decided first, then the selected
+column/dropdown order is applied to a copy of those selected rows. Sorting
+never adds/removes a qualifying stock or fetches data. Blue CE badges and
+purple PE badges show the qualifying list; overlaps have both badges and a
+split row accent. Category totals/overlap legend appears in Combine only.

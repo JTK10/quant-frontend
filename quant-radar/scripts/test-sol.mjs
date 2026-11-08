@@ -145,3 +145,55 @@ assert.equal(stockNodes('Bull').length,shortlists.bullShortlists(rows,2,'bull').
 assert.equal(root.root.findByProps({'aria-label':'bear stocks per shortlist'}).props.value,5,'Per-side counts independent');
 await act(async()=>root.unmount());
 console.log('PASS: Sol two-board presets, independent counts, signs, missing RVOL, duplicate removal and unchanged PE eligibility.');
+
+
+// Combine fixes membership first; table ordering then follows all visible sorts.
+const sortBulls=[
+ {s:'A',c_rvol:7,ce_pct:-9,pe_pct:1,oi_bias:3,mv:1.5},
+ {s:'B',c_rvol:10,ce_pct:-2,pe_pct:8,oi_bias:8,mv:.5},
+ {s:'C',c_rvol:5,ce_pct:-4,pe_pct:3,oi_bias:2,mv:2},
+ {s:'D',c_rvol:8,ce_pct:1,pe_pct:7,oi_bias:5,mv:.8},
+ {s:'E',c_rvol:2,ce_pct:-1,pe_pct:-2,oi_bias:1,mv:3},
+];
+const sortBears=sortBulls.map(r=>({...r,ce_pct:-r.ce_pct,pe_pct:-r.pe_pct,mv:-r.mv}));
+const selected={Bull:shortlists.bullShortlists(sortBulls,3,'bull'),Bear:shortlists.bullShortlists(sortBears,3,'bear')};
+await act(async()=>{root=create(React.createElement(client,{snaps:[{cut:'10:00',bull:sortBulls,bear:sortBears}],dateStr:'2026-11-06'}));});
+const selectedSection=side=>root.root.findByProps({'aria-label':side+' board'});
+const orderedNames=side=>stockNodes(side).map(n=>n.children.join(''));
+const members=side=>[...orderedNames(side)].sort();
+const requestCount=requests.length;
+for(const side of ['Bull','Bear']){
+ await act(async()=>root.root.findByProps({'aria-label':side.toLowerCase()+' stocks per shortlist'}).props.onChange({target:{value:'3'}}));
+ await clickPreset(side,3);
+ const expected=[...selected[side].both];
+ assert.deepEqual(members(side),expected.map(r=>r.s).sort(),side+' Combine keeps deduplicated chosen members');
+ assert.equal(selectedSection(side).findAllByProps({className:'shortlist-legend'}).length,1,side+' Combine explains categories');
+ for(const row of selectedSection(side).findAllByType('tr').filter(row=>row.findAllByProps({className:'stock-name'}).length)){
+  const symbol=row.findByProps({className:'stock-name'}).children.join('');
+  const ce=selected[side].ce.some(r=>r.s===symbol),pe=selected[side].pe.some(r=>r.s===symbol);
+  const badges=row.findByProps({className:'selection-badges'});
+  assert.equal(badges.findAllByProps({className:'selection-ce'}).length,Number(ce),symbol+' CE membership badge');
+  assert.equal(badges.findAllByProps({className:'selection-pe'}).length,Number(pe),symbol+' PE membership badge');
+  const rowType=ce&&pe?'selection-both-row':ce?'selection-ce-row':'selection-pe-row';
+  assert.ok(String(row.props.className).split(/\s+/).includes(rowType),symbol+' category accent matches membership');
+ }
+ const assertOrder=(key,descending)=>{
+  const wanted=[...expected].sort((a,b)=>(descending?b[key]-a[key]:a[key]-b[key])||a.s.localeCompare(b.s)).map(r=>r.s);
+  assert.deepEqual(orderedNames(side),wanted,side+' Combine sorts '+key+' '+(descending?'descending':'ascending'));
+  assert.deepEqual(members(side),expected.map(r=>r.s).sort(),'Sorting never reselects the shortlist');
+ };
+ for(const [heading,key]of [['CE %','ce_pct'],['PE %','pe_pct'],['Candle RVOL','c_rvol'],['Move %','mv']]){
+  const button=()=>selectedSection(side).findByProps({'aria-label':`Sort All ${side}s by ${heading}`});
+  await act(async()=>button().props.onClick());assertOrder(key,true);
+  await act(async()=>button().props.onClick());assertOrder(key,false);
+ }
+ await act(async()=>root.root.findByProps({'aria-label':side.toLowerCase()+' sort'}).props.onChange({target:{value:'c_rvol'}}));
+ assertOrder('c_rvol',true);
+ await act(async()=>root.root.findByProps({'aria-label':side.toLowerCase()+' sort direction'}).props.onClick());
+ assertOrder('c_rvol',false);
+}
+assert.equal(requests.length,requestCount,'Combine selection, headers and sort controls make no network requests');
+await clickPreset('Bull',2);
+assert.equal(selectedSection('Bull').findAllByProps({className:'shortlist-legend'}).length,0,'Combined legend hides outside Combine');
+await act(async()=>root.unmount());
+console.log('PASS: Combine membership survives both-direction column/dropdown sorting on both boards; CE/PE overlap badges and legend are accurate with no network requests.');
