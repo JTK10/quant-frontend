@@ -1,0 +1,14 @@
+--- ocelot.py
++++ ocelot.py
+@@ -784,6 +784,11 @@
+     except Exception as exc:
+         log(f"Rusty optional OI enrichment unavailable: {type(exc).__name__}")
+     try:
++        from rusty_rvol import enrich as enrich_rvol
++        enrich_rvol(cut_ts, doc, candles)
++    except Exception as exc:
++        log(f"Rusty optional RVOL unavailable: {type(exc).__name__}")
++    try:
+         tok = await ords_token(client, cfg)
+         r = await client.post(cfg["base"] + cfg["path"], content=json.dumps(doc),
+                               headers={"Authorization": "Bearer " + tok,

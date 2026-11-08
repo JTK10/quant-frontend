@@ -33,3 +33,6 @@ await bounded('one',10000,null,small);await bounded('two',10000,null,small);awai
 const tiny=rustyHistoryCache({maxBytes:1});let large=0;
 for(let i=0;i<2;i++)await tiny('large',10000,null,async()=>{large++;return rows;});assert.equal(large,2,'Oversized histories are not retained');
 console.log(`PASS: 78 slider cuts use one upstream read; single-cut bodies remain identical (${bytes} total fixture bytes); projection redaction, shared cold reads, live refresh, explicit refresh, expiry/errors and memory bounds verified.`);
+
+assert.equal(projectRustySnapshot({bull:[{s:'TEST',c_rvol:2.5,c_rvol_samples:20}]}).bull[0].c_rvol,2.5);
+assert.equal(projectRustySnapshot({bull:[{s:'TEST',c_rvol:2.5,c_rvol_samples:20}]}).bull[0].c_rvol_samples,20);

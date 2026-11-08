@@ -43,7 +43,7 @@ const names=()=>root.root.findAllByProps({className:'stock-name'}).map(n=>n.chil
 assert.equal(root.root.findAllByProps({className:'flow-panel'}).length,5);
 assert.equal(names().length,27,'No six-stock cap');
 assert.ok(!root.root.findAllByType('th').some(n=>n.children.join('')==='Candle tier'),'Candle tier removed from compact flow boards');
-assert.equal(root.root.findAllByType('col').length,45,'Nine fitted columns per flow board');
+assert.equal(root.root.findAllByType('col').length,50,'Ten fitted columns per flow board including RVOL');
 assert.ok(root.root.findAllByType('th').some(n=>n.children.join('')==='Target %'));
 assert.ok(!root.root.findAllByType('th').some(n=>n.children.join('').includes('confirmed')));
 await act(async()=>root.root.findByProps({'aria-label':'bull OI broken filter'}).props.onChange({target:{value:'Y'}}));
@@ -70,13 +70,15 @@ assert.equal(root.root.findAllByProps({className:'flow-panel'}).length,5);
 assert.equal(root.root.findByProps({'aria-label':'bull OI broken filter'}).props.value,'Y','Layout preserves filters');
 assert.equal(requests.length,0,'Layout and sector switches do not fetch data');
 const sortRows=[
- {s:'A',flow_label:'PE OI Rising',ce_pct:-10,pe_pct:20,oi_break_time:'10:15'},
- {s:'B',flow_label:'PE OI Rising',ce_pct:5,pe_pct:-2,oi_break_time:'09:55'},
+ {s:'A',flow_label:'PE OI Rising',ce_pct:-10,pe_pct:20,c_rvol:1.5,c_rvol_samples:20,oi_break_time:'10:15'},
+ {s:'B',flow_label:'PE OI Rising',ce_pct:5,pe_pct:-2,c_rvol:3.2,c_rvol_samples:18,oi_break_time:'09:55'},
  {s:'C',flow_label:'PE OI Rising',ce_pct:null,pe_pct:null,oi_break_time:null},
 ];
 await act(async()=>root.update(React.createElement(client,{snaps:[{cut:'10:20',bull:sortRows,bear:[]}],dateStr:'2026-10-12'})));
 await act(async()=>root.root.findByProps({'aria-label':'bull OI broken filter'}).props.onChange({target:{value:''}}));
 const clickSort=async h=>act(async()=>root.root.findByProps({'aria-label':`Sort PE OI Rising by ${h}`}).props.onClick());
+await clickSort('RVOL');assert.deepEqual(names(),['B','A','C'],'RVOL descending, missing last');
+await clickSort('RVOL');assert.deepEqual(names(),['A','B','C'],'RVOL ascending, missing last');
 await clickSort('CE %');assert.deepEqual(names(),['B','A','C'],'CE numeric descending, missing last');
 await clickSort('CE %');assert.deepEqual(names(),['A','B','C'],'CE ascending, missing last');
 await clickSort('PE %');assert.deepEqual(names(),['A','B','C'],'PE numeric descending');
