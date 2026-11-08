@@ -1,15 +1,23 @@
 // Authenticated Rusty views reuse compact, redacted history across slider cuts.
 // Nothing here is shared through a public CDN or sent as a full browser history.
 type Snapshot=Record<string,unknown>;
-export function projectRustySnapshot(snapshot:Snapshot){
+export type RustyRvolPoints=Record<string,Record<string,[number,number,boolean|null]>>;
+export function projectRustySnapshot(snapshot:Snapshot,rvol?:RustyRvolPoints){
   const visible=(side:unknown)=>Array.isArray(side)?side.map(value=>{
     const row=value as Record<string,unknown>;
+    const hm=String(row.c_time||'').slice(0,5),cut=String(snapshot.cut||snapshot.time||'').slice(0,5);
+    const closed=/^\d{2}:\d{2}$/.test(hm)&&/^\d{2}:\d{2}$/.test(cut)&&
+      Number(hm.slice(0,2))*60+Number(hm.slice(3))+5<=Number(cut.slice(0,2))*60+Number(cut.slice(3));
+    const saved=closed?rvol?.[hm]?.[String(row.s)]:undefined;
+    const recorded=typeof row.c_rvol==='number'&&Number.isFinite(row.c_rvol);
     const projected={s:row.s,mv:row.mv,brk:row.brk,bt:row.bt,ls:row.ls,p:row.rusty_pct,rr:row.rusty_rank,dr:row.rk??null,
       pi:row.put_inc_rank,ci:row.call_inc_rank,w:row.mr,ce:row.ce_pct??null,pe:row.pe_pct??null,
       ce_pct:row.ce_pct??null,pe_pct:row.pe_pct??null,oi_bias:row.oi_bias??null,flow_type:row.flow_type??null,
       flow_label:row.flow_label??null,badge_color:row.badge_color??null,badge_bg:row.badge_bg??null,
       conviction:row.conviction??null,is_new_discovery:row.is_new_discovery??false,
-      c_rvol:row.c_rvol??null,c_rvol_samples:row.c_rvol_samples??null,c_time:row.c_time??null,c_open:row.c_open??null,c_close:row.c_close??null,c_high:row.c_high??null,
+      c_rvol:recorded?row.c_rvol:saved?.[0]??null,c_rvol_samples:recorded?row.c_rvol_samples??null:saved?.[1]??null,
+      c_rvol_source:!recorded&&saved?'historical_cash':null,c_rvol_ohlc_match:!recorded&&saved?saved[2]:null,
+      c_time:row.c_time??null,c_open:row.c_open??null,c_close:row.c_close??null,c_high:row.c_high??null,
       c_low:row.c_low??null,c_body:row.c_body??null,c_uw:row.c_uw??null,c_lw:row.c_lw??null,
       c_mv:row.c_mv??null,is_maru:row.is_maru??false,is_solid:row.is_solid??false,
       candle_tier:row.candle_tier??null,tgt_pct:row.tgt_pct??null,oi_broken:row.oi_broken??null,oi_break_time:row.oi_break_time??null,entry_confirmed:row.entry_confirmed??false};

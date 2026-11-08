@@ -25,10 +25,13 @@ Sorting, presets, counts and sector toggles make zero network requests.
 
 Production RVOL is the current completed cash candle's volume divided by the
 mean of the same five-minute slot in previous20 available stock sessions.
-The adjacent Nd is actual sample coverage; prior documents without saved RVOL
-remain unavailable and may yield no shortlisted rows. They still appear under
-All Bulls/All Bears. This release does not upload the full offline replay
-archives or rewrite old published documents. Local-only own-line overlays
+The adjacent Nd is actual sample coverage. Historical dates covered by the
+packaged local RVOL archive now merge saved same-slot values by exact stock and
+completed candle time when the publication lacks RVOL. Recorded RVOL wins.
+Asterisk/tooltip preserve published-versus-final-cash OHLC differences; this is
+historical reconstruction, not a claim that the final cash volume was recorded
+at the original publication. Uncovered points remain unavailable. Only compact
+RVOL values are packaged; no full offline replay or old-document rewrite. Local-only own-line overlays
 (onlyOct29/30) are omitted rather than exposed as unavailable live controls.
 
 CSS is scoped to .sol-view; no original RustyClient or Rusty CSS changes.

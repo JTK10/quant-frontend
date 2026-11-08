@@ -5,6 +5,7 @@ import {projectLupusHistory} from '@/utils/lupusHistory';
 import {resultCache} from '@/utils/resultCache';
 import {projectRustySnapshot,rustyHistoryCache,rustyHistoryResponse} from '@/utils/rustyHistory';
 import {compactKairosEvents} from '@/utils/kairos';
+import {readRustyRvolArchive} from '@/utils/rustyRvolArchive';
 
 export const dynamic = "force-dynamic";
 
@@ -341,7 +342,8 @@ export async function GET(request: NextRequest) {
       const history=await historyCache(targetDate,forceRefresh?0:historical?300000:10000,forceRefresh?null:requestedCut,async()=>{
         const raw=await getRawByDate(targetDate,'rusty');
         const rows=raw.filter(s=>s.source==='rusty').sort((a,b)=>(a.ts??0)-(b.ts??0));
-        return normalizePantherSignals(rows.map(projectRustySnapshot));
+        const rvol=historical?await readRustyRvolArchive(targetDate):undefined;
+        return normalizePantherSignals(rows.map(s=>projectRustySnapshot(s,rvol)));
       });
       const body=rustyHistoryResponse(history,requestedCut,after);
       // Published cuts can be reused privately during the live day; Refresh can revalidate.
