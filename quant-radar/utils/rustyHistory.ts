@@ -4,7 +4,12 @@ type Snapshot=Record<string,unknown>;
 export type RustyRvolPoints=Record<string,Record<string,[number,number,boolean|null]>>;
 export function projectRustySnapshot(snapshot:Snapshot,rvol?:RustyRvolPoints){
   const visible=(side:unknown)=>Array.isArray(side)?side.map(value=>{
-    const row=value as Record<string,unknown>;
+    const original=value as Record<string,unknown>;
+    const nearby=original.nearby_oi;
+    const fields=['ce_pct','pe_pct','oi_bias','flow_type','flow_label','badge_color','badge_bg','conviction'];
+    const row=Array.isArray(nearby)&&nearby.length===fields.length
+      ? {...original,...Object.fromEntries(fields.map((field,i)=>[field,nearby[i]]))}
+      : original;
     const hm=String(row.c_time||'').slice(0,5),cut=String(snapshot.cut||snapshot.time||'').slice(0,5);
     const closed=/^\d{2}:\d{2}$/.test(hm)&&/^\d{2}:\d{2}$/.test(cut)&&
       Number(hm.slice(0,2))*60+Number(hm.slice(3))+5<=Number(cut.slice(0,2))*60+Number(cut.slice(3));
@@ -56,3 +61,4 @@ export function rustyHistoryResponse(history:History,cut:string|null,after:strin
   const snapshots=wanted.filter(c=>!after||c>=after).map(c=>history.snapshots.get(c)).filter(Boolean);
   return '{"snapshots":['+snapshots.join(',')+'],"cuts":'+JSON.stringify(history.cuts)+'}';
 }
+
