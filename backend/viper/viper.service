@@ -1,0 +1,25 @@
+[Unit]
+Description=Viper call and put scanner using existing Ocelot exports
+After=network-online.target ocelot.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/viper
+ExecStart=/usr/bin/python3 -u /home/ubuntu/viper/viper_live.py
+Environment=TZ=Asia/Kolkata
+Restart=on-failure
+RestartSec=45
+MemoryHigh=64M
+MemoryMax=88M
+CPUQuota=15%
+Nice=15
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/viper
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

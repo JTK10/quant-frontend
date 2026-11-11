@@ -140,6 +140,7 @@ const NAV_ITEMS: any[] = [
   { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
   { href: "/aurum", icon: Crown, label: "Aurum", color: "#e9bd66", rgb: "233,189,102" },
   { href: "/sol", icon: Target, label: "Sol", color: "#76c8ed", rgb: "118,200,237" },
+  { href: "/viper", icon: Activity, label: "Viper", color: "#34d399", rgb: "52,211,153" },
 // Hidden from navigation at user request (2026-11-01). Routes and services remain available.
 // { href: "/pallas", icon: Cat, label: "Pallas", color: "#5ad9ee", rgb: "90,217,238" },
 // { href: "/irbis", icon: Radar, label: "Irbis", color: "#5ee4c0", rgb: "94,228,192" },
