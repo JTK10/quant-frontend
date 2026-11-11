@@ -86,3 +86,8 @@
 .viper .kpi{color:inherit}
 @media(max-width:1300px){.viper .workspace.has-drawer{grid-template-columns:minmax(0,1fr) minmax(240px,31%)}}
 @media(max-width:960px){.viper .workspace.has-drawer{grid-template-columns:minmax(0,1fr)}}
+
+.viper-stock-actions {display:inline-flex;align-items:center;gap:5px}
+.viper-stock-actions button:not(.open-strike),.viper-stock-actions a {display:inline-grid;place-items:center;width:23px;height:23px;padding:0;border:1px solid var(--line);border-radius:5px;color:var(--sky);text-decoration:none}
+.viper-stock-actions button:disabled {opacity:1;color:var(--mint)}
+.viper-stock-actions a:hover,.viper-stock-actions button:not(.open-strike):enabled:hover {border-color:currentColor}

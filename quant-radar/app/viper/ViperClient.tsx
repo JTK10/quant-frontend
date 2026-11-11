@@ -1,6 +1,9 @@
 'use client';
 
 import {useEffect, useMemo, useRef, useState} from 'react';
+import {Check, ExternalLink, Plus} from 'lucide-react';
+import {buildTradingViewUrl} from '@/utils/backend';
+import {addChartWatchlistSymbol, readChartWatchlist, CHART_WATCHLIST_STORAGE_KEY, CHART_WATCHLIST_UPDATED_EVENT} from '@/utils/chartWatchlist';
 import {istSessionDate} from '@/utils/sessionPolling';
 import {createViperFeed} from './feed';
 import {ACTIVE_STATES, EVENT_STATES, IGNITION_STATES, WATCH_STATES, type Side, type ViperBoard, type ViperRow} from './model';
@@ -78,6 +81,21 @@ export default function ViperClient({initialDate}: {initialDate?: string}) {
   const [selectedContract, setContract] = useState('');
   const [playing, setPlaying] = useState(false);
   const search = useRef<HTMLInputElement>(null);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+
+  useEffect(() => {
+    const sync = () => setWatchlist(readChartWatchlist());
+    const syncStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === CHART_WATCHLIST_STORAGE_KEY) sync();
+    };
+    sync();
+    window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT, sync);
+    window.addEventListener('storage', syncStorage);
+    return () => {
+      window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT, sync);
+      window.removeEventListener('storage', syncStorage);
+    };
+  }, []);
 
   useEffect(() => {
     const feed = createViperFeed({
@@ -239,7 +257,19 @@ export default function ViperClient({initialDate}: {initialDate?: string}) {
           <button className="sort-button" onClick={() => setSort(previous => ({key, desc: previous.key === key && !previous.desc}))}>{labels[position]}{key === sort.key ? sort.desc ? ' ↓' : ' ↑' : ''}</button></th>)}</tr></thead>
         <tbody>{visible.map(row => <tr key={contract(row) + row.cut} className={selectedContract === contract(row) ? 'selected-row' : ''} onClick={() => setContract(contract(row))}>
           {columns.map(key => <td key={key}>
-            {key === 'symbol' ? <button className="open-strike" onClick={() => setContract(contract(row))}>{row.symbol}</button>
+            {key === 'symbol' ? <div className="viper-stock-actions">
+              <button className="open-strike" onClick={() => setContract(contract(row))}>{row.symbol}</button>
+              <button type="button" disabled={watchlist.includes(row.symbol)}
+                title={watchlist.includes(row.symbol) ? 'Already in Charts watchlist' : 'Add to Charts watchlist'}
+                aria-label={watchlist.includes(row.symbol) ? row.symbol + ' is in Charts watchlist' : 'Add ' + row.symbol + ' to Charts watchlist'}
+                onClick={event => {
+                  event.stopPropagation();
+                  setWatchlist(addChartWatchlistSymbol(row.symbol));
+                }}>{watchlist.includes(row.symbol) ? <Check size={13} /> : <Plus size={13} />}</button>
+              <a href={buildTradingViewUrl(row.symbol, row.symbol)} target="_blank" rel="noopener noreferrer"
+                title="Open TradingView" aria-label={'Open ' + row.symbol + ' on TradingView'}
+                onClick={event => event.stopPropagation()}><ExternalLink size={13} /></a>
+            </div>
               : key === 'state' ? <span className={'tag ' + stateClass(row.state)}>{row.state}</span>
               : typeof row[key] === 'string' ? row[key] : format(row[key] as number | null)}
           </td>)}
