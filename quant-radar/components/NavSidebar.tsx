@@ -141,6 +141,7 @@ const NAV_ITEMS: any[] = [
   { href: "/aurum", icon: Crown, label: "Aurum", color: "#e9bd66", rgb: "233,189,102" },
   { href: "/sol", icon: Target, label: "Sol", color: "#76c8ed", rgb: "118,200,237" },
   { href: "/viper", icon: Activity, label: "Viper", color: "#34d399", rgb: "52,211,153" },
+  { href: "/viper-signal", icon: Crosshair, label: "Viper Signal", color: "#34d399", rgb: "52,211,153" },
 // Hidden from navigation at user request (2026-11-01). Routes and services remain available.
 // { href: "/pallas", icon: Cat, label: "Pallas", color: "#5ad9ee", rgb: "90,217,238" },
 // { href: "/irbis", icon: Radar, label: "Irbis", color: "#5ee4c0", rgb: "94,228,192" },
@@ -302,11 +303,13 @@ export default function NavSidebar({hidden=false}:{hidden?:boolean}) {
 
       <nav className="flex gap-1.5 overflow-x-auto lg:flex-col lg:overflow-visible">
         {NAV_ITEMS.map(({ href, icon: Icon, customIcon, label, color, rgb }) => {
-          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+          const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
           return (
             <Link
               key={href}
               href={href}
+              prefetch={href === "/viper-signal" ? false : undefined}
+              aria-current={active ? "page" : undefined}
               className="min-w-[140px] rounded-lg border px-2.5 py-2 transition-all duration-300 lg:min-w-0 mb-1"
               style={{
                 borderColor: active ? `rgba(${rgb}, 0.2)` : "transparent",

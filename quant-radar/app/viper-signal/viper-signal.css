@@ -1,0 +1,118 @@
+.viper-signal {
+  color-scheme: dark;
+  --vs-surface: #101925;
+  --vs-control: #172434;
+  --vs-line: #2a384c;
+  --vs-text: #e9f0f8;
+  --vs-muted: #a2b3c8;
+  --vs-bull: #56dfae;
+  --vs-bear: #ff98a5;
+  max-width: 1480px;
+  width: 100%;
+  min-width: 0;
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding: 20px 20px 90px;
+  color: var(--vs-text);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.viper-signal__header,
+.viper-signal__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  background: var(--vs-surface);
+  border: 1px solid var(--vs-line);
+}
+
+.viper-signal__header {
+  justify-content: space-between;
+  border-radius: 10px 10px 0 0;
+}
+
+.viper-signal__header h1 { margin: 0; font-size: 23px; letter-spacing: -.3px; }
+.viper-signal__header p { margin: 2px 0 0; color: var(--vs-muted); }
+.viper-signal__filters { border-top: 0; border-radius: 0 0 10px 10px; }
+.viper-signal label { display: flex; align-items: center; gap: 7px; color: var(--vs-muted); }
+.viper-signal select,
+.viper-signal input[type="search"],
+.viper-signal__sides button {
+  min-height: 34px;
+  padding: 5px 9px;
+  background: var(--vs-control);
+  border: 1px solid var(--vs-line);
+  border-radius: 6px;
+  color: var(--vs-text);
+}
+
+.viper-signal input[type="search"] { width: 136px; }
+.viper-signal input[type="checkbox"] { accent-color: var(--vs-bull); width: 15px; height: 15px; }
+.viper-signal__sides { display: flex; flex-wrap: wrap; gap: 5px; }
+.viper-signal__sides button { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.viper-signal__sides button span { font-weight: 650; }
+.viper-signal__sides button[data-side="BULL"] span { color: var(--vs-bull); }
+.viper-signal__sides button[data-side="BEAR"] span { color: var(--vs-bear); }
+.viper-signal__sides button[aria-pressed="true"] {
+  border-color: #79a9df;
+  background: #203651;
+}
+
+.viper-signal__status { color: var(--vs-muted); margin: 11px 1px 7px; }
+.viper-signal__table { overflow-x: auto; border: 1px solid var(--vs-line); border-radius: 9px; background: var(--vs-surface); }
+.viper-signal table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+.viper-signal th { color: var(--vs-muted); background: #142031; font-weight: 600; text-align: left; }
+.viper-signal th button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  width: 100%;
+  background: none;
+  color: inherit;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.viper-signal th button:hover { color: var(--vs-text); }
+.viper-signal td { border-top: 1px solid var(--vs-line); padding: 7px 12px; }
+.viper-signal tbody tr:nth-child(even) { background: #111d2b; }
+.viper-signal tbody tr:hover { background: #17273a; }
+.viper-signal__stock { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+.viper-signal__strike,
+.viper-signal__minor { color: var(--vs-muted); font-size: 11px; }
+.viper-signal__second { display: block; margin-top: 2px; }
+.viper-signal__actions { display: flex; align-items: center; gap: 4px; }
+.viper-signal__actions button,
+.viper-signal__actions a {
+  display: inline-grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  background: var(--vs-control);
+  color: #bdd5f2;
+  border: 1px solid var(--vs-line);
+  border-radius: 5px;
+}
+
+.viper-signal__actions button:not(:disabled) { cursor: pointer; }
+.viper-signal__actions button:disabled { color: var(--vs-bull); }
+.viper-signal__actions button:hover:not(:disabled),
+.viper-signal__actions a:hover { border-color: #79a9df; color: #fff; }
+.viper-signal__badge { display: inline-block; border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: 700; }
+.viper-signal__badge[data-side="BULL"] { background: #173b34; color: var(--vs-bull); }
+.viper-signal__badge[data-side="BEAR"] { background: #452932; color: var(--vs-bear); }
+.viper-signal__route { margin-left: 6px; }
+.viper-signal__emphasis { color: #85cbf6; }
+.viper-signal__confirmed { display: flex; align-items: center; gap: 3px; color: var(--vs-bull); font-size: 11px; }
+.viper-signal td.viper-signal__empty { padding: 26px 12px; color: var(--vs-muted); text-align: center; }
+.viper-signal :focus-visible { outline: 2px solid #8bc6ff; outline-offset: 2px; }
+
+@media (max-width: 700px) {
+  .viper-signal { padding-inline: 9px; }
+  .viper-signal__header, .viper-signal__filters { padding-inline: 9px; }
+}
