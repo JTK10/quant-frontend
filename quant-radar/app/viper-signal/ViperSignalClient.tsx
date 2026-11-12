@@ -9,6 +9,9 @@ import {
   CHART_WATCHLIST_STORAGE_KEY, CHART_WATCHLIST_UPDATED_EVENT,
 } from '@/utils/chartWatchlist';
 import type {SignalRow} from './model';
+import type {ViperBoard} from './model';
+import {istSessionDate} from '@/utils/sessionPolling';
+import {createViperFeed} from './feed';
 import './viper-signal.css';
 
 const number = new Intl.NumberFormat('en-IN', {maximumFractionDigits: 2});
@@ -24,7 +27,7 @@ const sideFilters: ReadonlyArray<[SideFilter, string]> = [
   ['Both', 'Both'], ['BULL', 'Bulls'], ['BEAR', 'Bears'],
 ];
 
-export default function ViperSignalClient({date, dates, rows}: {
+export default function ViperSignalClient({date, dates, rows: archivedRows}: {
   date: string | undefined;
   dates: readonly string[];
   rows: readonly SignalRow[];
@@ -37,6 +40,32 @@ export default function ViperSignalClient({date, dates, rows}: {
   const [firstOnly, setFirstOnly] = useState(false);
   const [sort, setSort] = useState<{key: SortKey; descending: boolean}>({key: 'cut', descending: true});
   const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [board, setBoard] = useState<ViperBoard | null>(null);
+  const [liveDate, setLiveDate] = useState(istSessionDate);
+  const [error, setError] = useState('');
+  const archive = Boolean(date && dates.includes(date));
+  const rows = useMemo(() => archive ? archivedRows :
+    board?.cuts.flatMap(c => [...c.bull,...c.bear]) ?? [], [archive, archivedRows, board]);
+
+  useEffect(() => {
+    if (archive) return;
+    const feed = createViperFeed({
+      initialDate:date, now:Date.now, hidden:() => document.hidden,
+      setTimer:setTimeout, clearTimer:clearTimeout,
+      onReset:day => {setLiveDate(day);setBoard(null);setError('');},
+      onData:data => {setBoard(data);setError('');},
+      onError:setError,
+      read:async (day, known, signal) => {
+        const params = new URLSearchParams({date:day, known:known.join(',')});
+        const response = await fetch('/api/viper-signal?'+params, {signal,cache:'default'});
+        if (!response.ok) throw Error('Viper Signal feed unavailable');
+        return response.json();
+      },
+    });
+    const visibility = () => feed.visibility();
+    document.addEventListener('visibilitychange',visibility);
+    return () => {document.removeEventListener('visibilitychange',visibility);feed.stop();};
+  },[archive,date]);
 
   useEffect(() => {
     const sync = () => setWatchlist(readChartWatchlist());
@@ -72,9 +101,10 @@ export default function ViperSignalClient({date, dates, rows}: {
   const bears = scoped.length - bulls;
 
   function selectDate(next: string) {
-    if (next === date || !dates.includes(next)) return;
+    if (next === date || (!dates.includes(next) && next !== 'live')) return;
     setCut('');
-    startTransition(() => router.push('/viper-signal?date=' + encodeURIComponent(next), {scroll: false}));
+    startTransition(() => router.push(next === 'live' ? '/viper-signal' :
+      '/viper-signal?date=' + encodeURIComponent(next), {scroll: false}));
   }
 
   function sortBy(key: SortKey) {
@@ -89,13 +119,13 @@ export default function ViperSignalClient({date, dates, rows}: {
       <header className="viper-signal__header">
         <div>
           <h1 id="viper-signal-title">Viper Signal</h1>
-          <p>Historical signals from the bull and bear scanners</p>
+          <p>{archive ? 'Historical signals' : 'Live bull and bear signals · '+liveDate}</p>
         </div>
         <label>
           Session
-          <select aria-label="Session" value={date ?? ''} disabled={pending || !dates.length}
+          <select aria-label="Session" value={date ?? 'live'} disabled={pending}
             onChange={event => selectDate(event.target.value)}>
-            {!dates.length && <option value="">No saved sessions</option>}
+            <option value="live">Live session</option>
             {dates.map(day => <option key={day} value={day}>{day}</option>)}
           </select>
         </label>
@@ -130,10 +160,13 @@ export default function ViperSignalClient({date, dates, rows}: {
 
       <p className="viper-signal__status" role="status">
         {pending ? 'Loading session…' : `${visible.length} of ${scoped.length} signals`}
+        {!archive && (board?.lastCut ? ' · Processed '+board.lastCut+' IST' : ' · Waiting for completed session data')}
+        {!archive && board?.cuts.some(c => c.recovered) && ' · Includes recovered cuts'}
+        {error && ' · '+error+' · Last received data retained'}
       </p>
 
       <div className="viper-signal__table">
-        <table aria-label="Viper historical signals">
+        <table aria-label="Viper bull and bear signals">
           <thead>
             <tr>
               {labels.map(([key, label]) =>
@@ -203,7 +236,7 @@ export default function ViperSignalClient({date, dates, rows}: {
               );
             })}
             {!visible.length && <tr><td colSpan={labels.length} className="viper-signal__empty">
-              {scoped.length ? 'No signals match these filters.' : 'No saved signals for this session.'}
+              {scoped.length ? 'No signals match these filters.' : archive ? 'No saved signals for this session.' : 'Waiting for qualifying bull or bear setups.'}
             </td></tr>}
           </tbody>
         </table>
