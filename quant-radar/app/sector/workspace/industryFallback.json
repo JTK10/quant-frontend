@@ -1,0 +1,76 @@
+{
+  "Financial Services": [
+    "360ONE",
+    "ANANDRATHI",
+    "CUB",
+    "ICICILIFE",
+    "KARURVYSYA",
+    "MAHABANK",
+    "NAM-INDIA",
+    "UJJIVANSFB"
+  ],
+  "Consumer Durables": [
+    "AMBER",
+    "ASIANPAINT",
+    "CROMPTON",
+    "DIXON",
+    "HAVELLS",
+    "PGEL",
+    "TITAN",
+    "VOLTAS"
+  ],
+  "Healthcare": [
+    "APOLLOHOSP"
+  ],
+  "Capital Goods": [
+    "ASTRAL",
+    "BEL",
+    "COCHINSHIP",
+    "CUMMINSIND",
+    "DATAPATTNS",
+    "ENRIN",
+    "HAL",
+    "KEI",
+    "POLYCAB",
+    "SYRMA"
+  ],
+  "Automobile and Auto Components": [
+    "ATHERENERG"
+  ],
+  "Telecommunication": [
+    "BHARTIARTL",
+    "IDEA",
+    "INDUSTOWER"
+  ],
+  "Services": [
+    "CONCOR",
+    "DELHIVERY",
+    "INDIGO"
+  ],
+  "Chemicals": [
+    "COROMANDEL",
+    "NAVINFLUOR",
+    "PIDILITIND",
+    "PIIND",
+    "SRF",
+    "UPL"
+  ],
+  "Construction Materials": [
+    "GRASIM"
+  ],
+  "Consumer Services": [
+    "INDHOTEL",
+    "JUBLFOOD",
+    "TRENT"
+  ],
+  "Construction": [
+    "LT",
+    "RVNL"
+  ],
+  "Textiles": [
+    "PAGEIND"
+  ],
+  "Information Technology": [
+    "SAGILITY"
+  ]
+}
