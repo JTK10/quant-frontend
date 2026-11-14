@@ -7,9 +7,22 @@ import baseline from '../baselinePrepared.json';
 import template from '../workspaceTemplate';
 import runtime from '../workspaceRuntime';
 const towerMembers: Record<string,string[]> = {...members};
-for (const [sector, symbols] of Object.entries(industryFallback)) {
+const aliases: Record<string,string> = {
+ Healthcare: 'PHARMA',
+ 'Automobile and Auto Components': 'AUTO',
+ 'Information Technology': 'IT',
+ 'Financial Services': 'FIN SERVICE',
+};
+function addMembers(sector: string, symbols: string[]) {
  towerMembers[sector] = [...new Set([...(towerMembers[sector] || []), ...symbols])];
 }
+for (const [sector, symbols] of Object.entries(industryFallback)) {
+ addMembers(aliases[sector] || sector, symbols);
+}
+addMembers('PVT BANK', ['CUB', 'KARURVYSYA', 'UJJIVANSFB']);
+addMembers('PSU BANK', ['MAHABANK']);
+addMembers('BANK', [...(towerMembers['PVT BANK'] || []), ...(towerMembers['PSU BANK'] || [])]);
+addMembers('FIN SERVICE', towerMembers['BANK']);
 export const dynamic='force-dynamic';
 const htmlCache=new Map<string,string>();
 const responseHeaders={'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, max-age=300','X-Content-Type-Options':'nosniff','X-Frame-Options':'SAMEORIGIN'};
