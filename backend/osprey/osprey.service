@@ -1,0 +1,25 @@
+[Unit]
+Description=Osprey multi-strike OI scanner
+After=network-online.target ocelot.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/osprey
+ExecStart=/usr/bin/python3 -u /home/ubuntu/osprey/osprey_live.py
+Environment=TZ=Asia/Kolkata
+Restart=on-failure
+RestartSec=45
+MemoryHigh=100M
+MemoryMax=144M
+CPUQuota=15%
+Nice=15
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/ubuntu/osprey
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

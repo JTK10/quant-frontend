@@ -1,0 +1,27 @@
+.osprey{color-scheme:dark;--os-bg:#0b111d;--os-panel:#111c2c;--os-text:#e6eef9;--os-muted:#a6b6cc;--os-line:#26364b;--os-accent:#9bd2ff;--os-up:#67e4a6;--os-down:#ff8896;margin:20px auto;padding:0 16px;max-width:1360px;background:var(--os-bg);color:var(--os-text);font:13px Inter,system-ui,sans-serif}
+.osprey header,.osprey-controls,.osprey-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.osprey header{justify-content:space-between;gap:12px;margin-bottom:8px}
+.osprey h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.025em}
+.osprey p,.osprey small{color:var(--os-muted)}
+.osprey p{margin:8px 0;line-height:1.4}
+.osprey button,.osprey select,.osprey input,.osprey-actions a{background:#152238;color:inherit;border:1px solid #33435c;border-radius:5px;padding:5px 7px;font:inherit}
+.osprey button{cursor:pointer}
+.osprey button:disabled{cursor:default;opacity:.65}
+.osprey label{white-space:nowrap}
+.osprey-controls input[type=search]{max-width:122px}
+.osprey-actions{flex-wrap:nowrap;gap:3px}
+.osprey-actions button,.osprey-actions a{font-size:11px;line-height:1.2;text-decoration:none;padding:3px 5px}
+.osprey-actions button[aria-pressed=true]{color:var(--os-up);border-color:#347253}
+.osprey-table{overflow:auto}
+.osprey table{width:100%;border-collapse:collapse;text-align:left;font-variant-numeric:tabular-nums}
+.osprey th,.osprey td{padding:6px 7px;border-bottom:1px solid var(--os-line);white-space:nowrap}
+.osprey th{color:var(--os-muted);font-size:11px}
+.osprey tbody tr:nth-child(odd){background:var(--os-panel)}
+.osprey th button{background:transparent;border:0;white-space:nowrap;padding:0;font-weight:650}
+.osprey th[aria-sort] button{color:var(--os-accent)}
+.osprey td.num{text-align:right}
+.osprey .positive{color:var(--os-up)}
+.osprey .negative,.osprey .osprey-error{color:var(--os-down)}
+.osprey .osprey-sector{display:block;font-size:10px;white-space:normal;max-width:120px}
+.osprey small{font-size:10px}
+.osprey .osprey-strikes{max-width:180px;white-space:normal}

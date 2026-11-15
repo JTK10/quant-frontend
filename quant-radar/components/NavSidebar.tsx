@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat, Bot, Crown, Radar } from "lucide-react";
+import { Activity, BarChart2, Brain, ChevronRight, Zap, TrendingUp, Crosshair, Target, Layers, Cat, Bot, Radar } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const PantherIcon = (props: any) => (
@@ -138,7 +138,7 @@ const NAV_ITEMS: any[] = [
   { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },
   { href: "/kairos", icon: Bot, label: "Kairos", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/lynx", icon: LynxIcon, label: "Lynx", color: "#a78bfa", rgb: "167,139,250" },
-  { href: "/aurum", icon: Crown, label: "Aurum", color: "#e9bd66", rgb: "233,189,102" },
+  { href: "/osprey", icon: Radar, label: "Osprey", color: "#9bd2ff", rgb: "155,210,255" },
   { href: "/sol", icon: Target, label: "Sol", color: "#76c8ed", rgb: "118,200,237" },
   { href: "/viper", icon: Activity, label: "Viper", color: "#34d399", rgb: "52,211,153" },
   { href: "/viper-signal", icon: Crosshair, label: "Viper Signal", color: "#34d399", rgb: "52,211,153" },
