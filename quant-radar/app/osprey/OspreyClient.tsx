@@ -1,6 +1,7 @@
 'use client';
 
 import {useEffect,useMemo,useState} from 'react';
+import {ArrowDown,ArrowUp,ArrowUpRight,ChartCandlestick,Check,ChevronLeft,ChevronRight,Plus,Radar,Search} from 'lucide-react';
 import {buildTradingViewUrl} from '@/utils/backend';
 import {istSessionDate} from '@/utils/sessionPolling';
 import {
@@ -96,61 +97,93 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
     if (value===cut) return;
     setBoard(null);setError('');setCutDay(value?date:'');setCut(value);
   }
+  const isLive=!day&&!cut;
   const describe=board?.available
-    ? 'Cut '+board.cut+' IST · '+visible.length+' of '+rows.length+' stocks'
-    : board ? 'No completed Osprey cuts published for this session.' : 'Loading Osprey…';
+    ? visible.length+' of '+rows.length+' stocks'
+    : board ? 'No completed cuts for this session.' : 'Loading Osprey…';
 
   return <section className="osprey" aria-labelledby="osprey-title">
-    <header>
-      <div><h1 id="osprey-title">Osprey</h1><p>Multi-strike OI · {day ? 'Session '+day : 'Live'+(session?' · '+session:'')}</p></div>
-      <div className="osprey-controls">
-        <label>Session <input aria-label="Session date" type="date" max={istSessionDate()} value={day||session}
-          onChange={event=>chooseDay(event.target.value)} /></label>
-        <button type="button" onClick={()=>chooseDay('')} disabled={!day&&!cut}>Live</button>
-        <button type="button" aria-label="Previous cut" disabled={selectedIndex<=0} onClick={()=>chooseCut(cuts[selectedIndex-1])}>‹</button>
-        <select aria-label="Five-minute cut" value={cut} onChange={event=>chooseCut(event.target.value)}>
-          <option value="">Latest cut</option>
-          {cuts.map(time=><option key={time} value={time}>{time} IST</option>)}
-        </select>
-        <button type="button" aria-label="Next cut" disabled={!cut||selectedIndex<0||selectedIndex>=cuts.length-1} onClick={()=>chooseCut(cuts[selectedIndex+1])}>›</button>
-        <select aria-label="Ranking mode" value={mode} onChange={event=>setMode(event.target.value as OspreyRow['mode'])}>
-          {MODES.map(item=><option key={item}>{item}</option>)}
-        </select>
+    <header className="osprey-header">
+      <div className="osprey-identity">
+        <span className="osprey-mark"><Radar size={24} aria-hidden="true" /></span>
+        <div><h1 id="osprey-title">Osprey</h1><p>Multi-strike open interest</p></div>
+      </div>
+      <div className="osprey-session">
+        <label className="osprey-date">Session
+          <input aria-label="Session date" type="date" max={istSessionDate()} value={day||session}
+            onChange={event=>chooseDay(event.target.value)} />
+        </label>
+        <div className="osprey-cuts">
+          <button type="button" aria-label="Previous cut" disabled={selectedIndex<=0} onClick={()=>chooseCut(cuts[selectedIndex-1])}>
+            <ChevronLeft size={15} aria-hidden="true" />
+          </button>
+          <select aria-label="Five-minute cut" value={cut} onChange={event=>chooseCut(event.target.value)}>
+            <option value="">Latest cut</option>
+            {cuts.map(time=><option key={time} value={time}>{time} IST</option>)}
+          </select>
+          <button type="button" aria-label="Next cut" disabled={!cut||selectedIndex<0||selectedIndex>=cuts.length-1} onClick={()=>chooseCut(cuts[selectedIndex+1])}>
+            <ChevronRight size={15} aria-hidden="true" />
+          </button>
+        </div>
+        <button className="osprey-live" type="button" onClick={()=>chooseDay('')} disabled={isLive}>
+          <span aria-hidden="true" /> Live
+        </button>
+      </div>
+    </header>
+
+    <div className="osprey-board">
+      <div className="osprey-toolbar">
+        <div className="osprey-modes" role="group" aria-label="Ranking mode">
+          {MODES.map(item=><button key={item} type="button" aria-pressed={mode===item} onClick={()=>setMode(item)}>{item}</button>)}
+        </div>
+        <div className="osprey-filters">
+          <label className="osprey-search">
+            <Search size={15} aria-hidden="true" />
+            <input aria-label="Search stocks" placeholder="Find stock" type="search" value={query} onChange={event=>setQuery(event.target.value)} />
+          </label>
+          <select aria-label="Side" value={side} onChange={event=>setSide(event.target.value)}>
+            <option value="">All sides</option><option value="BULL">Bulls</option><option value="BEAR">Bears</option>
+          </select>
+          <select aria-label="Filter by state" value={state} onChange={event=>setState(event.target.value)}>
+            <option value="">All states</option>{STATES.map(item=><option key={item}>{item}</option>)}
+          </select>
         <select aria-label="Rows" value={limit} onChange={event=>setLimit(event.target.value)}>
           <option value="30">Top 30</option><option value="all">All stocks</option>
         </select>
-        <select aria-label="Side" value={side} onChange={event=>setSide(event.target.value)}>
-          <option value="">All sides</option><option value="BULL">Bulls</option><option value="BEAR">Bears</option>
-        </select>
-        <select aria-label="Filter by state" value={state} onChange={event=>setState(event.target.value)}>
-          <option value="">All states</option>{STATES.map(item=><option key={item}>{item}</option>)}
-        </select>
-        <input aria-label="Search stocks" placeholder="Search stocks" type="search" value={query} onChange={event=>setQuery(event.target.value)} />
+        </div>
       </div>
-    </header>
-    <p role="status" className={error?'osprey-error':undefined}>{error||describe}{error&&board?.available?' · '+describe:''}</p>
-    <div className="osprey-table"><table aria-label="Osprey stock rankings">
-      <thead><tr><th scope="col">#</th><th scope="col">Stock</th><th scope="col">Side</th>
-        {headers.map(([key,label])=><th key={key} scope="col"
+      <div className="osprey-status" role="status">
+        {board?.available&&<span className="osprey-timestamp">Cut <strong>{board.cut}</strong> IST</span>}
+        <span className={error?'osprey-error':undefined}>{error||describe}</span>
+        {error&&board?.available&&<span>{describe}</span>}
+      </div>
+    <div className="osprey-table" tabIndex={0} role="region" aria-label="Osprey stock rankings">
+      <table aria-label="Stock rankings">
+      <thead><tr><th className="osprey-rank" scope="col">#</th><th className="osprey-stock" scope="col">Stock</th><th scope="col">Side</th>
+        {headers.map(([key,label])=><th className="num" key={key} scope="col"
           aria-sort={sort.key===key?(sort.descending?'descending':'ascending'):undefined}>
           <button type="button" onClick={()=>setSort(previous=>({key,descending:previous.key===key?!previous.descending:true}))}>
-            {label}{sort.key===key?(sort.descending?' ↓':' ↑'):''}
+            {label}
+            {sort.key===key&&(sort.descending?<ArrowDown size={12} aria-hidden="true" />:<ArrowUp size={12} aria-hidden="true" />)}
           </button>
         </th>)}
         <th scope="col">First seen</th><th scope="col">Latest flow</th><th scope="col">State</th><th scope="col">Strikes</th>
       </tr></thead>
       <tbody>{visible.map((row,i)=><tr key={row.symbol}>
-        <td className="num">{i+1}</td>
-        <td><b>{row.symbol}</b><div className="osprey-actions">
+        <td className="osprey-rank">{i+1}</td>
+        <td className="osprey-stock"><b>{row.symbol}</b><div className="osprey-actions">
           <button type="button" aria-label={'Add '+row.symbol+' to Charts watchlist'} aria-pressed={watchlist.includes(row.symbol)}
+            title={watchlist.includes(row.symbol)?'In Charts watchlist':'Add to Charts watchlist'}
             disabled={watchlist.includes(row.symbol)} onClick={()=>setWatchlist(addChartWatchlistSymbol(row.symbol))}>
-            {watchlist.includes(row.symbol)?'✓':'+'}
+            {watchlist.includes(row.symbol)?<Check size={13} aria-hidden="true" />:<Plus size={13} aria-hidden="true" />}
           </button>
-          <a href={'/charts?'+new URLSearchParams({symbol:row.symbol,date})} target="_blank" rel="noopener noreferrer">Chart ↗</a>
-          <a href={buildTradingViewUrl(row.symbol)} target="_blank" rel="noopener noreferrer">TV ↗</a>
+          <a href={'/charts?'+new URLSearchParams({symbol:row.symbol,date})} aria-label={'Open '+row.symbol+' in Charts'}
+            title="Open Charts" target="_blank" rel="noopener noreferrer"><ChartCandlestick size={13} aria-hidden="true" /></a>
+          <a href={buildTradingViewUrl(row.symbol)} aria-label={'Open '+row.symbol+' on TradingView'}
+            title="Open TradingView" target="_blank" rel="noopener noreferrer">TV <ArrowUpRight size={11} aria-hidden="true" /></a>
         </div></td>
-        <td className={row.side==='BULL'?'positive':row.side==='BEAR'?'negative':undefined}>{row.side}</td>
-        <td className="num">{row.score?.toFixed(2)??'—'}</td>
+        <td><span className="osprey-side" data-side={row.side}>{row.side}</span></td>
+        <td className="num"><strong className="osprey-score">{row.score?.toFixed(2)??'—'}</strong></td>
         <td className="num" title={row.oi_5m_route}>{pct(row.oi_5m)}</td>
         <td className="num" title={row.oi_15m_route}>{pct(row.oi_15m)}</td>
         <td className="num">{row.rvol===null?'—':row.rvol.toFixed(2)+'×'}{row.rvol!==null&&row.rvol_sessions?<small> {row.rvol_sessions}d</small>:null}</td>
@@ -158,10 +191,14 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
           {pct(row.sector_strength,true)}{row.sector&&<small className="osprey-sector">{row.sector}</small>}
         </td>
         <td className={'num '+sign(row.move_pct)}>{pct(row.move_pct,true)}</td>
-        <td>{row.first||'—'}</td><td>{row.last||'—'}</td>
-        <td>{row.confirmed?'Confirmed '+row.confirmed:row.state}</td><td className="osprey-strikes">{row.strikes||'—'}</td>
+        <td className="osprey-time">{row.first||'—'}</td><td className="osprey-time">{row.last||'—'}</td>
+        <td><span className="osprey-state" data-state={row.state}>{row.state}{row.confirmed&&' '+row.confirmed}</span></td>
+        <td className="osprey-strikes">{row.strikes||'—'}</td>
       </tr>)}
-      {!visible.length&&<tr><td colSpan={13}>{board?.available?'No stocks match these filters.':describe}</td></tr>}</tbody>
+      {!visible.length&&<tr><td className="osprey-empty" colSpan={13}>
+        {board?.available?'No stocks match these filters.':error||describe}
+      </td></tr>}</tbody>
     </table></div>
+    </div>
   </section>;
 }
