@@ -28,24 +28,26 @@ export default function KairosClient({ events, engine, dateStr, asOf, feedError 
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 15000); return () => window.clearInterval(timer); }, []);
   const { open, closed, realized, unrealized, health, skips } = useMemo(() => kairosSummary(activeFeed.events, engine), [activeFeed.events, engine]);
   const aurum = engine === "kairos10";
+  const osprey = engine === "kairos29";
   const ninth = engine === "kairos9";
   const rusty = engine === "kairos_rusty";
   const v2 = engine !== "kairos";
+  const decisionDetails = ninth || aurum || osprey;
   const healthTime = kairosNumber(health?.ts);
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(now));
   const late = dateStr === today && healthTime !== null && now / 1000 - healthTime > (kairosNumber(health?.heartbeat_seconds) ?? 900) + 120;
   const healthClock = healthTime === null ? "" : new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(healthTime * 1000));
-  const warning = Boolean(activeFeed.error) || late || Boolean(health?.data_error || health?.publish_error || ((ninth || aurum) && health?.last_error));
-  const lastFailure = (ninth || aurum) && health?.last_failure && typeof health.last_failure === "object" ? health.last_failure as KairosEvent : undefined;
-  const lastDecision = (ninth || aurum) && health?.last_decision && typeof health.last_decision === "object" ? health.last_decision as KairosEvent : undefined;
-  const lastSkip = ninth || aurum ? [...skips].sort((a,b)=>(kairosNumber(b.ts)??0)-(kairosNumber(a.ts)??0))[0] : undefined;
+  const warning = Boolean(activeFeed.error) || late || Boolean(health?.data_error || health?.publish_error || (decisionDetails && health?.last_error));
+  const lastFailure = decisionDetails && health?.last_failure && typeof health.last_failure === "object" ? health.last_failure as KairosEvent : undefined;
+  const lastDecision = decisionDetails && health?.last_decision && typeof health.last_decision === "object" ? health.last_decision as KairosEvent : undefined;
+  const lastSkip = decisionDetails ? [...skips].sort((a,b)=>(kairosNumber(b.ts)??0)-(kairosNumber(a.ts)??0))[0] : undefined;
   const status = late ? "Service heartbeat overdue" : text(health?.status ?? (dateStr === today ? "Waiting for service heartbeat" : "Historical session"));
   const featured = open[0] ?? closed[0], entry = featured?.entry, exit = featured?.exit, mark = featured?.mtm;
   const score = kairosNumber(entry?.ai_score ?? exit?.ai_score), validScore = score !== null && score >= 0 && score <= 1;
   const tradePnl = exit?.pnl ?? mark?.pnl;
   const usedCapital = open.reduce((sum, p) => sum + (kairosNumber(p.entry?.capital_used) ?? 0), 0);
-  const selectionValue = (e?: KairosEvent) => rusty ? `${fmt(e?.rusty_pct)}%` : aurum ? `${fmt((kairosNumber(e?.ai_score) ?? NaN) * 100,1)} / 100` : ai(e?.ai_score);
-  const aurumThreshold = kairosNumber(health?.score_threshold) ?? 0.30;
+  const selectionValue = (e?: KairosEvent) => rusty ? `${fmt(e?.rusty_pct)}%` : aurum || osprey ? `${fmt((kairosNumber(e?.ai_score) ?? NaN) * 100,1)} / 100` : ai(e?.ai_score);
+  const modelThreshold = kairosNumber(health?.score_threshold) ?? (osprey ? 0.28 : 0.30);
   const columns = v2 ? ["ENTRY", "OPTION", rusty ? "RUSTY OI" : "AI SCORE", "BUY / ASK", "MARK / BID", "QTY / LOTS", "CAPITAL", "STOP", "PAPER P&L"] : ["ENTRY", "OPTION", "BUY / ASK", "MARK / BID", "PAPER P&L", "U-TARGET", "U-STOP", "QTY"];
   return <div className={styles.content}>
     {activeFeed.error && <div className={`${styles.health} ${styles.healthWarning}`} role="alert">{activeFeed.error}</div>}
@@ -64,7 +66,7 @@ export default function KairosClient({ events, engine, dateStr, asOf, feedError 
           <dl className={styles.tradeDetails}><Detail label="ENTRY / ASK">₹{fmt(entry?.entry ?? exit?.entry_fill)}</Detail><Detail label={exit ? "EXIT / BID" : "MARK / BID"}>₹{fmt(exit?.entry ?? mark?.entry)}</Detail><Detail label={v2 ? "PREMIUM STOP" : "UNDERLYING STOP"}>{fmt(v2 ? (mark?.stop_premium ?? exit?.stop_premium ?? entry?.stop_premium) : entry?.u_stop)}</Detail><Detail label={v2 ? "QUANTITY / LOTS" : "QUANTITY"}>{v2 ? `${fmt(entry?.quantity ?? exit?.quantity,0)} / ${fmt(entry?.lots ?? exit?.lots,0)}` : fmt(entry?.lot ?? exit?.lot,0)}</Detail></dl>
           <div className={styles.executionTimeline}><span><span className={styles.timelineDot}/>Entered <b title={text(entry?.entry_at)}>{time(entry?.time)} IST</b></span><span className={styles.timelineLine}/><span><span className={`${styles.timelineDot} ${exit ? styles.closedDot : ""}`}/>{exit ? <>Exited <b title={text(exit.exit_at)}>{time(exit.time)} IST</b></> : <b>Position open</b>}</span></div>
           {mark?.quote_at != null && !exit && <p className={styles.quoteNote}>Latest quote: {text(mark.quote_at)}</p>}
-        </> : <div className={styles.standby}><div className={styles.standbyIcon}><Crosshair size={29} strokeWidth={1.2}/></div><h2>No position this session</h2><p>{aurum ? "Waiting for an Aurum pullback confirmation, qualifying AI score and executable option depth. Entry window 09:45–11:00 IST." : ninth ? "Waiting for a fresh Irbis candidate, measured option quotes and an exact T+5 capture. Paper simulation only." : rusty ? "Waiting for a fresh Rusty confirmed-entry label with a completed cash candle and executable option depth." : v2 ? "Waiting for a fresh, confirmed Pallas signal that meets the AI selection and execution checks." : "Entries appear here when the Kairos engine publishes a trade."}</p><span>No qualifying signal means no trade.</span></div>}
+        </> : <div className={styles.standby}><div className={styles.standbyIcon}><Crosshair size={29} strokeWidth={1.2}/></div><h2>No position this session</h2><p>{osprey ? "Waiting for an Osprey confirmation, a completed next cash candle, and sufficient option quote depth." : aurum ? "Waiting for an Aurum pullback confirmation, qualifying AI score and executable option depth. Entry window 09:45–11:00 IST." : ninth ? "Waiting for a fresh Irbis candidate, measured option quotes and an exact T+5 capture. Paper simulation only." : rusty ? "Waiting for a fresh Rusty confirmed-entry label with a completed cash candle and executable option depth." : v2 ? "Waiting for a fresh, confirmed Pallas signal that meets the AI selection and execution checks." : "Entries appear here when the Kairos engine publishes a trade."}</p><span>No qualifying signal means no trade.</span></div>}
       </section>
       {rusty && <section className={`${styles.panel} ${styles.aiPanel}`} aria-label="Rusty selection">
         <div className={styles.panelHeading}><span><Activity size={16}/>Rusty selection</span><span className={styles.aiBadge}>OI CONFIRMED</span></div>
@@ -80,16 +82,21 @@ export default function KairosClient({ events, engine, dateStr, asOf, feedError 
         {lastSkip && <p className={styles.aiNote}>Latest skip {text(lastSkip.name)} · {time(lastSkip.time)} IST: {text(lastSkip.reason)}</p>}
         {lastFailure && <p className={styles.aiNote}>Last failure {text(lastFailure.symbol)} · {text(lastFailure.cut)}: {text(lastFailure.reason)}</p>}
       </section>}
-      {aurum && <section className={`${styles.panel} ${styles.aiPanel}`} aria-label="Kairos 10 Aurum AI selection">
-        <div className={styles.panelHeading}><span><BrainCircuit size={16}/>Kairos 10</span><span className={styles.aiBadge}>POWERED BY AURUM</span></div>
-        <div className={styles.scoreArea}><div className={styles.scoreRing}><svg viewBox="0 0 110 110" aria-hidden="true"><circle className={styles.ringTrack} cx="55" cy="55" r="46"/><circle className={styles.ringValue} cx="55" cy="55" r="46" pathLength="100" strokeDasharray={`${validScore ? score*100 : 0} 100`}/></svg><div><strong>{validScore ? fmt(score*100,1) : "—"}</strong><span>AI SCORE / 100</span></div></div><div className={styles.scoreDescription}><span className={styles.eyebrow}>{featured ? "SELECTED TRADE" : "ENTRY REQUIREMENT"}</span><h3>{featured ? "Aurum-confirmed execution" : "Pullback, then confirmation"}</h3><p>{featured ? "Model score recorded at confirmation." : "First eligible trade. No daily fallback."}</p><span className={styles.threshold}>Minimum score <b>{fmt(aurumThreshold*100,0)} / 100</b></span></div></div>
-        <div className={styles.rules}><span><ShieldCheck size={13}/>Whole lots · ₹30,000 budget · one-lot buffer to ₹35,000</span><span><Crosshair size={13}/>Initial stop −10% · Kairos stepped trailing</span><span><Clock3 size={13}/>1 entry / day · entries 09:45–11:00 IST</span><span><Activity size={13}/>45-minute stagnancy · 11:30 nonrunner exit · runners to 15:29</span></div>
-        <p className={styles.aiNote}>AI score is a learned ranking, not a win probability. Paper fills use quoted bid/ask depth; P&amp;L is before charges.</p>
+      {(aurum || osprey) && <section className={`${styles.panel} ${styles.aiPanel}`} aria-label={osprey ? "Kairos 29 Osprey model selection" : "Kairos 10 Aurum AI selection"}>
+        <div className={styles.panelHeading}><span><BrainCircuit size={16}/>{osprey ? "Kairos 29" : "Kairos 10"}</span><span className={styles.aiBadge}>{osprey ? "POWERED BY OSPREY" : "POWERED BY AURUM"}</span></div>
+        <div className={styles.scoreArea}><div className={styles.scoreRing}><svg viewBox="0 0 110 110" aria-hidden="true"><circle className={styles.ringTrack} cx="55" cy="55" r="46"/><circle className={styles.ringValue} cx="55" cy="55" r="46" pathLength="100" strokeDasharray={`${validScore ? score*100 : 0} 100`}/></svg><div><strong>{validScore ? fmt(score*100,1) : "—"}</strong><span>AI SCORE / 100</span></div></div><div className={styles.scoreDescription}>
+          <span className={styles.eyebrow}>{featured ? "SELECTED TRADE" : "ENTRY REQUIREMENT"}</span>
+          <h3>{osprey ? (featured ? "Osprey-confirmed execution" : "Confirm, then wait for the next cash candle") : (featured ? "Aurum-confirmed execution" : "Pullback, then confirmation")}</h3>
+          <p>{osprey ? "For candidates at the same cut, price tier takes priority, followed by model score." : featured ? "Model score recorded at confirmation." : "First eligible trade. No daily fallback."}</p>
+          <span className={styles.threshold}>Minimum score <b>{fmt(modelThreshold*100,0)} / 100</b></span>
+        </div></div>
+        <div className={styles.rules}><span><ShieldCheck size={13}/>Whole lots · ₹30,000 budget · one-lot buffer to ₹35,000</span><span><Crosshair size={13}/>Initial stop −10% · Kairos stepped trailing</span><span><Clock3 size={13}/>{osprey ? "1 entry / day · scheduled cuts 09:40–11:00 IST" : "1 entry / day · entries 09:45–11:00 IST"}</span><span><Activity size={13}/>45-minute stagnancy · 11:30 nonrunner exit · runners to 15:29</span></div>
+        <p className={styles.aiNote}>{osprey ? "The model scores completed inputs. Paper entry requires a quote received after scoring, within 90 seconds of the scheduled cut. P&L is before charges." : "AI score is a learned ranking, not a win probability. Paper fills use quoted bid/ask depth. P&L is before charges."}</p>
         {lastDecision && <p className={styles.aiNote}>Latest decision {text(lastDecision.symbol)} · {text(lastDecision.cut)}: {text(lastDecision.reason)}</p>}
         {lastSkip && <p className={styles.aiNote}>Latest skip {text(lastSkip.name)} · {time(lastSkip.time)} IST: {text(lastSkip.reason)}</p>}
         {lastFailure && <p className={styles.aiNote}>Last failure {text(lastFailure.symbol)} · {text(lastFailure.cut)}: {text(lastFailure.reason)}</p>}
       </section>}
-      {v2 && !rusty && !ninth && !aurum && <section className={`${styles.panel} ${styles.aiPanel}`} aria-label="AI selection">
+      {v2 && !rusty && !decisionDetails && <section className={`${styles.panel} ${styles.aiPanel}`} aria-label="AI selection">
         <div className={styles.panelHeading}><span><BrainCircuit size={16}/>AI selection</span><span className={styles.aiBadge}>PALLAS AI</span></div>
         <div className={styles.scoreArea}><div className={styles.scoreRing}><svg viewBox="0 0 110 110" aria-hidden="true"><circle className={styles.ringTrack} cx="55" cy="55" r="46"/><circle className={styles.ringValue} cx="55" cy="55" r="46" pathLength="100" strokeDasharray={`${validScore ? score*100 : 0} 100`}/></svg><div><strong>{ai(score)}</strong><span>SELECTION SCORE</span></div></div><div className={styles.scoreDescription}><span className={styles.eyebrow}>{featured ? "SELECTED TRADE" : "ENTRY REQUIREMENT"}</span><h3>{featured ? "AI-filtered execution" : "Quality over quantity"}</h3><p>{featured ? "Score recorded at entry." : "First eligible signal of the day."}</p><span className={styles.threshold}>Minimum score <b>70%</b></span></div></div>
         <div className={styles.rules}><span><ShieldCheck size={13}/>Whole lots · ₹30,000 budget</span><span><Crosshair size={13}/>Initial stop −15% · step trailing</span><span><Clock3 size={13}/>1 entry / day · time exit 11:30 IST</span></div><p className={styles.aiNote}>AI score is a model ranking, not a win probability.</p>

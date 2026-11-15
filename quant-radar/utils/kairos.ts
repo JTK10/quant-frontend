@@ -1,4 +1,4 @@
-export type KairosEngine = "kairos" | "kairos2" | "kairos_rusty" | "kairos9" | "kairos10";
+export type KairosEngine = "kairos" | "kairos2" | "kairos_rusty" | "kairos9" | "kairos10" | "kairos29";
 export type KairosEvent = Record<string, unknown>;
 export type KairosTrade = { sid: string; entry?: KairosEvent; mtm?: KairosEvent; exit?: KairosEvent };
 
@@ -9,6 +9,7 @@ export function kairosNumber(value: unknown): number | null {
 }
 
 export function kairosSource(e: KairosEvent): KairosEngine | null {
+  if (e.source === "kairos29" || e.cap === "KAIROS29") return "kairos29";
   if (e.source === "kairos10" || e.cap === "KAIROS10") return "kairos10";
   if (e.source === "kairos9" || e.cap === "KAIROS9") return "kairos9";
   if (e.source === "kairos_rusty" || e.cap === "KAIROS_RUSTY") return "kairos_rusty";
@@ -18,7 +19,7 @@ export function kairosSource(e: KairosEvent): KairosEngine | null {
 }
 
 export function resolveKairosEngine(value: unknown): KairosEngine {
-  return value === "kairos" || value === "kairos2" || value === "kairos_rusty" || value === "kairos9" ? value : "kairos10";
+  return value === "kairos" || value === "kairos2" || value === "kairos_rusty" || value === "kairos9" || value === "kairos29" ? value : "kairos10";
 }
 
 // The page needs each entry/exit and latest mark, not every superseded mark or

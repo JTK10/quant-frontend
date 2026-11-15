@@ -1,0 +1,499 @@
+{
+  "sessions": {
+    "2026-09-07": {
+      "split": "fit"
+    },
+    "2026-09-08": {
+      "split": "fit"
+    },
+    "2026-09-09": {
+      "split": "fit",
+      "pick": {
+        "symbol": "HDFCLIFE",
+        "side": "BEAR",
+        "cut": "09:45",
+        "entryTime": "09:50",
+        "score": 0.411914,
+        "cashReference": 521.3,
+        "mfe": 2.369,
+        "mae": 0.019,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-09-10": {
+      "split": "fit",
+      "pick": {
+        "symbol": "INDIGO",
+        "side": "BEAR",
+        "cut": "09:50",
+        "entryTime": "09:55",
+        "score": 0.30731,
+        "cashReference": 4880.0,
+        "mfe": 0.041,
+        "mae": 0.266,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-09-11": {
+      "split": "fit",
+      "pick": {
+        "symbol": "LODHA",
+        "side": "BEAR",
+        "cut": "09:50",
+        "entryTime": "09:55",
+        "score": 0.325023,
+        "cashReference": 1091.1,
+        "mfe": 1.394,
+        "mae": 0.266,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    },
+    "2026-09-15": {
+      "split": "fit",
+      "pick": {
+        "symbol": "BEL",
+        "side": "BEAR",
+        "cut": "09:45",
+        "entryTime": "09:50",
+        "score": 0.450194,
+        "cashReference": 394.25,
+        "mfe": 2.891,
+        "mae": 0.063,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-09-16": {
+      "split": "fit",
+      "pick": {
+        "symbol": "DIVISLAB",
+        "side": "BEAR",
+        "cut": "09:40",
+        "entryTime": "09:45",
+        "score": 0.465844,
+        "cashReference": 8965.5,
+        "mfe": 0.474,
+        "mae": 0.017,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-09-17": {
+      "split": "fit",
+      "pick": {
+        "symbol": "JINDALSTEL",
+        "side": "BULL",
+        "cut": "09:45",
+        "entryTime": "09:50",
+        "score": 0.356459,
+        "cashReference": 1124.4,
+        "mfe": 0.916,
+        "mae": 0.187,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-09-18": {
+      "split": "fit",
+      "pick": {
+        "symbol": "SHREECEM",
+        "side": "BULL",
+        "cut": "09:50",
+        "entryTime": "09:55",
+        "score": 0.43102,
+        "cashReference": 22665.0,
+        "mfe": 1.456,
+        "mae": 0.176,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    },
+    "2026-09-22": {
+      "split": "fit",
+      "pick": {
+        "symbol": "SBIN",
+        "side": "BEAR",
+        "cut": "10:35",
+        "entryTime": "10:40",
+        "score": 0.320723,
+        "cashReference": 988.6,
+        "mfe": 0.738,
+        "mae": 0.111,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-09-23": {
+      "split": "fit",
+      "pick": {
+        "symbol": "PERSISTENT",
+        "side": "BEAR",
+        "cut": "09:35",
+        "entryTime": "09:40",
+        "score": 0.284467,
+        "cashReference": 5289.5,
+        "mfe": 1.437,
+        "mae": 0.123,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    },
+    "2026-09-24": {
+      "split": "fit"
+    },
+    "2026-09-25": {
+      "split": "fit",
+      "pick": {
+        "symbol": "FORTIS",
+        "side": "BEAR",
+        "cut": "09:45",
+        "entryTime": "09:50",
+        "score": 0.403321,
+        "cashReference": 862.55,
+        "mfe": 3.542,
+        "mae": 0.122,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-09-28": {
+      "split": "fit",
+      "pick": {
+        "symbol": "TATACONSUM",
+        "side": "BEAR",
+        "cut": "09:35",
+        "entryTime": "09:40",
+        "score": 0.335237,
+        "cashReference": 967.7,
+        "mfe": 1.251,
+        "mae": 0.01,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    },
+    "2026-09-29": {
+      "split": "fit"
+    },
+    "2026-09-30": {
+      "split": "fit"
+    },
+    "2026-10-01": {
+      "split": "fit",
+      "pick": {
+        "symbol": "SUPREMEIND",
+        "side": "BEAR",
+        "cut": "09:45",
+        "entryTime": "09:50",
+        "score": 0.389637,
+        "cashReference": 3393.8,
+        "mfe": 3.17,
+        "mae": 0.021,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-10-05": {
+      "split": "fit"
+    },
+    "2026-10-06": {
+      "split": "fit",
+      "pick": {
+        "symbol": "TRENT",
+        "side": "BULL",
+        "cut": "10:30",
+        "entryTime": "10:35",
+        "score": 0.370748,
+        "cashReference": 2854.7,
+        "mfe": 2.031,
+        "mae": 0.175,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-10-07": {
+      "split": "fit"
+    },
+    "2026-10-08": {
+      "split": "fit",
+      "pick": {
+        "symbol": "BOSCHLTD",
+        "side": "BEAR",
+        "cut": "09:35",
+        "entryTime": "09:40",
+        "score": 0.319351,
+        "cashReference": 43905.0,
+        "mfe": 2.061,
+        "mae": 0.216,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-10-09": {
+      "split": "fit"
+    },
+    "2026-10-12": {
+      "split": "fit"
+    },
+    "2026-10-13": {
+      "split": "fit"
+    },
+    "2026-10-14": {
+      "split": "fit"
+    },
+    "2026-10-15": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "BHARTIARTL",
+        "side": "BULL",
+        "cut": "09:50",
+        "entryTime": "09:55",
+        "score": 0.493415,
+        "cashReference": 1861.1,
+        "mfe": 0.537,
+        "mae": 0.844,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-10-16": {
+      "split": "october_validation"
+    },
+    "2026-10-19": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "PAGEIND",
+        "side": "BEAR",
+        "cut": "10:00",
+        "entryTime": "10:05",
+        "score": 0.308349,
+        "cashReference": 35980.0,
+        "mfe": 1.14,
+        "mae": 0.167,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    },
+    "2026-10-21": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "IREDA",
+        "side": "BEAR",
+        "cut": "09:50",
+        "entryTime": "09:55",
+        "score": 0.350854,
+        "cashReference": 104.37,
+        "mfe": 1.523,
+        "mae": 0.086,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    },
+    "2026-10-22": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "ABCAPITAL",
+        "side": "BEAR",
+        "cut": "10:05",
+        "entryTime": "10:10",
+        "score": 0.339801,
+        "cashReference": 358.8,
+        "mfe": 0.92,
+        "mae": 1.227,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-10-23": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "KALYANKJIL",
+        "side": "BEAR",
+        "cut": "09:40",
+        "entryTime": "09:45",
+        "score": 0.282397,
+        "cashReference": 515.85,
+        "mfe": 3.014,
+        "mae": 0.126,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-10-26": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "HAL",
+        "side": "BEAR",
+        "cut": "09:35",
+        "entryTime": "09:40",
+        "score": 0.327859,
+        "cashReference": 4648.4,
+        "mfe": 0.12,
+        "mae": 0.637,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-10-27": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "KALYANKJIL",
+        "side": "BEAR",
+        "cut": "10:15",
+        "entryTime": "10:20",
+        "score": 0.320792,
+        "cashReference": 497.9,
+        "mfe": 1.486,
+        "mae": 0.251,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    },
+    "2026-10-28": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "PIDILITIND",
+        "side": "BEAR",
+        "cut": "09:40",
+        "entryTime": "09:45",
+        "score": 0.334185,
+        "cashReference": 1435.1,
+        "mfe": 3.171,
+        "mae": 0.049,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-10-29": {
+      "split": "october_validation"
+    },
+    "2026-10-30": {
+      "split": "october_validation",
+      "pick": {
+        "symbol": "ZYDUSLIFE",
+        "side": "BULL",
+        "cut": "10:25",
+        "entryTime": "10:30",
+        "score": 0.296098,
+        "cashReference": 1219.5,
+        "mfe": 2.402,
+        "mae": 0.205,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-11-02": {
+      "split": "november_replay",
+      "pick": {
+        "symbol": "DIXON",
+        "side": "BULL",
+        "cut": "09:35",
+        "entryTime": "09:40",
+        "score": 0.501992,
+        "cashReference": 11576.0,
+        "mfe": 7.858,
+        "mae": 0.052,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-11-03": {
+      "split": "november_replay",
+      "pick": {
+        "symbol": "PRESTIGE",
+        "side": "BULL",
+        "cut": "10:45",
+        "entryTime": "10:50",
+        "score": 0.319751,
+        "cashReference": 1531.8,
+        "mfe": 0.398,
+        "mae": 1.333,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-11-04": {
+      "split": "november_replay",
+      "pick": {
+        "symbol": "CROMPTON",
+        "side": "BULL",
+        "cut": "09:40",
+        "entryTime": "09:45",
+        "score": 0.466206,
+        "cashReference": 205.32,
+        "mfe": 1.101,
+        "mae": 0.297,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    },
+    "2026-11-05": {
+      "split": "november_replay"
+    },
+    "2026-11-06": {
+      "split": "november_replay",
+      "pick": {
+        "symbol": "KALYANKJIL",
+        "side": "BULL",
+        "cut": "10:15",
+        "entryTime": "10:20",
+        "score": 0.30781,
+        "cashReference": 581.3,
+        "mfe": 2.907,
+        "mae": 0.473,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-11-09": {
+      "split": "november_replay"
+    },
+    "2026-11-11": {
+      "split": "november_replay",
+      "pick": {
+        "symbol": "BANKINDIA",
+        "side": "BULL",
+        "cut": "09:40",
+        "entryTime": "09:45",
+        "score": 0.411209,
+        "cashReference": 148.31,
+        "mfe": 2.738,
+        "mae": 0.034,
+        "targetFirst": true,
+        "cleanRunner": true
+      }
+    },
+    "2026-11-12": {
+      "split": "november_replay",
+      "pick": {
+        "symbol": "SAIL",
+        "side": "BULL",
+        "cut": "10:30",
+        "entryTime": "10:35",
+        "score": 0.410292,
+        "cashReference": 181.0,
+        "mfe": 0.105,
+        "mae": 0.365,
+        "targetFirst": false,
+        "cleanRunner": false
+      }
+    },
+    "2026-11-13": {
+      "split": "november_replay",
+      "pick": {
+        "symbol": "MCX",
+        "side": "BULL",
+        "cut": "09:45",
+        "entryTime": "09:50",
+        "score": 0.443294,
+        "cashReference": 3721.0,
+        "mfe": 1.247,
+        "mae": 0.266,
+        "targetFirst": true,
+        "cleanRunner": false
+      }
+    }
+  }
+}

@@ -14,6 +14,10 @@ let tokenPending:Promise<string|null>|undefined;
 const historyCache=rustyHistoryCache();
 const payloadCache=resultCache<string>({maxEntries:32,maxBytes:16*1024*1024,size:s=>Buffer.byteLength(s)});
 
+function isBoundedKairosSource(source: string | null): source is "kairos10" | "kairos29" {
+  return source === "kairos10" || source === "kairos29";
+}
+
 async function getToken() {
   if (cache.token && Date.now() < cache.exp) return cache.token;
   if(tokenPending)return tokenPending;
@@ -99,13 +103,14 @@ async function getRawByDate(targetDate: string, sourcesParam: string | null): Pr
 
     const reader=r.body?.getReader();if(!reader)throw new Error('Empty Panther feed');
     const chunks:Uint8Array[]=[];let byteCount=0;
-    const maxBytes=sourcesParam==='kairos10'?2*1024*1024:64*1024*1024;
+    const boundedKairos = isBoundedKairosSource(sourcesParam);
+    const maxBytes=boundedKairos?2*1024*1024:64*1024*1024;
     try{for(;;){const {done,value}=await reader.read();if(done)break;byteCount+=value.byteLength;if(byteCount>maxBytes)throw new Error('Panther feed size exceeded');chunks.push(value);}}
     finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
     const data: any = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     if(data.hasMore)throw new Error('Incomplete Panther feed');
     const allItems = data.items || [];
-    if(!Array.isArray(allItems)||allItems.length>(sourcesParam==='kairos10'?1500:10000))throw new Error('Invalid Panther feed items');
+    if(!Array.isArray(allItems)||allItems.length>(boundedKairos?1500:10000))throw new Error('Invalid Panther feed items');
 
     const parsedSignals = allItems.map((it: any) => {
       let doc = {};
@@ -182,7 +187,7 @@ async function buildPayload(
   if (wantSources) {
     rows = rows.filter((s: any) => wantSources.has(String(s.source)));
   }
-  if(sourcesParam==='kairos10')rows=compactKairosEvents(rows,'kairos10');
+  if (isBoundedKairosSource(sourcesParam)) rows = compactKairosEvents(rows, sourcesParam);
   const availableCuts=rustyView?Array.from(new Set<string>(rows.map((s:any)=>String(s.cut||s.time||'')).filter(Boolean))).sort():[];
   if(rustyView){
     const latest=availableCuts.at(-1);
@@ -349,14 +354,14 @@ export async function GET(request: NextRequest) {
       // Published cuts can be reused privately during the live day; Refresh can revalidate.
       return new NextResponse(body,{headers:{'Content-Type':'application/json','Cache-Control':historical||requestedCut?'private, max-age=300':'private, max-age=10'}});
     }
-    const kairos10=sourcesParam==='kairos10';
-    const ttl=kairos10?(historical?3600000:15000):(historical?300000:10000);
+    const boundedKairos = isBoundedKairosSource(sourcesParam);
+    const ttl=boundedKairos?(historical?3600000:15000):(historical?300000:10000);
     const key=JSON.stringify([targetDate,sourcesParam,latestCycle,lastN,topN,rankBy,after,view,requestedCut]);
     const body=await payloadCache(key,ttl,async()=>{
       const rows=await buildPayload(targetDate,sourcesParam,latestCycle,lastN,topN,rankBy,after,view==='rusty',requestedCut,view==='lupus');
       return JSON.stringify(rows);
     });
-    return new NextResponse(body,{headers:{'Content-Type':'application/json','Cache-Control':kairos10?(historical?'private, max-age=3600, stale-while-revalidate=86400':'private, max-age=15, stale-while-revalidate=30'):(historical?'private, max-age=300':'private, max-age=10')}});
+    return new NextResponse(body,{headers:{'Content-Type':'application/json','Cache-Control':boundedKairos?(historical?'private, max-age=3600, stale-while-revalidate=86400':'private, max-age=15, stale-while-revalidate=30'):(historical?'private, max-age=300':'private, max-age=10')}});
   } catch (error) {
     console.error("Panther API Error:", error);
     return NextResponse.json(
