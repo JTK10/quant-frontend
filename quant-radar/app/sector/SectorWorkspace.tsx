@@ -14,5 +14,5 @@ export default function SectorWorkspace({date}:{date:string}){
   window.addEventListener('message',receive);window.addEventListener('storage',storage);window.addEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);
   return()=>{window.removeEventListener('message',receive);window.removeEventListener('storage',storage);window.removeEventListener(CHART_WATCHLIST_UPDATED_EVENT,sync);};
  },[date]);
- return <iframe ref={frame} onLoad={sync} key={date} title="Sector Scope — sector, flow and stock review" src={`/sector/workspace?date=${encodeURIComponent(date)}`} className="h-dvh w-full border-0"/>;
+ return <iframe ref={frame} onLoad={sync} key={date} title="Sector Scope — sector, flow and stock review" src={`/sector/workspace?date=${encodeURIComponent(date)}&mapping=20261116`} className="h-dvh w-full border-0"/>;
 }
