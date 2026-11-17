@@ -37,7 +37,7 @@ export class FlowBandPrimitive implements ISeriesPrimitive<Time> {
         const x=a.chart.timeScale().timeToCoordinate(p.time as UTCTimestamp),x2=a.chart.timeScale().timeToCoordinate(q.time as UTCTimestamp);
         const u=a.series.priceToCoordinate(p.upper),u2=a.series.priceToCoordinate(q.upper),l=a.series.priceToCoordinate(p.lower),l2=a.series.priceToCoordinate(q.lower);
         if(x==null||x2==null||u==null||u2==null||l==null||l2==null)continue;
-        ctx.fillStyle=q.pressure==null?'rgba(148,163,184,.10)':q.pressure>=0?'rgba(0,190,145,.23)':'rgba(239,68,100,.23)';
+        ctx.fillStyle=q.pressure==null?'rgba(148,163,184,.18)':q.pressure>=0?'rgba(0,190,145,.45)':'rgba(239,68,100,.45)';
         ctx.beginPath();ctx.moveTo(x,u);ctx.lineTo(x2,u2);ctx.lineTo(x2,l2);ctx.lineTo(x,l);ctx.closePath();ctx.fill();
       }
       ctx.restore();

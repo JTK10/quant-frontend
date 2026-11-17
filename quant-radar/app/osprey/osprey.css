@@ -70,6 +70,8 @@
 
 .osprey input, .osprey select, .osprey-session button { min-height: 34px; padding: 0 9px; }
 .osprey button, .osprey select { cursor: pointer; }
+.osprey select { color-scheme: dark; color: var(--os-text); }
+.osprey select option { background-color: var(--os-bg); color: var(--os-text); }
 .osprey button:disabled { cursor: default; color: var(--os-muted); }
 .osprey button:not(:disabled):hover, .osprey-actions a:hover { color: var(--os-accent); border-color: #48708c; }
 .osprey :is(button, select, input, a, .osprey-table):focus-visible {
@@ -84,7 +86,7 @@
 }
 
 .osprey-cuts button, .osprey-cuts select { border: 0; border-radius: 0; background: transparent; }
-.osprey-cuts select { border-inline: 1px solid var(--os-line); }
+.osprey-cuts select { border-inline: 1px solid var(--os-line); background: var(--os-bg); color: var(--os-text); }
 .osprey-cuts button:disabled { opacity: .45; }
 
 .osprey button.osprey-live {
