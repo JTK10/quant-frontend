@@ -22,6 +22,9 @@ import {
 } from "lightweight-charts";
 import type { OIData } from "./oiTypes";
 import { subscribeCandles } from "@/utils/candleStream";
+import { FlowBandPrimitive, computeFlowBand, type FlowPoint } from './flowBand';
+import { useFlowData } from './useFlowData';
+import { istSessionDate } from '@/utils/sessionPolling';
 
 export type Timeframe = "5m" | "15m" | "30m" | "1h" | "1D";
 
@@ -51,9 +54,9 @@ type StreamMessage =
 
 type LinePoint = { time: UTCTimestamp; value: number };
 type ContextMenu = { x: number; y: number } | null;
-type IndicatorKey = "ema" | "supertrend" | "pdhPdl" | "pivots";
+type IndicatorKey = "ema" | "supertrend" | "pdhPdl" | "pivots" | "flow";
 type Indicators = Record<IndicatorKey, boolean>;
-const INDICATOR_LABELS: Record<IndicatorKey, string> = { ema: "EMA 9", supertrend: "ST 10,3", pdhPdl: "PDH/PDL", pivots: "P/R1/S1" };
+const INDICATOR_LABELS: Record<IndicatorKey, string> = { ema: "EMA 9", supertrend: "ST 10,3", pdhPdl: "PDH/PDL", pivots: "P/R1/S1", flow: "Flow Band" };
 
 const IST_TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -247,6 +250,7 @@ export default function LiveCandleChart({
   includePreviousSession = false,
   mutedOI = false,
   relativeVolume = false,
+  allowFlowBand = false,
 }: {
   symbol: string;
   streamUrl: string;
@@ -264,6 +268,7 @@ export default function LiveCandleChart({
   includePreviousSession?: boolean;
   mutedOI?: boolean;
   relativeVolume?: boolean;
+  allowFlowBand?: boolean;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -277,14 +282,18 @@ export default function LiveCandleChart({
   const redrawRef = useRef<(bars: ChartBar[]) => void>(() => {});
   const updateLiveBarRef = useRef<(bar: ChartBar, bars: ChartBar[]) => void>(() => {});
   const indicatorRedrawRef = useRef<(bars: ChartBar[]) => void>(() => {});
+  const flowRedrawRef = useRef<(bars: ChartBar[]) => void>(() => {});
+  const flowPointsRef = useRef<FlowPoint[]>([]);
   const priceLinesRef = useRef<any[]>([]);
   const levelSignatureRef = useRef("");
   const lastRenderedTimeRef = useRef<number | null>(null);
   const recentRangeRef = useRef<{ from: number; to: number } | null>(null);
   const initialViewSetRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
-  const [indicators, setIndicators] = useState<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false });
-  const indicatorsRef = useRef<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false });
+  const [indicators, setIndicators] = useState<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false, flow: false });
+  const indicatorsRef = useRef<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false, flow: false });
+  const flow = useFlowData(symbol, sessionDate ?? istSessionDate(), allowFlowBand && indicators.flow && timeframe !== '1D');
+  const flowLabel = timeframe === '1D' ? 'Flow Band · intraday only' : flow.loading ? 'Flow Band · loading…' : flow.error ? flow.error : flow.data?.lastCut ? `Flow Band · ${flow.data.lastCut} IST${flow.data.stale ? ' · stale' : ''}` : 'Flow Band · no option-flow data';
   const [connection, setConnection] = useState("Connecting");
   const [barRevision, setBarRevision] = useState(0);
   const [hasBars, setHasBars] = useState(false);
@@ -324,6 +333,11 @@ export default function LiveCandleChart({
   }, [indicators, timeframe]);
 
   useEffect(() => {
+    flowPointsRef.current = flow.data?.points ?? [];
+    flowRedrawRef.current(aggregateBars(sessionBars([...barsRef.current.values()]), timeframe));
+  }, [flow.data, timeframe, sessionBars]);
+
+  useEffect(() => {
     const root = hostRef.current;
     if (!root) return;
     const chart = createChart(root, {
@@ -338,6 +352,10 @@ export default function LiveCandleChart({
       upColor: "#089981", downColor: "#F23645", borderVisible: false,
       wickUpColor: "#089981", wickDownColor: "#F23645",
     });
+    const flowBand = new FlowBandPrimitive();
+    candles.attachPrimitive(flowBand);
+    flowRedrawRef.current = bars => flowBand.update(allowFlowBand && indicatorsRef.current.flow && timeframe !== '1D'
+      ? computeFlowBand(bars, flowPointsRef.current, INTERVAL_SECONDS[timeframe], asOf ?? Date.now()/1000) : []);
     const volume = relativeVolume ? null : chart.addSeries(HistogramSeries, { priceFormat: { type: "volume" }, priceScaleId: "", lastValueVisible: symbol !== "NIFTY 50", priceLineVisible: symbol !== "NIFTY 50" });
     volume?.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
     const rvol = relativeVolume ? chart.addSeries(LineSeries, {
@@ -442,6 +460,7 @@ export default function LiveCandleChart({
 
     indicatorRedrawRef.current = (bars) => {
       const enabled = indicatorsRef.current;
+      flowRedrawRef.current(bars);
       if (enabled.ema) ema.setData(ema9(bars)); else ema.setData([]);
       if (enabled.supertrend) { const st = supertrend(bars); superBull.setData(st.bull); superBear.setData(st.bear); } else { superBull.setData([]); superBear.setData([]); }
       const levels = enabled.pdhPdl || enabled.pivots ? previousSessionLevels(bars) : null;
@@ -472,6 +491,7 @@ export default function LiveCandleChart({
       redrawRef.current = () => {};
       updateLiveBarRef.current = () => {};
       indicatorRedrawRef.current = () => {};
+      flowRedrawRef.current = () => {};
       if (rvol) chart.unsubscribeCrosshairMove(crosshairRvol);
       chart.remove();
       chartRef.current = null;
@@ -486,7 +506,7 @@ export default function LiveCandleChart({
       initialViewSetRef.current = false;
       lastRenderedTimeRef.current = null;
     };
-  }, [timeframe, symbol, sessionDate, sessionBars, includePreviousSession, relativeVolume, asOf]);
+  }, [timeframe, symbol, sessionDate, sessionBars, includePreviousSession, relativeVolume, asOf, allowFlowBand]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -616,7 +636,8 @@ export default function LiveCandleChart({
       <div className="absolute right-2 top-2 z-10 flex overflow-hidden rounded border text-xs shadow-lg" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>
         <button type="button" onClick={(event) => { event.stopPropagation(); zoom(1.45); }} className="px-2 py-1 hover:bg-white/10">−</button><button type="button" onClick={(event) => { event.stopPropagation(); resetView(); }} className="border-x px-2 py-1 font-mono text-[10px] hover:bg-white/10" style={{ borderColor: "var(--color-border)" }}>RESET</button><button type="button" onClick={(event) => { event.stopPropagation(); zoom(0.7); }} className="px-2 py-1 hover:bg-white/10">+</button>
       </div>
-      <div className="absolute right-2 top-10 z-10 flex overflow-hidden rounded border font-mono text-[10px]" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>{(Object.keys(INDICATOR_LABELS) as IndicatorKey[]).map((key) => <button key={key} type="button" onClick={(event) => { event.stopPropagation(); setIndicators((current) => ({ ...current, [key]: !current[key] })); }} className="border-l px-2 py-1 hover:bg-white/10 first:border-l-0" style={{ borderColor: "var(--color-border)", color: indicators[key] ? "#fbbf24" : "#94a3b8" }}>{INDICATOR_LABELS[key]}</button>)}</div>
+      <div className="absolute right-2 top-10 z-10 flex max-w-[95%] flex-wrap overflow-hidden rounded border font-mono text-[10px]" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>{(Object.keys(INDICATOR_LABELS) as IndicatorKey[]).filter(key => key !== 'flow' || allowFlowBand).map((key) => <button key={key} type="button" aria-pressed={indicators[key]} title={key === 'flow' ? 'Experimental · EMA9 ± ATR14; green/red option-pressure proxy. Grey means unavailable. Completed candles only.' : INDICATOR_LABELS[key]} onClick={(event) => { event.stopPropagation(); setIndicators((current) => ({ ...current, [key]: !current[key] })); }} className="border-l px-2 py-1 hover:bg-white/10 first:border-l-0" style={{ borderColor: "var(--color-border)", color: indicators[key] ? "#fbbf24" : "#94a3b8" }}>{INDICATOR_LABELS[key]}</button>)}</div>
+      {allowFlowBand && indicators.flow && <div className="pointer-events-none absolute left-2 top-16 z-10 rounded bg-slate-950/80 px-2 py-1 font-mono text-[10px] text-slate-300" title="Experimental option-pressure overlay; not measured institutional buying or selling. Green bullish pressure · red bearish pressure · grey unavailable.">{flowLabel} · experimental</div>}
       {Object.keys(INDICATOR_LABELS).some((key) => indicators[key as IndicatorKey]) && <div className="pointer-events-none absolute left-2 top-2 z-10 rounded px-2 py-1 font-mono text-[10px]" style={{ color: "#cbd5e1", background: "rgba(11,18,32,.72)" }}>{(Object.keys(INDICATOR_LABELS) as IndicatorKey[]).filter((key) => indicators[key]).map((key) => INDICATOR_LABELS[key]).join(" · ")}</div>}
       {contextMenu && (
         <button

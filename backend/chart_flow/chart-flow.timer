@@ -1,0 +1,11 @@
+[Unit]
+Description=Check existing chart-flow captures once per minute
+
+[Timer]
+OnCalendar=*-*-* *:*:45
+AccuracySec=5s
+Persistent=false
+Unit=chart-flow.service
+
+[Install]
+WantedBy=timers.target

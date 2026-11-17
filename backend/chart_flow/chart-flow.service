@@ -1,0 +1,16 @@
+[Unit]
+Description=Optional chart option-pressure publisher over existing captures
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/chart-flow
+ExecStart=/usr/bin/python3 /home/ubuntu/chart-flow/worker.py
+Nice=15
+CPUQuota=15%
+MemoryHigh=64M
+MemoryMax=96M
+TimeoutStartSec=110
+NoNewPrivileges=true
+PrivateTmp=true
