@@ -9,6 +9,8 @@ import {
 } from '@/utils/chartWatchlist';
 import {createOspreyFeed} from './feed';
 import {MODES,STATES,type OspreyBoard,type OspreyRow} from './model';
+import {useSetupCandles} from './useSetupCandles';
+import {evaluateOspreySetup} from './setup';
 
 const headers=[
   ['score','Score'],['oi_5m','5m OI'],['oi_15m','15m OI'],['rvol','RVOL'],
@@ -89,6 +91,7 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
   const selectedIndex=cuts.indexOf(cut||board?.cut||'');
   const visible=limit==='all'?rows:rows.slice(0,30);
   const date=board?.date||day||session;
+  const setupBars=useSetupCandles(visible.filter(r=>r.state==='Confirmed').map(r=>r.symbol),date,board?.cut??'');
   function chooseDay(value:string) {
     if (value===day&&!cut) return;
     setBoard(null);setError('');setCuts([]);setDay(value);setCut('');setCutDay('');
@@ -169,9 +172,9 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
         </th>)}
         <th scope="col">First seen</th><th scope="col">Latest flow</th><th scope="col">State</th><th scope="col">Strikes</th>
       </tr></thead>
-      <tbody>{visible.map((row,i)=><tr key={row.symbol}>
+      <tbody>{visible.map((row,i)=>{const setup=error?null:evaluateOspreySetup(row,setupBars.get(row.symbol),date,board?.cut??'');return <tr key={row.symbol}>
         <td className="osprey-rank">{i+1}</td>
-        <td className="osprey-stock"><b>{row.symbol}</b><div className="osprey-actions">
+        <td className="osprey-stock"><b>{row.symbol}</b>{setup&&<span className="osprey-setup-star" role="img" aria-label={row.symbol+' Flow Band setup passed'} title={'Flow Band setup · '+setup.cut+' IST · '+(setup.contact==='WICK'?'wick touches band':'body overlaps band')+' · '+(setup.kind==='PRIMARY'?'body avoids EMA9':'line breakout')}>★</span>}<div className="osprey-actions">
           <button type="button" aria-label={'Add '+row.symbol+' to Charts watchlist'} aria-pressed={watchlist.includes(row.symbol)}
             title={watchlist.includes(row.symbol)?'In Charts watchlist':'Add to Charts watchlist'}
             disabled={watchlist.includes(row.symbol)} onClick={()=>setWatchlist(addChartWatchlistSymbol(row.symbol))}>
@@ -194,7 +197,7 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
         <td className="osprey-time">{row.first||'—'}</td><td className="osprey-time">{row.last||'—'}</td>
         <td><span className="osprey-state" data-state={row.state}>{row.state}{row.confirmed&&' '+row.confirmed}</span></td>
         <td className="osprey-strikes">{row.strikes||'—'}</td>
-      </tr>)}
+      </tr>;})}
       {!visible.length&&<tr><td className="osprey-empty" colSpan={13}>
         {board?.available?'No stocks match these filters.':error||describe}
       </td></tr>}</tbody>

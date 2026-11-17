@@ -88,6 +88,7 @@
 .osprey-cuts button, .osprey-cuts select { border: 0; border-radius: 0; background: transparent; }
 .osprey-cuts select { border-inline: 1px solid var(--os-line); background: var(--os-bg); color: var(--os-text); }
 .osprey-cuts button:disabled { opacity: .45; }
+.osprey-setup-star { color: #facc15; margin-left: 6px; font-size: 16px; line-height: 1; vertical-align: baseline; }
 
 .osprey button.osprey-live {
   display: inline-flex;

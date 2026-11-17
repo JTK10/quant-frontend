@@ -5,6 +5,7 @@ export const MAX_ROWS = 2200;
 export const MAX_BYTES = 1024 * 1024;
 
 export type OspreyRow = {
+  setup_oi?: {date:string;levels:number[]};
   symbol: string; mode: typeof MODES[number]; side: 'BULL' | 'BEAR' | '—';
   score: number | null; oi_5m: number | null; oi_15m: number | null;
   rvol: number | null; rvol_sessions: number | null; sector_strength: number | null;

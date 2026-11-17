@@ -119,6 +119,7 @@ const api=load('app/api/osprey/route.ts',{
   '@/utils/resultCache':load('utils/resultCache.ts'),
   '@/utils/sessionPolling':policy,
   '@/app/osprey/model':model,
+  '@/utils/ospreySetupLevels':{ospreySetupLevels:async()=>({})},
 },{process:{env:{PANTHER_SIGNALS_URL:'https://example.invalid/feed'}},
   fetch:async url=>{
     const source=url.searchParams.get('src');cursor=source;

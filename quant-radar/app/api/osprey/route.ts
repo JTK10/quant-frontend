@@ -5,6 +5,7 @@ import {getSharedOrdsToken, invalidateSharedOrdsToken} from '@/utils/aurumFeed';
 import {resultCache} from '@/utils/resultCache';
 import {istSessionDate} from '@/utils/sessionPolling';
 import {MAX_BYTES, projectBoard, validDate, validCut, type OspreyBoard} from '@/app/osprey/model';
+import {ospreySetupLevels} from '@/utils/ospreySetupLevels';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -90,12 +91,13 @@ export async function GET(request: NextRequest) {
     const cuts=selected ? [] : await indexCache(date,historical?300000:45000,()=>index(date));
     const cut=selected??cuts.at(-1);
     if (!cut) return NextResponse.json(unavailable(date),{headers:noStore});
-    const board=await snapshotCache(date+'|'+cut,3600000,async()=>{
+    const [board,setupLevels]=await Promise.all([snapshotCache(date+'|'+cut,3600000,async()=>{
       const loaded=await snapshot(date,cut);
       if (!loaded.available) throw Error('Osprey snapshot unavailable');
       return loaded;
-    });
-    const payload=JSON.stringify({...board,cuts:cuts.length?cuts:board.cuts});
+    }),ospreySetupLevels(date).catch(()=>({} as Awaited<ReturnType<typeof ospreySetupLevels>>))]);
+    // Optional compact context piggybacks on the existing read; no per-stock API fan-out.
+    const payload=JSON.stringify({...board,rows:board.rows.map(r=>r.state==='Confirmed'&&setupLevels[r.symbol]?{...r,setup_oi:setupLevels[r.symbol]}:r),cuts:cuts.length?cuts:board.cuts});
     if (Buffer.byteLength(payload)>MAX_BYTES) throw Error('Osprey browser response exceeded size budget');
     return new NextResponse(payload,{headers:{
       'Content-Type':'application/json',
