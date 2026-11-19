@@ -1,6 +1,7 @@
 export const MODES = ['All chain activity', 'Since open', 'Tracked', 'Same cut'] as const;
 export const STATES = ['Watch', 'Confirmed', 'No classified flow', 'Snapshot'] as const;
 export const POLL_MS = 5 * 60 * 1000;
+export const ROW_SCHEMA = 'rusty-oi-v1';
 export const MAX_ROWS = 2200;
 export const MAX_BYTES = 1024 * 1024;
 

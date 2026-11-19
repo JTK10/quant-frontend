@@ -8,7 +8,7 @@ import {
   addChartWatchlistSymbol,readChartWatchlist,CHART_WATCHLIST_STORAGE_KEY,CHART_WATCHLIST_UPDATED_EVENT,
 } from '@/utils/chartWatchlist';
 import {createOspreyFeed} from './feed';
-import {MODES,STATES,type OspreyBoard,type OspreyRow} from './model';
+import {MODES,STATES,ROW_SCHEMA,type OspreyBoard,type OspreyRow} from './model';
 import {useSetupCandles} from './useSetupCandles';
 import {evaluateOspreySetup} from './setup';
 
@@ -67,6 +67,7 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
       onError:setError,
       read:async(date,requested,signal)=>{
         const params=new URLSearchParams({date});
+        params.set('fields',ROW_SCHEMA);
         if (requested) params.set('cut',requested);
         const response=await fetch('/api/osprey?'+params,{signal,cache:'default'});
         if (!response.ok) throw Error('Osprey feed unavailable');

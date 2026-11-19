@@ -4,7 +4,7 @@ import {requireApiSession} from '@/utils/auth';
 import {getSharedOrdsToken, invalidateSharedOrdsToken} from '@/utils/aurumFeed';
 import {resultCache} from '@/utils/resultCache';
 import {istSessionDate} from '@/utils/sessionPolling';
-import {MAX_BYTES, projectBoard, selectSnapshotRows, validDate, validCut, type OspreyBoard} from '@/app/osprey/model';
+import {MAX_BYTES, ROW_SCHEMA, projectBoard, selectSnapshotRows, validDate, validCut, type OspreyBoard} from '@/app/osprey/model';
 import {ospreySetupLevels} from '@/utils/ospreySetupLevels';
 
 export const dynamic = 'force-dynamic';
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     const cuts=selected ? [] : await indexCache(date,historical?300000:45000,()=>index(date));
     const cut=selected??cuts.at(-1);
     if (!cut) return NextResponse.json(unavailable(date),{headers:noStore});
-    const [board,setupLevels]=await Promise.all([snapshotCache(date+'|'+cut,3600000,async()=>{
+    const [board,setupLevels]=await Promise.all([snapshotCache(ROW_SCHEMA+'|'+date+'|'+cut,3600000,async()=>{
       const loaded=await snapshot(date,cut);
       if (!loaded.available) throw Error('Osprey snapshot unavailable');
       return loaded;
