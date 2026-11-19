@@ -107,6 +107,14 @@ const biasRow=model.projectBoard({...testBoard(friday),rows:[{
 assert.equal(biasRow.ce_pct,0,'Zero OI change is a valid reading');
 assert.equal(biasRow.pe_pct,4.25);
 assert.equal(biasRow.oi_bias,4.25);
+const oldRow={symbol:'TEST',mode:'Tracked',side:'BULL',score:10};
+const variants=[{id:'same',rows:[oldRow]},{id:'same',rows:[{...oldRow,ce_pct:0,pe_pct:4,oi_bias:4}]}];
+assert.equal(model.selectSnapshotRows(variants)[0].oi_bias,4);
+assert.equal(model.selectSnapshotRows([...variants].reverse())[0].ce_pct,0);
+assert.throws(()=>model.selectSnapshotRows([variants[0],{id:'same',rows:[{...oldRow,score:20}]}]),/Conflicting/);
+assert.throws(()=>model.selectSnapshotRows([variants[0],{...variants[1],id:'other'}]),/identity/);
+assert.throws(()=>model.selectSnapshotRows([variants[1],{id:'same',rows:[{...oldRow,ce_pct:0,pe_pct:4,oi_bias:5}]}]),/Conflicting/);
+assert.throws(()=>model.selectSnapshotRows([...variants,variants[0]]),/count/);
 assert.throws(()=>model.projectBoard(testBoard(friday,'10:05'),friday,null,now),/cut/);
 assert.throws(()=>model.projectBoard({...testBoard(friday),rows:[projected.rows[0],projected.rows[0]]},friday,null,now),/Duplicate/);
 

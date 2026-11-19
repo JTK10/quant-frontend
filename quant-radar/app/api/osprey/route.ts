@@ -4,7 +4,7 @@ import {requireApiSession} from '@/utils/auth';
 import {getSharedOrdsToken, invalidateSharedOrdsToken} from '@/utils/aurumFeed';
 import {resultCache} from '@/utils/resultCache';
 import {istSessionDate} from '@/utils/sessionPolling';
-import {MAX_BYTES, projectBoard, validDate, validCut, type OspreyBoard} from '@/app/osprey/model';
+import {MAX_BYTES, projectBoard, selectSnapshotRows, validDate, validCut, type OspreyBoard} from '@/app/osprey/model';
 import {ospreySetupLevels} from '@/utils/ospreySetupLevels';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,7 @@ const indexCache = resultCache<string[]>({maxEntries:16,maxBytes:128*1024});
 const snapshotCache = resultCache<OspreyBoard>({maxEntries:16,maxBytes:4*MAX_BYTES});
 const noStore = {'Cache-Control':'private, no-store'};
 
-async function readDocuments(date:string, source:string, maxItems:number, maxBytes:number) {
+async function readDocuments(date:string, source:string, maxItems:number, maxBytes:number):Promise<(Record<string,unknown>&{cut:string})[]> {
   const endpoint=process.env.PANTHER_SIGNALS_URL;
   if (!endpoint) throw Error('Osprey origin unavailable');
   const url=new URL(endpoint);
@@ -67,13 +67,15 @@ async function index(date:string):Promise<string[]> {
 }
 
 async function snapshot(date:string,cut:string) {
-  const docs=await readDocuments(date,'osprey-'+cut.replace(':',''),1,112*1024);
+  const docs=await readDocuments(date,'osprey-'+cut.replace(':',''),2,224*1024);
   if (!docs.length) return unavailable(date);
   const doc=docs[0];
-  if (doc.kind!=='SNAPSHOT' || doc.cut!==cut) throw Error('Invalid Osprey snapshot');
-  if (doc.encoding!=='gzip+base64' || typeof doc.payload!=='string' || doc.payload.length>96*1024 ||
-      !/^[A-Za-z0-9+/]+={0,2}$/.test(doc.payload)) throw Error('Invalid Osprey snapshot payload');
-  const rows=JSON.parse(gunzipSync(Buffer.from(doc.payload,'base64'),{maxOutputLength:512*1024}).toString('utf8'));
+  const rows=selectSnapshotRows(docs.map(d=>{
+    if (d.kind!=='SNAPSHOT' || d.cut!==cut) throw Error('Invalid Osprey snapshot');
+    if (d.encoding!=='gzip+base64' || typeof d.payload!=='string' || d.payload.length>96*1024 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(d.payload)) throw Error('Invalid Osprey snapshot payload');
+    return {id:d.Doc_ID,rows:JSON.parse(gunzipSync(Buffer.from(d.payload,'base64'),{maxOutputLength:512*1024}).toString('utf8'))};
+  }));
   return projectBoard({...doc,rows,source:'osprey',available:true,cuts:[cut]},date,cut);
 }
 

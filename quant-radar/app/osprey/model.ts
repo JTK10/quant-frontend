@@ -30,6 +30,35 @@ const text = (value: unknown, size = 80) => typeof value === 'string' ? value.sl
 const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const time = (value: unknown, cut: string) => validCut(value) && value <= cut ? value : '';
 
+// ORDS is append-only. Accept at most one additive enrichment of the same
+// document, and reject changes to any existing signal/ranking field.
+export function selectSnapshotRows(variants:{id:unknown;rows:unknown}[]):unknown[] {
+  if (!variants.length||variants.length>2) throw Error('Invalid Osprey snapshot count');
+  const fields=['ce_pct','pe_pct','oi_bias'];
+  const arrays=variants.map(v=>{
+    if (!Array.isArray(v.rows)||v.rows.length>MAX_ROWS||v.rows.some(r=>!r||typeof r!=='object'||Array.isArray(r)))
+      throw Error('Invalid Osprey snapshot rows');
+    return v.rows as Record<string,unknown>[];
+  });
+  if (arrays.length===1) return arrays[0];
+  if (typeof variants[0].id!=='string'||!variants[0].id||variants[0].id!==variants[1].id)
+    throw Error('Conflicting Osprey document identity');
+  const withoutOI=(rows:Record<string,unknown>[])=>JSON.stringify(rows.map(row=>Object.fromEntries(
+    Object.entries(row).filter(([key])=>!fields.includes(key)).sort(([a],[b])=>a.localeCompare(b)))));
+  if (withoutOI(arrays[0])!==withoutOI(arrays[1])) throw Error('Conflicting Osprey snapshots');
+  return arrays[0].map((row,i)=>{
+    const merged={...row};
+    for (const key of fields) {
+      const a=row[key],b=arrays[1][i][key];
+      for (const value of [a,b]) if (value!=null&&(typeof value!=='number'||!Number.isFinite(value)))
+        throw Error('Invalid Osprey OI enrichment');
+      if (a!=null&&b!=null&&a!==b) throw Error('Conflicting Osprey OI values');
+      merged[key]=a??b??null;
+    }
+    return merged;
+  });
+}
+
 export function projectBoard(raw: unknown, date: string, requested: string | null, now = Date.now()): OspreyBoard {
   const board = raw as Record<string, unknown> | null;
   if (!board || board.source !== 'osprey' || board.date !== date || typeof board.available !== 'boolean')
