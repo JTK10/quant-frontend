@@ -13,7 +13,7 @@ import {useSetupCandles} from './useSetupCandles';
 import {evaluateOspreySetup} from './setup';
 
 const headers=[
-  ['score','Score'],['oi_5m','5m OI'],['oi_15m','15m OI'],['rvol','RVOL'],
+  ['score','Score'],['rvol','RVOL'],
   ['ce_pct','CE %'],['pe_pct','PE %'],['oi_bias','OI bias'],
   ['sector_strength','Sector strength'],['move_pct','Move so far'],
 ] as const;
@@ -191,8 +191,6 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
         </div></td>
         <td><span className="osprey-side" data-side={row.side}>{row.side}</span></td>
         <td className="num"><strong className="osprey-score">{row.score?.toFixed(2)??'—'}</strong></td>
-        <td className="num" title={row.oi_5m_route}>{pct(row.oi_5m)}</td>
-        <td className="num" title={row.oi_15m_route}>{pct(row.oi_15m)}</td>
         <td className="num">{row.rvol===null?'—':row.rvol.toFixed(2)+'×'}{row.rvol!==null&&row.rvol_sessions?<small> {row.rvol_sessions}d</small>:null}</td>
         <td className={'num '+sign(row.ce_pct)} title="Rusty CE OI change · same session and cut">{pct(row.ce_pct,true)}</td>
         <td className={'num '+sign(row.pe_pct)} title="Rusty PE OI change · same session and cut">{pct(row.pe_pct,true)}</td>
@@ -205,7 +203,7 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
         <td><span className="osprey-state" data-state={row.state}>{row.state}{row.confirmed&&' '+row.confirmed}</span></td>
         <td className="osprey-strikes">{row.strikes||'—'}</td>
       </tr>;})}
-      {!visible.length&&<tr><td className="osprey-empty" colSpan={16}>
+      {!visible.length&&<tr><td className="osprey-empty" colSpan={14}>
         {board?.available?'No stocks match these filters.':error||describe}
       </td></tr>}</tbody>
     </table></div>
