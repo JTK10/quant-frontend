@@ -14,6 +14,7 @@ import {evaluateOspreySetup} from './setup';
 
 const headers=[
   ['score','Score'],['oi_5m','5m OI'],['oi_15m','15m OI'],['rvol','RVOL'],
+  ['ce_pct','CE %'],['pe_pct','PE %'],['oi_bias','OI bias'],
   ['sector_strength','Sector strength'],['move_pct','Move so far'],
 ] as const;
 type SortKey=typeof headers[number][0];
@@ -190,6 +191,9 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
         <td className="num" title={row.oi_5m_route}>{pct(row.oi_5m)}</td>
         <td className="num" title={row.oi_15m_route}>{pct(row.oi_15m)}</td>
         <td className="num">{row.rvol===null?'—':row.rvol.toFixed(2)+'×'}{row.rvol!==null&&row.rvol_sessions?<small> {row.rvol_sessions}d</small>:null}</td>
+        <td className={'num '+sign(row.ce_pct)} title="Rusty CE OI change · same session and cut">{pct(row.ce_pct,true)}</td>
+        <td className={'num '+sign(row.pe_pct)} title="Rusty PE OI change · same session and cut">{pct(row.pe_pct,true)}</td>
+        <td className={'num '+sign(row.oi_bias)} title="Rusty OI bias · same session and cut">{row.oi_bias===null?'—':(row.oi_bias>0?'+':'')+row.oi_bias.toFixed(2)}</td>
         <td className="num" title={row.sector_samples?row.sector_source+' breadth · '+row.sector_samples+' stocks':undefined}>
           {pct(row.sector_strength,true)}{row.sector&&<small className="osprey-sector">{row.sector}</small>}
         </td>
@@ -198,7 +202,7 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
         <td><span className="osprey-state" data-state={row.state}>{row.state}{row.confirmed&&' '+row.confirmed}</span></td>
         <td className="osprey-strikes">{row.strikes||'—'}</td>
       </tr>;})}
-      {!visible.length&&<tr><td className="osprey-empty" colSpan={13}>
+      {!visible.length&&<tr><td className="osprey-empty" colSpan={16}>
         {board?.available?'No stocks match these filters.':error||describe}
       </td></tr>}</tbody>
     </table></div>

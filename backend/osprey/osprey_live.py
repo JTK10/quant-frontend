@@ -31,6 +31,7 @@ MAX_DOCUMENT = 96 * 1024
 MAX_ROWS_BYTES = 512 * 1024
 ROUTE = re.compile(r'\b(?:CE|PE)_(?:BUILD|UNWIND)\b')
 ROW_FIELDS = (
+    'ce_pct','pe_pct','oi_bias',
     'symbol','side','score','first','last','state','confirmed','strengthening',
     'oi_5m','oi_5m_route','oi_15m','oi_15m_route','rvol','rvol_sessions',
     'sector','sector_strength','sector_samples','sector_source','move_pct',

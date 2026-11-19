@@ -18,6 +18,31 @@ def capture(cut, io, premium, close=100, date='2026-11-13'):
 
 
 class TestEngine(unittest.TestCase):
+    def test_rusty_bias_exact_cut_only_and_no_stale_carry(self):
+        engine = Engine()
+        engine.process(capture('09:15', 0, 10))
+        rust = dict(date='2026-11-13', cut='09:20', bull=[
+            dict(s='S11', ce_pct=99, pe_pct=99, oi_bias=0,
+                 nearby_oi=[-3,8,11,'CE_DOWN_PE_UP','label','green','black','high'])], bear=[])
+        data = engine.process(capture('09:20', 1, 9), {'rusty':rust})
+        row = next(r for r in data['Tracked'] if r['symbol']=='S11')
+        self.assertEqual((row['ce_pct'],row['pe_pct'],row['oi_bias']),(-3,8,11))
+        data = engine.process(capture('09:25', 2, 8), {'rusty':rust})
+        row = next(r for r in data['Tracked'] if r['symbol']=='S11')
+        self.assertIsNone(row['oi_bias'])
+
+    def test_duplicate_and_nonfinite_rusty_bias_are_unavailable(self):
+        for extra in (dict(s='S11',ce_pct=2,pe_pct=3,oi_bias=1),
+                      dict(s='S11',ce_pct=float('nan'),pe_pct=3,oi_bias=1)):
+            engine = Engine()
+            engine.process(capture('09:15',0,10))
+            rust = dict(date='2026-11-13',cut='09:20',bull=[extra],bear=[])
+            if extra['ce_pct']==2:
+                rust['bear']=[dict(extra)]
+            data=engine.process(capture('09:20',1,9),rust)
+            row=next(r for r in data['Tracked'] if r['symbol']=='S11')
+            self.assertIsNone(row['oi_bias'])
+
     def test_exact_preceding_window_and_new_session(self):
         engine = Engine()
         engine.process(capture('09:15', 0, 10))

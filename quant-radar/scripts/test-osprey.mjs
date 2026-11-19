@@ -100,6 +100,13 @@ const projected=model.projectBoard({...testBoard(friday),rows:[{
 assert.equal(projected.rows[0].state,'Confirmed');
 assert.equal(projected.rows[0].strikes,'CE buildup');
 assert.ok(!('mfe' in projected.rows[0])&&!('level' in projected.rows[0]));
+assert.equal(projected.rows[0].ce_pct,null,'Old snapshots remain readable');
+const biasRow=model.projectBoard({...testBoard(friday),rows:[{
+  symbol:'TEST',mode:'Tracked',side:'BULL',ce_pct:0,pe_pct:4.25,oi_bias:4.25,
+}]},friday,null,now).rows[0];
+assert.equal(biasRow.ce_pct,0,'Zero OI change is a valid reading');
+assert.equal(biasRow.pe_pct,4.25);
+assert.equal(biasRow.oi_bias,4.25);
 assert.throws(()=>model.projectBoard(testBoard(friday,'10:05'),friday,null,now),/cut/);
 assert.throws(()=>model.projectBoard({...testBoard(friday),rows:[projected.rows[0],projected.rows[0]]},friday,null,now),/Duplicate/);
 

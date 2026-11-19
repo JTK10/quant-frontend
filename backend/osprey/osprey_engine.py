@@ -233,11 +233,24 @@ class Engine:
         if rust is not None:
             rust = rust.get("rusty", rust)
         directions = defaultdict(set)
+        oi_context, duplicates, seen_oi = {}, set(), set()
         if (rust and (rust.get("date") or rust.get("sig_date")) == doc["date"]
                 and minute(rust.get("cut") or rust.get("time")) == cut):
             for board, labels, value in (("bull", BULL_TYPES, 1), ("bear", BEAR_TYPES, -1)):
                 for row in rust.get(board, []):
                     symbol = row.get("s")
+                    if symbol:
+                        key = ALIASES.get(symbol, symbol)
+                        if key in seen_oi:
+                            duplicates.add(key)
+                        seen_oi.add(key)
+                        fields = ('ce_pct', 'pe_pct', 'oi_bias')
+                        # Match Rusty's browser projection: nearby OI overrides
+                        # legacy top-level values when the packed tuple exists.
+                        packed = row.get('nearby_oi')
+                        values = dict(zip(fields, packed[:3])) if isinstance(packed, list) and len(packed)==8 else row
+                        if all(type(values.get(k)) in (int, float) and isfinite(values[k]) for k in fields):
+                            oi_context[key] = {k: values[k] for k in fields}
                     flow_type = row.get("flow_type")
                     if symbol and row.get("ce_pct") is not None and row.get("pe_pct") is not None:
                         if flow_type in labels or flow_type in NEUTRAL:
@@ -279,6 +292,9 @@ class Engine:
                                            sector_source=source if sector_samples else None, rvol=rvol,
                                            rvol_sessions=samples, move_pct=move)
                 row.update(context[symbol])
+                key = ALIASES.get(symbol, symbol)
+                for field in ('ce_pct', 'pe_pct', 'oi_bias'):
+                    row[field] = oi_context.get(key, {}).get(field) if key not in duplicates else None
 
     def process(self, doc, rusty_doc=None):
         day = doc.get("date")

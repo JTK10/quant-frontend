@@ -5,6 +5,7 @@ export const MAX_ROWS = 2200;
 export const MAX_BYTES = 1024 * 1024;
 
 export type OspreyRow = {
+  ce_pct: number | null; pe_pct: number | null; oi_bias: number | null;
   setup_oi?: {date:string;levels:number[]};
   symbol: string; mode: typeof MODES[number]; side: 'BULL' | 'BEAR' | '—';
   score: number | null; oi_5m: number | null; oi_15m: number | null;
@@ -62,6 +63,7 @@ export function projectBoard(raw: unknown, date: string, requested: string | nul
     return {
       symbol:row.symbol,mode:row.mode as OspreyRow['mode'],side:row.side as OspreyRow['side'],
       score:number(row.score),oi_5m:number(row.oi_5m),oi_15m:number(row.oi_15m),
+      ce_pct:number(row.ce_pct),pe_pct:number(row.pe_pct),oi_bias:number(row.oi_bias),
       rvol:number(row.rvol),rvol_sessions:number(row.rvol_sessions),sector_strength:number(row.sector_strength),
       sector_samples:number(row.sector_samples),move_pct:number(row.move_pct),strengthening:strength,
       sector:text(row.sector),sector_source:text(row.sector_source),first:time(row.first,cut),
