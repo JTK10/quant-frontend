@@ -18,8 +18,10 @@ const headers=[
   ['sector_strength','Sector strength'],['move_pct','Move so far'],
 ] as const;
 type SortKey=typeof headers[number][0];
-const pct=(value:number|null,signed=false)=>value===null?'—':(signed&&value>0?'+':'')+value.toFixed(2)+'%';
-const sign=(value:number|null)=>value===null?'':value>0?'positive':value<0?'negative':'';
+const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value);
+const numeric=(value:unknown,signed=false)=>finite(value)?(signed&&value>0?'+':'')+value.toFixed(2):'—';
+const pct=(value:unknown,signed=false)=>finite(value)?numeric(value,signed)+'%':'—';
+const sign=(value:unknown)=>finite(value)?value>0?'positive':value<0?'negative':'':'';
 
 export default function OspreyClient({initialDate}:{initialDate?:string}) {
   const [day,setDay]=useState(initialDate??'');
@@ -79,7 +81,7 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
     const symbol=query.trim().toUpperCase();
     const ranked=(board?.rows??[]).filter(row=>row.mode===mode&&(!side||row.side===side)&&
       (!state||row.state===state)&&row.symbol.includes(symbol)).sort((a,b)=>{
-      const x=a[sort.key],y=b[sort.key];
+      const x=finite(a[sort.key])?a[sort.key]:null,y=finite(b[sort.key])?b[sort.key]:null;
       if (x===null&&y!==null) return 1;
       if (x!==null&&y===null) return -1;
       return (x===null||y===null?0:(x-y)*(sort.descending?-1:1)) ||
@@ -193,7 +195,7 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
         <td className="num">{row.rvol===null?'—':row.rvol.toFixed(2)+'×'}{row.rvol!==null&&row.rvol_sessions?<small> {row.rvol_sessions}d</small>:null}</td>
         <td className={'num '+sign(row.ce_pct)} title="Rusty CE OI change · same session and cut">{pct(row.ce_pct,true)}</td>
         <td className={'num '+sign(row.pe_pct)} title="Rusty PE OI change · same session and cut">{pct(row.pe_pct,true)}</td>
-        <td className={'num '+sign(row.oi_bias)} title="Rusty OI bias · same session and cut">{row.oi_bias===null?'—':(row.oi_bias>0?'+':'')+row.oi_bias.toFixed(2)}</td>
+        <td className={'num '+sign(row.oi_bias)} title="Rusty OI bias · same session and cut">{numeric(row.oi_bias,true)}</td>
         <td className="num" title={row.sector_samples?row.sector_source+' breadth · '+row.sector_samples+' stocks':undefined}>
           {pct(row.sector_strength,true)}{row.sector&&<small className="osprey-sector">{row.sector}</small>}
         </td>
