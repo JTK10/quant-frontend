@@ -2,7 +2,7 @@
 
 import MovementRuler from "./MovementRuler";
 import { computeRelativeVolume } from "./relativeVolume";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CandlestickSeries,
   BaselineSeries,
@@ -292,10 +292,20 @@ export default function LiveCandleChart({
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
   const [indicators, setIndicators] = useState<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false, flow: false });
   const indicatorsRef = useRef<Indicators>({ ema: false, supertrend: false, pdhPdl: false, pivots: false, flow: false });
-  const flow = useFlowData(symbol, sessionDate ?? istSessionDate(), allowFlowBand && indicators.flow && timeframe !== '1D');
+  const [barRevision, setBarRevision] = useState(0);
+  const requestedFlowDate = sessionDate ?? istSessionDate();
+  const flowDate = useMemo(() => {
+    if (requestedFlowDate === istSessionDate() && ![0, 6].includes(new Date(requestedFlowDate + 'T00:00:00Z').getUTCDay())) return requestedFlowDate;
+    let latest = '';
+    for (const bar of barsRef.current.values()) {
+      const date = istDay(bar.time);
+      if (date <= requestedFlowDate && date > latest) latest = date;
+    }
+    return latest || requestedFlowDate;
+  }, [requestedFlowDate, barRevision]);
+  const flow = useFlowData(symbol, flowDate, allowFlowBand && indicators.flow && timeframe !== '1D');
   const flowLabel = timeframe === '1D' ? 'Flow Band · intraday only' : flow.loading ? 'Flow Band · loading…' : flow.error ? flow.error : flow.data?.lastCut ? `Flow Band · ${flow.data.lastCut} IST${flow.data.stale ? ' · stale' : ''}` : 'Flow Band · no option-flow data';
   const [connection, setConnection] = useState("Connecting");
-  const [barRevision, setBarRevision] = useState(0);
   const [hasBars, setHasBars] = useState(false);
   const [rvolLabel, setRvolLabel] = useState("Waiting for volume history");
   const quoteRef = useRef(onQuote);
@@ -636,7 +646,7 @@ export default function LiveCandleChart({
       <div className="absolute right-2 top-2 z-10 flex overflow-hidden rounded border text-xs shadow-lg" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>
         <button type="button" onClick={(event) => { event.stopPropagation(); zoom(1.45); }} className="px-2 py-1 hover:bg-white/10">−</button><button type="button" onClick={(event) => { event.stopPropagation(); resetView(); }} className="border-x px-2 py-1 font-mono text-[10px] hover:bg-white/10" style={{ borderColor: "var(--color-border)" }}>RESET</button><button type="button" onClick={(event) => { event.stopPropagation(); zoom(0.7); }} className="px-2 py-1 hover:bg-white/10">+</button>
       </div>
-      <div className="absolute right-2 top-10 z-10 flex max-w-[95%] flex-wrap overflow-hidden rounded border font-mono text-[10px]" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>{(Object.keys(INDICATOR_LABELS) as IndicatorKey[]).filter(key => key !== 'flow' || allowFlowBand).map((key) => <button key={key} type="button" aria-pressed={indicators[key]} title={key === 'flow' ? 'Experimental · EMA9 ± ATR14; green/red option-pressure proxy. Grey means unavailable. Completed candles only.' : INDICATOR_LABELS[key]} onClick={(event) => { event.stopPropagation(); setIndicators((current) => ({ ...current, [key]: !current[key] })); }} className="border-l px-2 py-1 hover:bg-white/10 first:border-l-0" style={{ borderColor: "var(--color-border)", color: indicators[key] ? "#fbbf24" : "#94a3b8" }}>{INDICATOR_LABELS[key]}</button>)}</div>
+      <div className="absolute right-2 top-10 z-10 flex max-w-[95%] flex-wrap overflow-hidden rounded border font-mono text-[10px]" style={{ borderColor: "var(--color-border)", background: "rgba(11,18,32,.92)" }}>{(Object.keys(INDICATOR_LABELS) as IndicatorKey[]).filter(key => key !== 'flow' || allowFlowBand).map((key) => <button key={key} type="button" aria-pressed={indicators[key]} title={key === 'flow' ? 'Experimental · EMA9 ± ATR14; green/red option-pressure proxy. Grey means unavailable. Triangles mark closes crossing the preceding completed candle�s band edge.' : INDICATOR_LABELS[key]} onClick={(event) => { event.stopPropagation(); setIndicators((current) => ({ ...current, [key]: !current[key] })); }} className="border-l px-2 py-1 hover:bg-white/10 first:border-l-0" style={{ borderColor: "var(--color-border)", color: indicators[key] ? "#fbbf24" : "#94a3b8" }}>{INDICATOR_LABELS[key]}</button>)}</div>
       {allowFlowBand && indicators.flow && <div className="pointer-events-none absolute left-2 top-16 z-10 rounded bg-slate-950/80 px-2 py-1 font-mono text-[10px] text-slate-300" title="Experimental option-pressure overlay; not measured institutional buying or selling. Green bullish pressure · red bearish pressure · grey unavailable.">{flowLabel} · experimental</div>}
       {Object.keys(INDICATOR_LABELS).some((key) => indicators[key as IndicatorKey]) && <div className="pointer-events-none absolute left-2 top-2 z-10 rounded px-2 py-1 font-mono text-[10px]" style={{ color: "#cbd5e1", background: "rgba(11,18,32,.72)" }}>{(Object.keys(INDICATOR_LABELS) as IndicatorKey[]).filter((key) => indicators[key]).map((key) => INDICATOR_LABELS[key]).join(" · ")}</div>}
       {contextMenu && (

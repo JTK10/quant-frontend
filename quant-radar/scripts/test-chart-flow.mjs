@@ -16,7 +16,7 @@ assert.equal(computeFlowBand(bars,[...points.slice(0,1),{time:600,available:615,
 let updates=0,fills=0;
 const primitive=new FlowBandPrimitive();primitive.attached({chart:{timeScale:()=>({timeToCoordinate:t=>t})},series:{priceToCoordinate:p=>p},requestUpdate:()=>updates++});primitive.update(ready);
 primitive.paneViews()[0].renderer().draw({useMediaCoordinateSpace:fn=>fn({context:{save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){fills++;}}})});
-assert.equal(updates,1);assert.equal(fills,1);primitive.detached();
+assert.equal(ready[1].breakSide,"BULL");assert.equal(ready[1].breakLevel,102);assert.equal(computeFlowBand(bars,points,300,599).length,1);assert.equal(updates,1);assert.equal(fills,2);primitive.detached();
 
 const at=s=>Date.parse(s+'+05:30'),flush=async()=>{for(let i=0;i<25;i++)await Promise.resolve();};
 function hookHarness(start){

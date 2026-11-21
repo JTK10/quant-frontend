@@ -3,7 +3,7 @@ import type { IPrimitivePaneView, ISeriesPrimitive, SeriesAttachedParameter, Tim
 export type FlowPoint = { time: number; available: number; value: number | null };
 export type FlowData = { symbol: string; date: string; points: FlowPoint[]; lastCut: string | null; stale: boolean };
 type Bar = { time: number; high: number; low: number; close: number };
-export type BandPoint = { time: number; upper: number; lower: number; pressure: number | null };
+export type BandPoint = { time: number; upper: number; lower: number; pressure: number | null; breakSide?: "BULL" | "BEAR"; breakLevel?: number };
 
 export function computeFlowBand(bars: Bar[], points: FlowPoint[], interval = 300, asOf = Date.now()/1000): BandPoint[] {
   const pressure = new Map<number, number | null>();
@@ -16,10 +16,12 @@ export function computeFlowBand(bars: Bar[], points: FlowPoint[], interval = 300
   }
   let ema=0, atr=0, prior=0;
   return bars.flatMap((bar,i) => {
+    const priorUpper = ema + atr, priorLower = ema - atr;
+    const breakSide: BandPoint["breakSide"] = !i || bar.time - bars[i - 1].time !== interval ? undefined : prior <= priorUpper && bar.close > priorUpper ? "BULL" : prior >= priorLower && bar.close < priorLower ? "BEAR" : undefined;
     const tr=Math.max(bar.high-bar.low,i?Math.abs(bar.high-prior):0,i?Math.abs(bar.low-prior):0);
     ema = i ? .2*bar.close+.8*ema : bar.close; atr=i?(13*atr+tr)/14:tr; prior=bar.close;
     if(bar.time+interval>asOf)return [];
-    return [{time:bar.time,upper:ema+atr,lower:ema-atr,pressure:pressure.get(bar.time+interval)??null}];
+    return [{time:bar.time,upper:ema+atr,lower:ema-atr,pressure:pressure.get(bar.time+interval)??null, breakSide, breakLevel: breakSide === "BULL" ? priorUpper : breakSide === "BEAR" ? priorLower : undefined}];
   });
 }
 
@@ -39,6 +41,20 @@ export class FlowBandPrimitive implements ISeriesPrimitive<Time> {
         if(x==null||x2==null||u==null||u2==null||l==null||l2==null)continue;
         ctx.fillStyle=q.pressure==null?'rgba(148,163,184,.18)':q.pressure>=0?'rgba(0,190,145,.45)':'rgba(239,68,100,.45)';
         ctx.beginPath();ctx.moveTo(x,u);ctx.lineTo(x2,u2);ctx.lineTo(x2,l2);ctx.lineTo(x,l);ctx.closePath();ctx.fill();
+      }
+      for (const point of this.points) {
+        if (point.breakLevel === undefined) continue;
+        const x = a.chart.timeScale().timeToCoordinate(point.time as UTCTimestamp);
+        const y = a.series.priceToCoordinate(point.breakLevel);
+        if (x == null || y == null) continue;
+        const bullish = point.breakSide === "BULL";
+        ctx.fillStyle = bullish ? "#34d399" : "#fb7185";
+        ctx.beginPath();
+        ctx.moveTo(x, y + (bullish ? -8 : 8));
+        ctx.lineTo(x - 4, y);
+        ctx.lineTo(x + 4, y);
+        ctx.closePath();
+        ctx.fill();
       }
       ctx.restore();
     });
