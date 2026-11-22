@@ -3,9 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizePantherSignals, getTodayIstDate } from "@/utils/backend";
 import {projectLupusHistory} from '@/utils/lupusHistory';
 import {resultCache} from '@/utils/resultCache';
-import {projectRustySnapshot,rustyHistoryCache,rustyHistoryResponse} from '@/utils/rustyHistory';
+import {projectRustySnapshot,rustyHistoryCache,rustyHistoryResponse,type RustyCleanRunnerDay} from '@/utils/rustyHistory';
 import {compactKairosEvents} from '@/utils/kairos';
 import {readRustyRvolArchive} from '@/utils/rustyRvolArchive';
+import {readRustyNovemberArchive} from '@/utils/rustyNovemberArchive';
+import cleanRunnerArchive from '@/data/rusty-clean-runners.json';
+
+const cleanRunnerByDate=((cleanRunnerArchive as unknown) as {dates?:Record<string,RustyCleanRunnerDay>}).dates??{};
 
 export const dynamic = "force-dynamic";
 
@@ -300,9 +304,11 @@ async function buildPayload(
   // the named display metrics: pure OI change (Rusty %) and its rank, plus the
   // requested opposite-leg increase rank for each side. Raw leg values and
   // the selection calculation remain redacted before serialization.
+  const isoDate=`${targetDate.slice(0,4)}-${targetDate.slice(4,6)}-${targetDate.slice(6,8)}`;
+  const crDay=cleanRunnerByDate[isoDate];
   rows = rows.map((snapshot: any) => {
     if (snapshot.source !== "rusty") return snapshot;
-    return projectRustySnapshot(snapshot);
+    return projectRustySnapshot(snapshot,undefined,crDay);
   });
   if(lupusView)return projectLupusHistory(rows,targetDate.slice(0,4)+'-'+targetDate.slice(4,6)+'-'+targetDate.slice(6,8));
   const snapshots=normalizePantherSignals(rows);
@@ -345,10 +351,13 @@ export async function GET(request: NextRequest) {
     if(view==='rusty'&&!latestCycle&&!lastN&&!topN&&!rankBy){
       const forceRefresh=/\b(no-cache|max-age=0)\b/.test(request.headers?.get('cache-control')??'');
       const history=await historyCache(targetDate,forceRefresh?0:historical?300000:10000,forceRefresh?null:requestedCut,async()=>{
-        const raw=await getRawByDate(targetDate,'rusty');
-        const rows=raw.filter(s=>s.source==='rusty').sort((a,b)=>(a.ts??0)-(b.ts??0));
+        const isoDate=`${targetDate.slice(0,4)}-${targetDate.slice(4,6)}-${targetDate.slice(6,8)}`;
+        const crDay=cleanRunnerByDate[isoDate];
+        const archivedNov=historical?await readRustyNovemberArchive(targetDate):undefined;
+        const raw=archivedNov&&archivedNov.length>0?archivedNov:await getRawByDate(targetDate,'rusty');
+        const rows=raw.filter(s=>s.source==='rusty').sort((a,b)=>Number(a.ts??0)-Number(b.ts??0)||String(a.cut||a.time||'').localeCompare(String(b.cut||b.time||'')));
         const rvol=historical?await readRustyRvolArchive(targetDate):undefined;
-        return normalizePantherSignals(rows.map(s=>projectRustySnapshot(s,rvol)));
+        return normalizePantherSignals(rows.map(s=>projectRustySnapshot(s,rvol,crDay)));
       });
       const body=rustyHistoryResponse(history,requestedCut,after);
       // Published cuts can be reused privately during the live day; Refresh can revalidate.

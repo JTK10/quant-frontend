@@ -1,0 +1,37 @@
+--- a/ocelot.py
++++ b/ocelot.py
+@@ -495,7 +495,7 @@
+         log(f"publish_jaguar {cut_ts:%H:%M} FAILED: {type(e).__name__}: {e}")
+ 
+ 
+-async def publish_rusty(client, cut_ts, opp_rows, degraded, jaguar_aux=None, candles=None):
++async def publish_rusty(client, cut_ts, opp_rows, degraded, jaguar_aux=None, candles=None, chain_rows=None, lv=None, expiry=None):
+     """Publish price-direction boards with independent Rusty OI metrics and candle quality.
+ 
+     The stock's move from its cash-session open decides the board. Rusty % and
+@@ -797,6 +797,11 @@
+     except Exception as exc:
+         log(f"Rusty optional RVOL unavailable: {type(exc).__name__}")
+     try:
++        from rusty_clean_runner import enrich as enrich_clean_runner
++        enrich_clean_runner(cut_ts, doc, candles=candles, chain_rows=chain_rows, lv=lv, expiry=expiry)
++    except Exception as exc:
++        log(f"Rusty optional Clean-Runner unavailable: {type(exc).__name__}")
++    try:
+         tok = await ords_token(client, cfg)
+         r = await client.post(cfg["base"] + cfg["path"], content=json.dumps(doc),
+                               headers={"Authorization": "Bearer " + tok,
+@@ -2005,12 +2010,12 @@
+             except Exception:
+                 log("rusty candle fetch FAILED\n" + traceback.format_exc())
+         try:
+-            await publish_rusty(client, cut_ts, opp_rows, degraded, jaguar_aux, rusty_candles)
++            await publish_rusty(client, cut_ts, opp_rows, degraded, jaguar_aux, rusty_candles, chain_rows, lv, expiry)
+         except Exception:
+             log("rusty publish with candles FAILED\n" + traceback.format_exc())
+             if rusty_candles:
+                 try:
+-                    await publish_rusty(client, cut_ts, opp_rows, degraded, jaguar_aux)
++                    await publish_rusty(client, cut_ts, opp_rows, degraded, jaguar_aux, None, chain_rows, lv, expiry)
+                 except Exception:
+                     log("rusty OI-only fallback FAILED\n" + traceback.format_exc())

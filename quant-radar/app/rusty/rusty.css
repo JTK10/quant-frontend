@@ -42,3 +42,12 @@
 .rusty-view .flow-panel .sort{white-space:normal;max-width:100%;font-size:8px;line-height:1.2;text-align:right}
 .rusty-view .stock-actions{gap:2px;flex-wrap:wrap}
 .rusty-view .stock-actions .stock-name{max-width:100%;overflow-wrap:anywhere;white-space:normal;text-align:left}
+.rusty-view .cr-star{display:inline-flex;align-items:center;padding:1px 3px;border-radius:3px;font-size:8px;font-weight:800;line-height:1.1;letter-spacing:.2px;color:#fde047;background:rgba(250,204,21,.16);border:1px solid rgba(250,204,21,.55);flex-shrink:0}
+.rusty-view .cr-star.cr-t2{color:#fbbf24;background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.45)}
+.rusty-view .cr-star.cr-t3{color:#fdba74;background:rgba(249,115,22,.14);border-color:rgba(249,115,22,.4)}
+.rusty-view .cr-star.cr-trig{color:#082f49;background:#38bdf8;border-color:#7dd3fc}
+.rusty-view tr.cr-row>td{background:rgba(250,204,21,.055)}
+.rusty-view tr.cr-row>td:first-child{box-shadow:inset 2px 0 #facc15}
+.rusty-view tr.cr-row.cr-new>td{background:rgba(56,189,248,.11)}
+.rusty-view tr.cr-row.cr-new>td:first-child{box-shadow:inset 2px 0 #38bdf8}
+.rusty-view .cr-drawer-badge{margin-top:8px;padding:6px 8px;border-radius:6px;font-size:11px;font-weight:700;color:#fde047;background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.45)}

@@ -2,19 +2,34 @@
 // Nothing here is shared through a public CDN or sent as a full browser history.
 type Snapshot=Record<string,unknown>;
 export type RustyRvolPoints=Record<string,Record<string,[number,number,boolean|null]>>;
-export function projectRustySnapshot(snapshot:Snapshot,rvol?:RustyRvolPoints){
-  const visible=(side:unknown)=>Array.isArray(side)?side.map(value=>{
+export type RustyCleanRunnerTuple=[string,number,string,number]; // [cut_ist, tier, lane, score]
+export type RustyCleanRunnerDay={bull?:Record<string,RustyCleanRunnerTuple>;bear?:Record<string,RustyCleanRunnerTuple>};
+
+export function projectRustySnapshot(snapshot:Snapshot,rvol?:RustyRvolPoints,cleanRunners?:RustyCleanRunnerDay){
+  const cut=String(snapshot.cut||snapshot.time||'').slice(0,5);
+  const validCut=/^\d{2}:\d{2}$/.test(cut);
+  const visible=(side:unknown,sideKey:'bull'|'bear')=>Array.isArray(side)?side.map(value=>{
     const original=value as Record<string,unknown>;
     const nearby=original.nearby_oi;
     const fields=['ce_pct','pe_pct','oi_bias','flow_type','flow_label','badge_color','badge_bg','conviction'];
     const row=Array.isArray(nearby)&&nearby.length===fields.length
       ? {...original,...Object.fromEntries(fields.map((field,i)=>[field,nearby[i]]))}
       : original;
-    const hm=String(row.c_time||'').slice(0,5),cut=String(snapshot.cut||snapshot.time||'').slice(0,5);
-    const closed=/^\d{2}:\d{2}$/.test(hm)&&/^\d{2}:\d{2}$/.test(cut)&&
+    const hm=String(row.c_time||'').slice(0,5);
+    const closed=/^\d{2}:\d{2}$/.test(hm)&&validCut&&
       Number(hm.slice(0,2))*60+Number(hm.slice(3))+5<=Number(cut.slice(0,2))*60+Number(cut.slice(3));
     const saved=closed?rvol?.[hm]?.[String(row.s)]:undefined;
     const recorded=typeof row.c_rvol==='number'&&Number.isFinite(row.c_rvol);
+    // Causal Clean-Runner projection: native live cr_tier (when cr_cut <= cut) takes precedence,
+    // otherwise packaged causal Clean-Runner lookup fires strictly when cut >= crTuple[0].
+    const nativeCrCut=typeof row.cr_cut==='string'&&/^\d{2}:\d{2}$/.test(row.cr_cut)?row.cr_cut:null;
+    const nativeCrActive=typeof row.cr_tier==='number'&&Number.isFinite(row.cr_tier)&&(!nativeCrCut||!validCut||nativeCrCut<=cut);
+    const savedCr=!nativeCrActive&&validCut?cleanRunners?.[sideKey]?.[String(row.s)]:undefined;
+    const savedCrActive=Array.isArray(savedCr)&&savedCr.length>=4&&typeof savedCr[0]==='string'&&savedCr[0]<=cut;
+    const cr_tier=nativeCrActive?Number(row.cr_tier):savedCrActive?Number(savedCr![1]):null;
+    const cr_lane=nativeCrActive?(typeof row.cr_lane==='string'?row.cr_lane:null):savedCrActive?String(savedCr![2]):null;
+    const cr_cut=nativeCrActive?(nativeCrCut??(validCut?cut:null)):savedCrActive?String(savedCr![0]):null;
+    const cr_score=nativeCrActive?(typeof row.cr_score==='number'&&Number.isFinite(row.cr_score)?row.cr_score:null):savedCrActive?Number(savedCr![3]):null;
     const projected={s:row.s,mv:row.mv,brk:row.brk,bt:row.bt,ls:row.ls,p:row.rusty_pct,rr:row.rusty_rank,dr:row.rk??null,
       pi:row.put_inc_rank,ci:row.call_inc_rank,w:row.mr,ce:row.ce_pct??null,pe:row.pe_pct??null,
       ce_pct:row.ce_pct??null,pe_pct:row.pe_pct??null,oi_bias:row.oi_bias??null,flow_type:row.flow_type??null,
@@ -25,11 +40,12 @@ export function projectRustySnapshot(snapshot:Snapshot,rvol?:RustyRvolPoints){
       c_time:row.c_time??null,c_open:row.c_open??null,c_close:row.c_close??null,c_high:row.c_high??null,
       c_low:row.c_low??null,c_body:row.c_body??null,c_uw:row.c_uw??null,c_lw:row.c_lw??null,
       c_mv:row.c_mv??null,is_maru:row.is_maru??false,is_solid:row.is_solid??false,
-      candle_tier:row.candle_tier??null,tgt_pct:row.tgt_pct??null,oi_broken:row.oi_broken??null,oi_break_time:row.oi_break_time??null,entry_confirmed:row.entry_confirmed??false};
+      candle_tier:row.candle_tier??null,tgt_pct:row.tgt_pct??null,oi_broken:row.oi_broken??null,oi_break_time:row.oi_break_time??null,entry_confirmed:row.entry_confirmed??false,
+      cr_tier,cr_lane,cr_cut,cr_score};
     // Omitted unavailable fields render identically and avoid repeated null keys.
     return Object.fromEntries(Object.entries(projected).filter(([,value])=>value!==null&&value!==undefined));
   }):[];
-  return {source:'rusty',cap:'RUSTY',cut:snapshot.cut,time:snapshot.time,bull:visible(snapshot.bull),bear:visible(snapshot.bear)};
+  return {source:'rusty',cap:'RUSTY',cut:snapshot.cut,time:snapshot.time,bull:visible(snapshot.bull,'bull'),bear:visible(snapshot.bear,'bear')};
 }
 type History={cuts:string[];snapshots:Map<string,string>;loaded:number;bytes:number};
 export function rustyHistoryCache({maxEntries=3,maxBytes=16*1024*1024,retention=300000}={}){
@@ -61,4 +77,3 @@ export function rustyHistoryResponse(history:History,cut:string|null,after:strin
   const snapshots=wanted.filter(c=>!after||c>=after).map(c=>history.snapshots.get(c)).filter(Boolean);
   return '{"snapshots":['+snapshots.join(',')+'],"cuts":'+JSON.stringify(history.cuts)+'}';
 }
-
