@@ -18,8 +18,8 @@ let tokenPending:Promise<string|null>|undefined;
 const historyCache=rustyHistoryCache();
 const payloadCache=resultCache<string>({maxEntries:32,maxBytes:16*1024*1024,size:s=>Buffer.byteLength(s)});
 
-function isBoundedKairosSource(source: string | null): source is "kairos10" | "kairos29" {
-  return source === "kairos10" || source === "kairos29";
+function isBoundedKairosSource(source: string | null): source is "kairos10" | "kairos29" | "kairos_cr" {
+  return source === "kairos10" || source === "kairos29" || source === "kairos_cr";
 }
 
 async function getToken() {
