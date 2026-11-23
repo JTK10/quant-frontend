@@ -94,6 +94,11 @@ assert(ibPage.includes('pagePath="/intraday-boost"'));
 assert(ibClient.includes('buildRfacSectorScope'));
 assert(ibClient.includes('INTRADAY BOOST'));
 assert(ibClient.includes('SECTOR SCOPE'));
+assert(!ibClient.includes('Mean 32d'));
+assert(!ibClient.includes('32d causal daily-move denominator'));
+assert(!ibClient.includes('9:20 → LTP'));
+assert(!ibClient.includes('detailStock'));
+assert(ibClient.includes('className="tv-link"'));
 assert(!ibClient.includes('router.refresh'));
 assert(nav.includes('/intraday-boost'));
 

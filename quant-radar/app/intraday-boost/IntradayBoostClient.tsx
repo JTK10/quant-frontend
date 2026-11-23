@@ -84,7 +84,7 @@ export default function IntradayBoostClient({
     bear: { ...defaultFilters },
   });
   const [watchlist, setWatchlist] = useState<string[]>([]);
-  const [detailKey, setDetailKey] = useState<string | null>(null);
+  const [showSectorDetails, setShowSectorDetails] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -103,9 +103,9 @@ export default function IntradayBoostClient({
   }, []);
 
   useEffect(() => {
-    if (detailKey) dialog.current?.showModal();
+    if (showSectorDetails) dialog.current?.showModal();
     else dialog.current?.close();
-  }, [detailKey]);
+  }, [showSectorDetails]);
 
   const board = useMemo(() => {
     if (!snap || snapshotMissing) {
@@ -126,11 +126,6 @@ export default function IntradayBoostClient({
         ),
     [board.sectors],
   );
-
-  const detailStock = useMemo(() => {
-    if (!detailKey || detailKey === "sectors") return null;
-    return [...board.bulls, ...board.bears].find((r) => r.symbol === detailKey) ?? null;
-  }, [detailKey, board.bulls, board.bears]);
 
   const updateFilter = (side: Side, patch: Partial<SideFilters>) => {
     setFilters((cur) => ({ ...cur, [side]: { ...cur[side], ...patch } }));
@@ -259,7 +254,6 @@ export default function IntradayBoostClient({
                     Move %{f.sort === "move" ? (f.descending ? " ↓" : " ↑") : ""}
                   </button>
                 </th>
-                <th className="num">9:20 → LTP</th>
                 <th className="num">Peak @</th>
                 <th className="num">
                   <button type="button" className={`sort ${f.sort === "oiBias" ? "selected" : ""}`} onClick={() => updateFilter(side, { sort: "oiBias", descending: f.sort === "oiBias" ? !f.descending : true })}>
@@ -276,7 +270,7 @@ export default function IntradayBoostClient({
                   const rfClass = rf >= 3 ? "extreme" : rf >= 2 ? "hot" : rf >= 1.5 ? "boost" : "";
                   const barPct = Math.min(100, (rf / 4.0) * 100);
                   return (
-                    <tr key={r.symbol} onClick={() => setDetailKey(r.symbol)}>
+                    <tr key={r.symbol}>
                       <td className="rank">{i + 1}</td>
                       <td>
                         <div className="stock-actions">
@@ -286,20 +280,17 @@ export default function IntradayBoostClient({
                             className="watch-add"
                             aria-label={`Add ${r.symbol} to Charts watchlist`}
                             disabled={watchlist.includes(r.symbol)}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setWatchlist(addChartWatchlistSymbol(r.symbol));
-                            }}
+                            onClick={() => setWatchlist(addChartWatchlistSymbol(r.symbol))}
                           >
                             {watchlist.includes(r.symbol) ? "✓" : "+"}
                           </button>
                           <a
+                            className="tv-link"
                             href={buildTradingViewUrl(r.symbol, r.symbol)}
                             title={`Open ${r.symbol} on TradingView`}
                             aria-label={`Open ${r.symbol} on TradingView`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
                           >
                             ↗
                           </a>
@@ -318,9 +309,6 @@ export default function IntradayBoostClient({
                         {r.stale && <span className="stale-tag" title="Price reversed sharply off R.Fac peak">STALE</span>}
                       </td>
                       <td className={`num ${(r.move ?? 0) >= 0 ? "positive" : "negative"}`}>{pct(r.move)}</td>
-                      <td className="num muted-val">
-                        {fmt(r.o20)} → <b>{fmt(r.price)}</b>
-                      </td>
                       <td className="num muted-val">{r.peakCut || "—"}</td>
                       <td className="num">{fmt(r.oiBias)}</td>
                       <td className="num">
@@ -333,7 +321,7 @@ export default function IntradayBoostClient({
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} className="empty">
+                  <td colSpan={8} className="empty">
                     {snapshotMissing
                       ? `Waiting for snapshot ${currentCut}…`
                       : currentCut && currentCut < "09:25"
@@ -356,7 +344,6 @@ export default function IntradayBoostClient({
           <div className="ib-logo">⚡</div>
           <div>
             <h1 className="ib-brand">INTRADAY BOOST</h1>
-            <div className="ib-sub">R.Fac = max(|Close − Open 09:20|) / Mean 32d(|ΔClose|) · Bulls &amp; Bears separate</div>
           </div>
           <div className="ib-top-right">
             <div className="ib-date">{dateStr}</div>
@@ -434,7 +421,7 @@ export default function IntradayBoostClient({
                 <div className="ib-sector-title">
                   SECTOR SCOPE
                   <span className="ib-sector-logic">R.FAC LOGIC</span>
-                  <button type="button" onClick={() => setDetailKey("sectors")}>
+                  <button type="button" onClick={() => setShowSectorDetails(true)}>
                     View details ↗
                   </button>
                   {selectedSector && (
@@ -483,7 +470,6 @@ export default function IntradayBoostClient({
             </div>
 
             <footer className="ib-foot">
-              <span>5-minute snapshots · R.Fac anchored at 09:20 IST open · 32d causal daily-move denominator</span>
               <span>
                 {active + 1} / {cuts.length} · {currentCut} IST
               </span>
@@ -495,29 +481,25 @@ export default function IntradayBoostClient({
       <dialog
         ref={dialog}
         className="ib-dialog"
-        aria-label={detailKey === "sectors" ? "Sector Scope R.Fac breakdown" : "Stock R.Fac details"}
-        onCancel={() => setDetailKey(null)}
+        aria-label="Sector Scope R.Fac breakdown"
+        onCancel={() => setShowSectorDetails(false)}
         onClick={(e) => {
-          if (e.target === e.currentTarget) setDetailKey(null);
+          if (e.target === e.currentTarget) setShowSectorDetails(false);
         }}
       >
         <aside className="ib-drawer">
           <div className="ib-drawer-top">
-            <h2>{detailKey === "sectors" ? "Sector Scope (R.Fac Logic)" : detailStock?.symbol || detailKey}</h2>
-            <button type="button" className="close" autoFocus aria-label="Close details" onClick={() => setDetailKey(null)}>
+            <h2>Sector Scope (R.Fac Logic)</h2>
+            <button type="button" className="close" autoFocus aria-label="Close details" onClick={() => setShowSectorDetails(false)}>
               ×
             </button>
           </div>
 
-          {detailKey === "sectors" ? (
+          {showSectorDetails ? (
             <>
               <p className="ib-explain">
-                <b>{currentCut} IST</b> · Sector Scope ranks each sector using the exact live-verified <b>R.Fac</b> formula.
-                Every stock gets a signed R.Fac: <b>+R.Fac</b> when LTP ≥ Open 09:20 (Bull) and <b>−R.Fac</b> when LTP &lt; Open 09:20 (Bear).
-              </p>
-              <p className="ib-explain">
-                <b>Net R.Fac</b> = average signed R.Fac across active sector members (positive = bullish leadership, negative = bearish leadership).
-                <b> Avg R.Fac</b> = average magnitude. Click any sector row to filter the Bulls &amp; Bears boards.
+                <b>{currentCut} IST</b> · Sector Scope ranks each sector using signed R.Fac: <b>+R.Fac</b> for Bulls and <b>−R.Fac</b> for Bears.
+                <b> Net R.Fac</b> = average signed R.Fac across active sector members. Click any sector row to filter Bulls &amp; Bears.
               </p>
               {sectors.map((s) => (
                 <div
@@ -525,7 +507,7 @@ export default function IntradayBoostClient({
                   key={s.sec}
                   onClick={() => {
                     setSelectedSector(s.sec);
-                    setDetailKey(null);
+                    setShowSectorDetails(false);
                   }}
                 >
                   <div className="ib-sec-detail-top">
@@ -542,37 +524,6 @@ export default function IntradayBoostClient({
                   </p>
                 </div>
               ))}
-            </>
-          ) : detailStock ? (
-            <>
-              <p className="ib-explain">
-                <b className={detailStock.direction === "BULL" ? "positive" : "negative"}>{detailStock.direction}</b> · {currentCut} IST
-                {detailStock.stale ? " · STALE (price pulled back ≥0.5 R.Fac from peak)" : " · Fresh momentum"}
-              </p>
-              <div className="ib-detail-grid">
-                <div><small>PEAK R.FAC</small><strong>{fmt(detailStock.rfac)}</strong></div>
-                <div><small>CURR R.FAC</small><strong>{fmt(detailStock.currRfac)}</strong></div>
-                <div><small>OPEN 09:20</small><strong>{fmt(detailStock.o20)}</strong></div>
-                <div><small>LTP</small><strong>{fmt(detailStock.price)}</strong></div>
-                <div><small>32D DENOM</small><strong>{fmt(detailStock.denom)}</strong></div>
-                <div><small>PEAK TIME</small><strong>{detailStock.peakCut || "—"}</strong></div>
-                <div><small>OI BIAS</small><strong>{fmt(detailStock.oiBias)}</strong></div>
-                <div><small>MOVE %</small><strong>{pct(detailStock.move)}</strong></div>
-                <div><small>CE OI %</small><strong>{pct(detailStock.ce)}</strong></div>
-                <div><small>PE OI %</small><strong>{pct(detailStock.pe)}</strong></div>
-              </div>
-              <p className="ib-explain">
-                Flow: <b>{detailStock.classification}</b> · PDH/PDL: <b>{detailStock.pdhPdlBroken}</b>
-                {detailStock.pdhPdlBreakTime ? ` (${detailStock.pdhPdlBreakTime})` : ""}
-              </p>
-              <div className="ib-drawer-links">
-                <a className="ib-link" href={`/charts?symbol=${encodeURIComponent(detailStock.symbol)}&date=${encodeURIComponent(dateStr)}`}>
-                  Open Chart ↗
-                </a>
-                <a className="ib-link" href={buildTradingViewUrl(detailStock.symbol, detailStock.symbol)} target="_blank" rel="noopener noreferrer">
-                  TradingView ↗
-                </a>
-              </div>
             </>
           ) : null}
         </aside>
