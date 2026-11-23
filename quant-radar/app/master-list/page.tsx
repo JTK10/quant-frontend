@@ -27,3 +27,5 @@ export default async function MasterListPage({ searchParams }: { searchParams: D
     </div>
   );
 }
+
+export const metadata = { title: "Master List | Quant Radar" };

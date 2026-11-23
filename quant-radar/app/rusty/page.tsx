@@ -8,3 +8,5 @@ export default async function RustyPage({ searchParams }: { searchParams: DateSe
   const params=await searchParams;
   return <RustyFeed key={dateStr} dateStr={dateStr} followToday={!params?.date}/>;
 }
+
+export const metadata = { title: "Rusty | Quant Radar" };

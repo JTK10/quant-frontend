@@ -75,3 +75,5 @@ export default async function CapitulationSignalPage({ searchParams }: { searchP
     </div>
   );
 }
+
+export const metadata = { title: "Intraday Reversal | Quant Radar" };

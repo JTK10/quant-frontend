@@ -60,3 +60,5 @@ export default async function OcelotPage({ searchParams }: { searchParams: DateS
     </div>
   );
 }
+
+export const metadata = { title: "Ocelot | Quant Radar" };

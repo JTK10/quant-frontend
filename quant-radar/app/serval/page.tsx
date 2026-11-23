@@ -45,3 +45,5 @@ export default async function ServalPage({ searchParams }: { searchParams: DateS
     </div>
   );
 }
+
+export const metadata = { title: "Serval | Quant Radar" };

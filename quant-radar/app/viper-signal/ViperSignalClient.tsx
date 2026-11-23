@@ -27,9 +27,10 @@ const sideFilters: ReadonlyArray<[SideFilter, string]> = [
   ['Both', 'Both'], ['BULL', 'Bulls'], ['BEAR', 'Bears'],
 ];
 
-export default function ViperSignalClient({date, dates, rows: archivedRows}: {
+export default function ViperSignalClient({date, dates, archive, rows: archivedRows}: {
   date: string | undefined;
   dates: readonly string[];
+  archive: boolean;
   rows: readonly SignalRow[];
 }) {
   const router = useRouter();
@@ -43,7 +44,6 @@ export default function ViperSignalClient({date, dates, rows: archivedRows}: {
   const [board, setBoard] = useState<ViperBoard | null>(null);
   const [liveDate, setLiveDate] = useState(istSessionDate);
   const [error, setError] = useState('');
-  const archive = Boolean(date && dates.includes(date));
   const rows = useMemo(() => archive ? archivedRows :
     board?.cuts.flatMap(c => [...c.bull,...c.bear]) ?? [], [archive, archivedRows, board]);
 
@@ -119,7 +119,7 @@ export default function ViperSignalClient({date, dates, rows: archivedRows}: {
       <header className="viper-signal__header">
         <div>
           <h1 id="viper-signal-title">Viper Signal</h1>
-          <p>{archive ? 'Historical signals' : 'Live bull and bear signals · '+liveDate}</p>
+          <p>{date ? 'Historical signals · '+date : 'Live bull and bear signals · '+liveDate}</p>
         </div>
         <label>
           Session
@@ -236,7 +236,7 @@ export default function ViperSignalClient({date, dates, rows: archivedRows}: {
               );
             })}
             {!visible.length && <tr><td colSpan={labels.length} className="viper-signal__empty">
-              {scoped.length ? 'No signals match these filters.' : archive ? 'No saved signals for this session.' : 'Waiting for qualifying bull or bear setups.'}
+              {scoped.length ? 'No signals match these filters.' : (archive || (date && board)) ? 'No saved signals for this session.' : 'Waiting for qualifying bull or bear setups.'}
             </td></tr>}
           </tbody>
         </table>

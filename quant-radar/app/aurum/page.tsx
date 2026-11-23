@@ -6,3 +6,5 @@ export default async function AurumPage({searchParams}: {searchParams: Promise<{
     Number.isFinite(Date.parse(date)) && new Date(date).toISOString().slice(0, 10) === date ? date : undefined;
   return <AurumClient initialDate={initialDate}/>;
 }
+
+export const metadata = { title: "Aurum | Quant Radar" };

@@ -99,3 +99,5 @@ export default async function CapsSignalPage({ searchParams }: { searchParams: D
     </div>
   );
 }
+
+export const metadata = { title: "Caps Signals Engine | Quant Radar" };

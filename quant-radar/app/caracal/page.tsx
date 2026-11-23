@@ -60,3 +60,5 @@ export default async function CaracalPage({ searchParams }: { searchParams: Date
     </div>
   );
 }
+
+export const metadata = { title: "Caracal | Quant Radar" };

@@ -87,3 +87,5 @@ export default async function PantherSignalPage({ searchParams }: { searchParams
     </div>
   );
 }
+
+export const metadata = { title: "Panther Signals | Quant Radar" };

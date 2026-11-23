@@ -79,3 +79,5 @@ export default async function ObSignalPage({ searchParams }: { searchParams: Dat
     </div>
   );
 }
+
+export const metadata = { title: "Precision Radar | Quant Radar" };

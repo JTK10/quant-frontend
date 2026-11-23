@@ -9,3 +9,5 @@ export default async function ChartsPage({ searchParams }: { searchParams: Chart
   const initialSymbol = typeof params.symbol === "string" ? params.symbol : undefined;
   return <ChartsClient initialSymbol={initialSymbol} initialDate={params.date} streamUrl={process.env.NEXT_PUBLIC_CHART_STREAM_URL ?? "wss://140.238.241.210.sslip.io"} />;
 }
+
+export const metadata = { title: "Charts | Quant Radar" };

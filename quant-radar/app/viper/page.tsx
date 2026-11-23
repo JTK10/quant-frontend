@@ -5,3 +5,5 @@ export default async function ViperPage({searchParams}: {searchParams: Promise<{
   const {date} = await searchParams;
   return <ViperClient initialDate={typeof date === 'string' && validDate(date) ? date : undefined} />;
 }
+
+export const metadata = { title: "Viper | Quant Radar" };

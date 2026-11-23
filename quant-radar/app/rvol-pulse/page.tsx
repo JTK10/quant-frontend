@@ -30,3 +30,5 @@ export default async function RvolPulsePage({ searchParams }: { searchParams: Da
     </div>
   );
 }
+
+export const metadata = { title: "Intraday Pulse | Quant Radar" };

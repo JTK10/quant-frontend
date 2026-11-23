@@ -133,3 +133,5 @@ export default async function AfacPage({ searchParams }: { searchParams: DateSea
     </div>
   );
 }
+
+export const metadata = { title: "AFAC | Quant Radar" };

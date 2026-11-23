@@ -4,3 +4,5 @@ export const dynamic='force-dynamic';
 export default async function SectorPage({searchParams}:{searchParams:DateSearchParams}){
  return <SectorWorkspace date={await resolveDate(searchParams)}/>;
 }
+
+export const metadata = { title: "Sector Scope | Quant Radar" };

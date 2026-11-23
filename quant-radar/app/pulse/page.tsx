@@ -73,3 +73,5 @@ export default async function PulsePage({ searchParams }: { searchParams: DateSe
     </div>
   );
 }
+
+export const metadata = { title: "Watchlist | Quant Radar" };

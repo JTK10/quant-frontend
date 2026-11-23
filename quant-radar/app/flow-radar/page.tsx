@@ -76,3 +76,5 @@ function SummaryStat({ label, value, color }: { label: string; value: string; co
     </div>
   );
 }
+
+export const metadata = { title: "Flow Radar | Quant Radar" };

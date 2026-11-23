@@ -88,3 +88,5 @@ export default async function LynxPage({ searchParams }: { searchParams: DateSea
     </div>
   );
 }
+
+export const metadata = { title: "Lynx | Quant Radar" };

@@ -71,3 +71,5 @@ export default async function KairosPage({ searchParams }: { searchParams: DateS
     </div>
   );
 }
+
+export const metadata = { title: "Kairos | Quant Radar" };

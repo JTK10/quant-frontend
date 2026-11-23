@@ -5,3 +5,5 @@ export default async function SolPage({searchParams}:{searchParams:DateSearchPar
   const dateStr=await resolveDate(searchParams), params=await searchParams;
   return <SolFeed key={dateStr} dateStr={dateStr} followToday={!params?.date}/>;
 }
+
+export const metadata = { title: "Sol | Quant Radar" };

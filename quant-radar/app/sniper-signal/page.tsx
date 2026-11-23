@@ -76,3 +76,5 @@ export default async function SniperSignalPage({ searchParams }: { searchParams:
     </div>
   );
 }
+
+export const metadata = { title: "Sniper Signal | Quant Radar" };

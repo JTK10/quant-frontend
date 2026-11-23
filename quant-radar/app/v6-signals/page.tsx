@@ -75,3 +75,5 @@ export default async function V6SignalPage({ searchParams }: { searchParams: Dat
     </div>
   );
 }
+
+export const metadata = { title: "V6 Momentum | Quant Radar" };
