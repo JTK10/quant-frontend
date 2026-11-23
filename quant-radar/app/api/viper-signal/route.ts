@@ -7,6 +7,8 @@ import {
   validCut, validDate, VIPER_MAX_CUTS,
   VIPER_MAX_ORIGIN_BYTES, VIPER_MAX_ROWS_PER_CUT, type ViperBoard, type ViperRow,
 } from '@/app/viper-signal/model';
+import {evaluateFixASniper} from '@/app/viper-signal/sniperBadge';
+import {recentPeakRfac} from '@/app/viper-signal/sniperRecentRfac';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -37,11 +39,24 @@ function projectRows(raw: unknown, date: string, cut: string): ViperRow[] {
     if (keys.has(key)) throw Error('Duplicate signal');
     keys.add(key);
     if (row.oppositeConfirmed !== null && typeof row.oppositeConfirmed !== 'boolean') throw Error('Invalid confirmation');
+    const rvol = finiteOrNull(row.rvol);
+    const activeRvol = finiteOrNull(row.activeRvol);
+    const referencePrice = finiteOrNull(row.referencePrice);
+    const decisionVwap = finiteOrNull(row.decisionVwap);
+    const aboveVwap = referencePrice !== null && decisionVwap !== null ? referencePrice > decisionVwap : null;
+    const nativeRfac = finiteOrNull(row.peakRfac);
+    const peakRfac = nativeRfac ?? recentPeakRfac(date, row.symbol, cut);
+    const first = row.first === true;
+    const {sniper, sniperMode} = evaluateFixASniper({
+      side: row.side, cut, date, expiry: row.expiry, aboveVwap, peakRfac, rvol, activeRvol, first,
+    });
     return {
       side: row.side, symbol:row.symbol, cut, route:row.route, strike:row.strike, level:row.level,
-      rvol:finiteOrNull(row.rvol), activeRvol:finiteOrNull(row.activeRvol),
+      rvol, activeRvol,
       unwind:finiteOrNull(row.unwind), opposite:finiteOrNull(row.opposite),
-      oppositeConfirmed:row.oppositeConfirmed, first:row.first === true,
+      oppositeConfirmed:row.oppositeConfirmed, first,
+      ...(peakRfac !== null ? {peakRfac} : {}),
+      ...(sniper && sniperMode ? {sniper: true, sniperMode} : {}),
     };
   });
 }

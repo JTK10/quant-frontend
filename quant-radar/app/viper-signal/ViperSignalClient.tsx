@@ -209,6 +209,19 @@ export default function ViperSignalClient({date, dates, archive, rows: archivedR
                   <td className="viper-signal__time">{row.cut}</td>
                   <td>
                     <span className="viper-signal__badge" data-side={row.side}>{row.side}</span>
+                    {row.sniper && (
+                      <span
+                        className="viper-signal__sniper"
+                        title={
+                          'Fix A Sniper (+1% setup)' +
+                          (row.peakRfac != null ? ` · Peak R.Fac ${number.format(row.peakRfac)}` : '') +
+                          ' · Above VWAP · ' +
+                          (row.sniperMode === 'expiry' ? 'Expiry-week volume confirmed (RVOL ≥ 1.5× & Active ≥ 2.0×)' : 'Normal week')
+                        }
+                      >
+                        ★ SNIPER
+                      </span>
+                    )}
                     <span className="viper-signal__route">{row.route}</span>
                   </td>
                   <td>

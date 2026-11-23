@@ -13,6 +13,8 @@ function load(file, deps = {}, globals = {}) {
 }
 const baseModel = load('app/viper/model.ts');
 const model = load('app/viper-signal/model.ts', {'../viper/model':baseModel});
+const sniperBadge = load('app/viper-signal/sniperBadge.ts');
+const sniperRecentRfac = load('app/viper-signal/sniperRecentRfac.ts');
 const polling = load('utils/sessionPolling.ts');
 const {createViperFeed} = load('app/viper-signal/feed.ts', {'./model': model, '@/utils/sessionPolling': polling});
 const nowIst = (date, time) => Date.parse(date + 'T' + time + ':00+05:30');
@@ -94,7 +96,7 @@ const mock = {source:'viper-signal',engine:'phoenix-live-v1',kind:'SNAPSHOT',sig
   ts:nowIst('2026-11-11','09:46')/1000,recovered:true,bull:[{
     symbol:'RVNL',side:'BULL',cut:'09:45',route:'Standard ignition',strike:200,level:202,
     expiry:'2026-11-23',rvol:2.1,activeRvol:3.1,unwind:-20,opposite:5,
-    oppositeConfirmed:true,first:true,
+    oppositeConfirmed:true,first:true,referencePrice:208.95,decisionVwap:206.17,peakRfac:0.95,
   }],bear:[]};
 const request = path => ({url:'https://unit.invalid'+path,nextUrl:new URL('https://unit.invalid'+path),method:'GET',
   headers:new Headers(),cookies:{get:()=>({value:'mock'})}});
@@ -102,6 +104,8 @@ const route = load('app/api/viper-signal/route.ts', {
   'next/server':{NextResponse},'@/utils/auth':auth,'@/utils/aurumFeed':{getSharedOrdsToken:async()=>'mock'},
   '@/utils/sessionPolling':{istSessionDate:()=>today},'@/utils/resultCache':load('utils/resultCache.ts',{}),
   '@/app/viper-signal/model':model,
+  '@/app/viper-signal/sniperBadge':sniperBadge,
+  '@/app/viper-signal/sniperRecentRfac':sniperRecentRfac,
 }, {process:{env:{PANTHER_SIGNALS_URL:'https://origin.invalid/feed'}},fetch:async url=>{
   originReads++;
   assert.equal(url.searchParams.get('src'),'viper-signal');
@@ -123,7 +127,40 @@ assert.equal(fullBoard.cuts[0].recovered,true);
 assert.equal(fullBoard.cuts[0].bull[0].symbol,'RVNL');
 assert.equal(fullBoard.cuts[0].bull[0].oppositeConfirmed,true);
 assert.equal(fullBoard.cuts[0].bull[0].expiry,undefined);
+assert.equal(fullBoard.cuts[0].bull[0].sniper,true);
+assert.equal(fullBoard.cuts[0].bull[0].sniperMode,'normal');
+assert.equal(fullBoard.cuts[0].bull[0].peakRfac,0.95);
 assert.deepEqual((await delta.json()).cuts,[]);
+
+// Fix A Sniper badge unit tests: normal week vs expiry week vs rejections
+assert.equal(sniperBadge.weekdaysUntil('2026-11-13','2026-11-23'), 6);
+assert.equal(sniperBadge.weekdaysUntil('2026-11-16','2026-11-23'), 5);
+const evalFixA = input => { const r = sniperBadge.evaluateFixASniper(input); return {sniper: r.sniper, sniperMode: r.sniperMode}; };
+assert.deepEqual(
+  evalFixA({side:'BULL',cut:'09:55',date:'2026-11-13',expiry:'2026-11-23',aboveVwap:true,peakRfac:1.22,rvol:0.88,activeRvol:1.31,first:true}),
+  {sniper:true,sniperMode:'normal'},
+);
+assert.deepEqual(
+  evalFixA({side:'BULL',cut:'09:45',date:'2026-11-17',expiry:'2026-11-23',aboveVwap:false,peakRfac:0.38,rvol:1.8,activeRvol:2.5,first:true}),
+  {sniper:false,sniperMode:null},
+);
+assert.deepEqual(
+  evalFixA({side:'BULL',cut:'09:35',date:'2026-11-20',expiry:'2026-11-23',aboveVwap:true,peakRfac:0.47,rvol:1.31,activeRvol:1.31,first:true}),
+  {sniper:false,sniperMode:null},
+);
+assert.deepEqual(
+  evalFixA({side:'BULL',cut:'10:15',date:'2026-11-20',expiry:'2026-11-23',aboveVwap:true,peakRfac:0.64,rvol:1.76,activeRvol:2.66,first:true}),
+  {sniper:true,sniperMode:'expiry'},
+);
+assert.deepEqual(
+  evalFixA({side:'BULL',cut:'09:55',date:'2026-11-13',expiry:'2026-11-23',aboveVwap:true,peakRfac:1.50,rvol:2.0,activeRvol:3.0,first:true}),
+  {sniper:false,sniperMode:null},
+);
+assert.deepEqual(
+  evalFixA({side:'BULL',cut:'11:35',date:'2026-11-13',expiry:'2026-11-23',aboveVwap:true,peakRfac:0.80,rvol:2.0,activeRvol:3.0,first:true}),
+  {sniper:false,sniperMode:null},
+);
+assert.equal(sniperRecentRfac.recentPeakRfac('2026-11-20','TCS','10:15'), 0.64);
 const proxy = load('proxy.ts', {'next/server':{NextResponse},'@/utils/auth':auth}).proxy;
 assert.equal((await proxy(request('/api/viper-signal'))).headers.get('cache-control'),null);
-console.log('PASS: Viper historical and weekend cadence, hidden tab, close and rollover, single in-flight request, stale preservation, private cache, origin deduplication and snapshot delta.');
+console.log('PASS: Viper historical and weekend cadence, hidden tab, close and rollover, single in-flight request, stale preservation, private cache, origin deduplication, snapshot delta and Fix A Sniper badge.');

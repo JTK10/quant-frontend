@@ -11,6 +11,9 @@ export interface SignalRow {
   opposite: number | null;
   oppositeConfirmed: boolean | null;
   first: boolean;
+  peakRfac?: number | null;
+  sniper?: boolean;
+  sniperMode?: 'normal' | 'expiry';
 }
 
 export {validDate, validCut, VIPER_MAX_CUTS, VIPER_MAX_ORIGIN_BYTES, VIPER_MAX_ROWS_PER_CUT, VIPER_POLL_MS} from '../viper/model';

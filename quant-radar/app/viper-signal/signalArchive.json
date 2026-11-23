@@ -14,7 +14,8 @@
       "unwind": -10.81,
       "opposite": 0.13,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 2.05
     },
     {
       "side": "BULL",
@@ -28,7 +29,8 @@
       "unwind": -9.15,
       "opposite": -1.9,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.27
     }
   ],
   "2026-09-11": [
@@ -58,7 +60,8 @@
       "unwind": -11.35,
       "opposite": 2.16,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.81
     },
     {
       "side": "BULL",
@@ -86,7 +89,8 @@
       "unwind": -8.19,
       "opposite": 6.65,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 4.22
     }
   ],
   "2026-09-15": [
@@ -116,7 +120,8 @@
       "unwind": null,
       "opposite": -0.87,
       "oppositeConfirmed": null,
-      "first": true
+      "first": true,
+      "peakRfac": 1.75
     },
     {
       "side": "BULL",
@@ -130,7 +135,10 @@
       "unwind": -6.97,
       "opposite": 1.67,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.61,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -174,7 +182,10 @@
       "unwind": -9.64,
       "opposite": -0.93,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.38,
+      "sniper": true,
+      "sniperMode": "normal"
     }
   ],
   "2026-09-17": [
@@ -190,7 +201,10 @@
       "unwind": -27.69,
       "opposite": 0.25,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.64,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -204,7 +218,10 @@
       "unwind": -5.96,
       "opposite": 3.26,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.56,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -218,7 +235,10 @@
       "unwind": -3.57,
       "opposite": 2.96,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.68,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -232,7 +252,8 @@
       "unwind": -18.6,
       "opposite": 1.18,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.05
     },
     {
       "side": "BULL",
@@ -246,7 +267,8 @@
       "unwind": -9.15,
       "opposite": 21.14,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 4.72
     },
     {
       "side": "BULL",
@@ -260,7 +282,8 @@
       "unwind": -2.5,
       "opposite": 0.0,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.37
     }
   ],
   "2026-09-18": [
@@ -276,7 +299,10 @@
       "unwind": -3.74,
       "opposite": 9.57,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.28,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -290,7 +316,10 @@
       "unwind": -20.83,
       "opposite": 4.7,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.73,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -304,7 +333,10 @@
       "unwind": -3.85,
       "opposite": 14.29,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.82,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -318,7 +350,8 @@
       "unwind": -14.39,
       "opposite": -0.27,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.62
     },
     {
       "side": "BULL",
@@ -376,7 +409,10 @@
       "unwind": -7.1,
       "opposite": 2.74,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.69,
+      "sniper": true,
+      "sniperMode": "normal"
     }
   ],
   "2026-09-22": [
@@ -406,7 +442,8 @@
       "unwind": -7.89,
       "opposite": 3.53,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.44
     },
     {
       "side": "BULL",
@@ -450,7 +487,8 @@
       "unwind": -12.6,
       "opposite": 0.08,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.51
     }
   ],
   "2026-09-24": [
@@ -510,7 +548,10 @@
       "unwind": -27.94,
       "opposite": 38.38,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.45,
+      "sniper": true,
+      "sniperMode": "expiry"
     },
     {
       "side": "BULL",
@@ -524,7 +565,8 @@
       "unwind": -31.67,
       "opposite": 0.64,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.88
     },
     {
       "side": "BULL",
@@ -624,7 +666,8 @@
       "unwind": -8.54,
       "opposite": 8.65,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.97
     },
     {
       "side": "BEAR",
@@ -655,7 +698,10 @@
       "unwind": -6.74,
       "opposite": 1.58,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.19,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -829,7 +875,8 @@
       "unwind": -9.3,
       "opposite": 11.26,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.26
     },
     {
       "side": "BULL",
@@ -843,7 +890,10 @@
       "unwind": -9.95,
       "opposite": 16.44,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.09,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -857,7 +907,8 @@
       "unwind": -11.59,
       "opposite": 5.66,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.5
     },
     {
       "side": "BULL",
@@ -885,7 +936,8 @@
       "unwind": -16.39,
       "opposite": 9.87,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.45
     },
     {
       "side": "BULL",
@@ -913,7 +965,8 @@
       "unwind": -12.56,
       "opposite": 3.18,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.48
     }
   ],
   "2026-10-07": [
@@ -929,7 +982,10 @@
       "unwind": -14.1,
       "opposite": 63.79,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.06,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -971,7 +1027,10 @@
       "unwind": -9.78,
       "opposite": 10.2,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.0,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -1087,7 +1146,10 @@
       "unwind": -2.7,
       "opposite": 5.86,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.1,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -1101,7 +1163,8 @@
       "unwind": -8.51,
       "opposite": 5.62,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.79
     },
     {
       "side": "BULL",
@@ -1115,7 +1178,8 @@
       "unwind": -9.44,
       "opposite": 0.26,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 2.13
     },
     {
       "side": "BULL",
@@ -1129,7 +1193,8 @@
       "unwind": -1.6,
       "opposite": 4.5,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.7
     }
   ],
   "2026-10-12": [
@@ -1175,7 +1240,10 @@
       "unwind": -6.06,
       "opposite": 2.08,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.07,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -1203,7 +1271,8 @@
       "unwind": -4.82,
       "opposite": 6.08,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.93
     },
     {
       "side": "BULL",
@@ -1217,7 +1286,8 @@
       "unwind": -53.33,
       "opposite": 19.75,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.61
     }
   ],
   "2026-10-14": [
@@ -1233,7 +1303,8 @@
       "unwind": -24.8,
       "opposite": null,
       "oppositeConfirmed": null,
-      "first": true
+      "first": true,
+      "peakRfac": 1.81
     }
   ],
   "2026-10-15": [
@@ -1305,7 +1376,10 @@
       "unwind": -25.8,
       "opposite": 35.03,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.31,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -1319,7 +1393,10 @@
       "unwind": -11.76,
       "opposite": 140.0,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.39,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -1475,7 +1552,8 @@
       "unwind": -3.39,
       "opposite": 8.55,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.76
     },
     {
       "side": "BEAR",
@@ -1575,7 +1653,8 @@
       "unwind": -5.32,
       "opposite": 29.39,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 5.49
     }
   ],
   "2026-10-21": [
@@ -1817,7 +1896,10 @@
       "unwind": -2.43,
       "opposite": 0.67,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.63,
+      "sniper": true,
+      "sniperMode": "expiry"
     },
     {
       "side": "BEAR",
@@ -2073,7 +2155,8 @@
       "unwind": -26.89,
       "opposite": -5.73,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.93
     },
     {
       "side": "BULL",
@@ -2087,7 +2170,8 @@
       "unwind": -4.57,
       "opposite": -2.36,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.75
     },
     {
       "side": "BULL",
@@ -2101,7 +2185,8 @@
       "unwind": -20.0,
       "opposite": null,
       "oppositeConfirmed": null,
-      "first": true
+      "first": true,
+      "peakRfac": 1.62
     },
     {
       "side": "BULL",
@@ -2115,7 +2200,10 @@
       "unwind": -18.52,
       "opposite": null,
       "oppositeConfirmed": null,
-      "first": true
+      "first": true,
+      "peakRfac": 1.3,
+      "sniper": true,
+      "sniperMode": "expiry"
     },
     {
       "side": "BULL",
@@ -2129,7 +2217,8 @@
       "unwind": -4.58,
       "opposite": 7.89,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.08
     },
     {
       "side": "BULL",
@@ -2143,7 +2232,8 @@
       "unwind": -8.39,
       "opposite": -1.15,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.61
     },
     {
       "side": "BULL",
@@ -2157,7 +2247,8 @@
       "unwind": -0.91,
       "opposite": 7.39,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.12
     },
     {
       "side": "BULL",
@@ -2171,7 +2262,8 @@
       "unwind": -12.5,
       "opposite": -0.2,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 2.13
     },
     {
       "side": "BULL",
@@ -2185,7 +2277,8 @@
       "unwind": -13.64,
       "opposite": -15.0,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 2.79
     },
     {
       "side": "BEAR",
@@ -2302,7 +2395,10 @@
       "unwind": -14.08,
       "opposite": 15.53,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.91,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -2388,7 +2484,10 @@
       "unwind": -8.3,
       "opposite": 19.59,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.08,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -2416,7 +2515,8 @@
       "unwind": -7.52,
       "opposite": 0.47,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.94
     },
     {
       "side": "BEAR",
@@ -2502,7 +2602,10 @@
       "unwind": -11.06,
       "opposite": 48.15,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.84,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2530,7 +2633,10 @@
       "unwind": -13.96,
       "opposite": 6.3,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.67,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2544,7 +2650,10 @@
       "unwind": -1.27,
       "opposite": 6.55,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.49,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2586,7 +2695,10 @@
       "unwind": -12.0,
       "opposite": null,
       "oppositeConfirmed": null,
-      "first": true
+      "first": true,
+      "peakRfac": 0.63,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2600,7 +2712,10 @@
       "unwind": -7.14,
       "opposite": 1.59,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.1,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2614,7 +2729,10 @@
       "unwind": -11.11,
       "opposite": 2.63,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.97,
+      "sniper": true,
+      "sniperMode": "normal"
     }
   ],
   "2026-11-03": [
@@ -2630,7 +2748,10 @@
       "unwind": -11.46,
       "opposite": 7.27,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.34,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2644,7 +2765,8 @@
       "unwind": -6.93,
       "opposite": 0.69,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 2.0
     }
   ],
   "2026-11-04": [
@@ -2660,7 +2782,10 @@
       "unwind": -8.35,
       "opposite": 19.95,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.99,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2674,7 +2799,10 @@
       "unwind": -9.38,
       "opposite": 44.44,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.87,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2688,7 +2816,8 @@
       "unwind": -13.63,
       "opposite": -2.02,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.51
     },
     {
       "side": "BULL",
@@ -2702,7 +2831,10 @@
       "unwind": -13.56,
       "opposite": 20.49,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 1.25,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2716,7 +2848,8 @@
       "unwind": -12.04,
       "opposite": 6.92,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.07
     },
     {
       "side": "BULL",
@@ -2730,7 +2863,8 @@
       "unwind": -5.77,
       "opposite": 4.21,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.33
     }
   ],
   "2026-11-05": [
@@ -2830,7 +2964,10 @@
       "unwind": -2.16,
       "opposite": 3.47,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.39,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2844,7 +2981,10 @@
       "unwind": -17.97,
       "opposite": 4.8,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.59,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -2858,7 +2998,10 @@
       "unwind": -14.54,
       "opposite": -1.43,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.97,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -3098,7 +3241,10 @@
       "unwind": -10.96,
       "opposite": 5.51,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.99,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -3154,7 +3300,8 @@
       "unwind": -7.89,
       "opposite": 50.0,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.93
     }
   ],
   "2026-11-09": [
@@ -3282,7 +3429,8 @@
       "unwind": -21.47,
       "opposite": 136.92,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 2.14
     },
     {
       "side": "BULL",
@@ -3310,7 +3458,10 @@
       "unwind": -4.05,
       "opposite": 0.77,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 1.26,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BEAR",
@@ -3368,7 +3519,10 @@
       "unwind": -11.72,
       "opposite": 98.5,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.0,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -3410,7 +3564,10 @@
       "unwind": -9.96,
       "opposite": 36.0,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.0,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -3424,7 +3581,10 @@
       "unwind": -5.29,
       "opposite": 7.8,
       "oppositeConfirmed": true,
-      "first": true
+      "first": true,
+      "peakRfac": 0.0,
+      "sniper": true,
+      "sniperMode": "normal"
     },
     {
       "side": "BULL",
@@ -3438,7 +3598,10 @@
       "unwind": -3.55,
       "opposite": -3.0,
       "oppositeConfirmed": false,
-      "first": true
+      "first": true,
+      "peakRfac": 0.0,
+      "sniper": true,
+      "sniperMode": "normal"
     }
   ],
   "2026-11-12": []

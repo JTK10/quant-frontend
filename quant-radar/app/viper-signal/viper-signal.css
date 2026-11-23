@@ -106,6 +106,19 @@
 .viper-signal__badge { display: inline-block; border-radius: 4px; padding: 2px 5px; font-size: 10px; font-weight: 700; }
 .viper-signal__badge[data-side="BULL"] { background: #173b34; color: var(--vs-bull); }
 .viper-signal__badge[data-side="BEAR"] { background: #452932; color: var(--vs-bear); }
+.viper-signal__sniper {
+  display: inline-block;
+  margin-left: 5px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  cursor: help;
+}
 .viper-signal__route { margin-left: 6px; }
 .viper-signal__emphasis { color: #85cbf6; }
 .viper-signal__confirmed { display: flex; align-items: center; gap: 3px; color: var(--vs-bull); font-size: 11px; }
