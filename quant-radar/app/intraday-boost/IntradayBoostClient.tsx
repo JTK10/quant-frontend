@@ -16,8 +16,10 @@ import "./intraday-boost.css";
 type Side = "bull" | "bear";
 type SortKey = "rfac" | "currRfac" | "move" | "oiBias" | "rvol" | "peakCut";
 type RfacBand = "ALL" | "GE1" | "GE15" | "GE2" | "EARLY";
+type ClearSkyMode = 0 | 3 | 5;
 type SideFilters = {
   band: RfacBand;
+  clearSky: ClearSkyMode;
   hideStale: boolean;
   pdBroken: boolean;
   sort: SortKey;
@@ -26,6 +28,7 @@ type SideFilters = {
 
 const defaultFilters: SideFilters = {
   band: "ALL",
+  clearSky: 0,
   hideStale: false,
   pdBroken: false,
   sort: "rfac",
@@ -109,7 +112,7 @@ export default function IntradayBoostClient({
 
   const board = useMemo(() => {
     if (!snap || snapshotMissing) {
-      return { cut: currentCut, sectors: [], bulls: [], bears: [], unmapped: 0 };
+      return { cut: currentCut, sectors: [], bulls: [], bears: [], all: [], unmapped: 0 };
     }
     return buildRfacSectorScope(snap, SECTOR_MEMBERS);
   }, [snap, snapshotMissing, currentCut]);
@@ -131,6 +134,13 @@ export default function IntradayBoostClient({
     setFilters((cur) => ({ ...cur, [side]: { ...cur[side], ...patch } }));
   };
 
+  const setBothClearSky = (mode: ClearSkyMode) => {
+    setFilters((cur) => ({
+      bull: { ...cur.bull, clearSky: mode },
+      bear: { ...cur.bear, clearSky: mode },
+    }));
+  };
+
   const sortValue = (r: RfacStockRow, key: SortKey): number | null => {
     if (key === "peakCut") {
       const m = r.peakCut.match(/^(\d{2}):(\d{2})/);
@@ -144,12 +154,18 @@ export default function IntradayBoostClient({
     const f = filters[side];
     const q = search.trim().toUpperCase();
     const sectorSet = selectedSector ? new Set(SECTOR_MEMBERS[selectedSector] || []) : null;
-    return source
+    // When Clear-Sky (3D+ or 5D) is active, evaluate across ALL active stocks so gap-ups above 3D/5D High
+    // aren't hidden by a tiny dip below 09:20 open; 3D mode strictly includes 5D stocks (clearVal >= 3)!
+    const pool = f.clearSky > 0 ? board.all : source;
+    return pool
       .filter((r) => {
         if (q && !r.symbol.includes(q)) return false;
         if (sectorSet && !sectorSet.has(r.symbol)) return false;
         if (f.hideStale && r.stale) return false;
-        if (f.pdBroken && r.pdhPdlBroken !== "YES") return false;
+        const clearVal = side === "bull" ? r.clearBull : r.clearBear;
+        if (f.clearSky === 3 && clearVal < 3) return false;
+        if (f.clearSky === 5 && clearVal < 5) return false;
+        if (f.pdBroken && f.clearSky === 0 && r.pdhPdlBroken !== "YES") return false;
         const rf = r.rfac ?? 0;
         if (f.band === "GE1" && rf < 1.0) return false;
         if (f.band === "GE15" && rf < 1.5) return false;
@@ -166,10 +182,19 @@ export default function IntradayBoostClient({
       });
   };
 
-  const bullRows = useMemo(() => filterRows(board.bulls, "bull"), [board.bulls, filters, search, selectedSector]);
-  const bearRows = useMemo(() => filterRows(board.bears, "bear"), [board.bears, filters, search, selectedSector]);
+  const bullRows = useMemo(() => filterRows(board.bulls, "bull"), [board.all, board.bulls, filters, search, selectedSector]);
+  const bearRows = useMemo(() => filterRows(board.bears, "bear"), [board.all, board.bears, filters, search, selectedSector]);
   const boostedBulls = useMemo(() => board.bulls.filter((r) => (r.rfac ?? 0) >= 1.5).length, [board.bulls]);
   const boostedBears = useMemo(() => board.bears.filter((r) => (r.rfac ?? 0) >= 1.5).length, [board.bears]);
+  const clearCounts = useMemo(
+    () => ({
+      b3: board.all.filter((r) => r.clearBull >= 3).length,
+      b5: board.all.filter((r) => r.clearBull === 5).length,
+      s3: board.all.filter((r) => r.clearBear >= 3).length,
+      s5: board.all.filter((r) => r.clearBear === 5).length,
+    }),
+    [board.all],
+  );
 
   const renderBoard = (side: Side, rows: RfacStockRow[], totalSide: number, boostedCount: number) => {
     const f = filters[side];
@@ -194,6 +219,15 @@ export default function IntradayBoostClient({
               <option value="GE15">Boost ≥ 1.5</option>
               <option value="GE2">Extreme ≥ 2.0</option>
               <option value="EARLY">Early &lt; 1.5</option>
+            </select>
+            <select
+              aria-label={`${side} Clear-Sky filter`}
+              value={f.clearSky}
+              onChange={(e) => updateFilter(side, { clearSky: Number(e.target.value) as ClearSkyMode })}
+            >
+              <option value={0}>Clear-Sky: Off</option>
+              <option value={3}>Clear 3D+ (incl. 5D)</option>
+              <option value={5}>Clear 5D Only</option>
             </select>
             <label className="ib-check">
               <input
@@ -312,9 +346,33 @@ export default function IntradayBoostClient({
                       <td className="num muted-val">{r.peakCut || "—"}</td>
                       <td className="num">{fmt(r.oiBias)}</td>
                       <td className="num">
-                        <span className={`pd-pill ${r.pdhPdlBroken === "YES" ? "yes" : r.pdhPdlBroken === "NO" ? "no" : ""}`}>
-                          {r.pdhPdlBroken === "YES" ? "BRK" : r.pdhPdlBroken === "NO" ? "HOLD" : "—"}
-                        </span>
+                        {(() => {
+                          const clearVal = isBull ? r.clearBull : r.clearBear;
+                          const lvls = r.clearLevels;
+                          const tip = lvls
+                            ? isBull
+                              ? `Cleared ${clearVal}-day High (3D High: ${fmt(lvls[0])} · 5D High: ${fmt(lvls[1])})`
+                              : `Cleared ${clearVal}-day Low (3D Low: ${fmt(lvls[2])} · 5D Low: ${fmt(lvls[3])})`
+                            : undefined;
+                          const broken = clearVal > 0 || r.pdhPdlBroken === "YES";
+                          return (
+                            <>
+                              <span className={`pd-pill ${broken ? "yes" : r.pdhPdlBroken === "NO" ? "no" : ""}`}>
+                                {broken ? "BRK" : r.pdhPdlBroken === "NO" ? "HOLD" : "—"}
+                              </span>
+                              {clearVal === 5 && (
+                                <span className="cs-pill d5" title={tip}>
+                                  5D CLEAR
+                                </span>
+                              )}
+                              {clearVal === 3 && (
+                                <span className="cs-pill d3" title={tip}>
+                                  3D CLEAR
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
@@ -414,6 +472,36 @@ export default function IntradayBoostClient({
               <button type="button" className={`ib-btn ${selectedCut === null ? "active" : ""}`} onClick={() => chooseCut(null)}>
                 {selectedCut === null ? "Latest · auto" : "Jump to latest"}
               </button>
+            </div>
+
+            <div className="ib-cs-bar" role="group" aria-label="Clear-Sky 3-day and 5-day High/Low filter">
+              <span className="ib-cs-title">Clear-Sky (No 3–5d Resistance):</span>
+              <button
+                type="button"
+                className={`ib-cs-btn ${filters.bull.clearSky === 0 && filters.bear.clearSky === 0 ? "on" : ""}`}
+                onClick={() => setBothClearSky(0)}
+              >
+                All Stocks
+              </button>
+              <button
+                type="button"
+                className={`ib-cs-btn ${filters.bull.clearSky === 3 && filters.bear.clearSky === 3 ? "on" : ""}`}
+                onClick={() => setBothClearSky(3)}
+                title="Shows stocks trading above prior 3-day High (Bulls) or below prior 3-day Low (Bears) — automatically includes all 5D Clear stocks"
+              >
+                Clear 3D+ (incl. 5D)
+              </button>
+              <button
+                type="button"
+                className={`ib-cs-btn ${filters.bull.clearSky === 5 && filters.bear.clearSky === 5 ? "on" : ""}`}
+                onClick={() => setBothClearSky(5)}
+                title="Shows stocks trading above prior 5-day High (Bulls) or below prior 5-day Low (Bears)"
+              >
+                Clear 5D
+              </button>
+              <span className="ib-cs-hint">
+                3D+: {clearCounts.b3}B / {clearCounts.s3}S · 5D: {clearCounts.b5}B / {clearCounts.s5}S
+              </span>
             </div>
 
             {showSectors && (

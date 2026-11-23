@@ -5,14 +5,17 @@ type SeedFile = {
   window?: number;
   through?: string;
   symbols?: Record<string, Record<string, number>>;
+  hl?: Record<string, Record<string, [number, number]>>;
 };
 
 const SEED = (rfacSeedRaw as unknown as SeedFile).symbols ?? {};
+const HL_SEED = (rfacSeedRaw as unknown as SeedFile).hl ?? {};
 const WINDOW = (rfacSeedRaw as unknown as SeedFile).window ?? 32;
 const MIN_DIFFS = 10;
 const EXCLUDED_DATES = new Set(["2026-10-02", "2026-11-08"]);
 
 const denomCache = new Map<string, number | null>();
+const levelCache = new Map<string, [number, number | null, number, number | null] | null>();
 
 function finite(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
@@ -48,6 +51,74 @@ export function causalRfacDenom(symbol: string, isoDate: string): number | null 
   return out;
 }
 
+/**
+ * Strictly causal prior 3-day & 5-day High/Low using only regular sessions < isoDate.
+ * Returns [hi3, hi5 (or null if <5 prior days), lo3, lo5 (or null if <5 prior days)].
+ */
+export function causalClearSkyLevels(
+  symbol: string,
+  isoDate: string,
+): [number, number | null, number, number | null] | null {
+  const sym = symbol.trim().toUpperCase();
+  const key = `${isoDate}|${sym}`;
+  if (levelCache.has(key)) return levelCache.get(key)!;
+  const days = HL_SEED[sym];
+  if (!days) {
+    levelCache.set(key, null);
+    return null;
+  }
+  const pairs = Object.entries(days)
+    .filter(
+      ([d, pair]) =>
+        d < isoDate &&
+        !EXCLUDED_DATES.has(d) &&
+        Array.isArray(pair) &&
+        pair.length === 2 &&
+        finite(pair[0]) &&
+        finite(pair[1]) &&
+        pair[0] > 0 &&
+        pair[1] > 0 &&
+        pair[0] >= pair[1],
+    )
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-5)
+    .map(([, pair]) => pair);
+  if (pairs.length < 3) {
+    levelCache.set(key, null);
+    return null;
+  }
+  const p3 = pairs.slice(-3);
+  const hi3 = Math.max(...p3.map((p) => p[0]));
+  const lo3 = Math.min(...p3.map((p) => p[1]));
+  const hi5 = pairs.length >= 5 ? Math.max(...pairs.map((p) => p[0])) : null;
+  const lo5 = pairs.length >= 5 ? Math.min(...pairs.map((p) => p[1])) : null;
+  const out: [number, number | null, number, number | null] = [hi3, hi5, lo3, lo5];
+  if (levelCache.size > 8000) levelCache.clear();
+  levelCache.set(key, out);
+  return out;
+}
+
+function applyClearSky(row: Record<string, unknown>, sym: string, isoDate: string, price: number | null) {
+  // Preserve native VM2 Clear-Sky fields verbatim when already populated.
+  if (finite(row.cs_b) || finite(row.cs_s) || Array.isArray(row.cs_l)) return;
+  if (price === null || price <= 0) return;
+  const levels = causalClearSkyLevels(sym, isoDate);
+  if (!levels) return;
+  const [hi3, hi5, lo3, lo5] = levels;
+  const csB = hi5 !== null && price > hi5 ? 5 : price > hi3 ? 3 : 0;
+  const csS = lo5 !== null && price < lo5 ? 5 : price < lo3 ? 3 : 0;
+  if (csB) row.cs_b = csB;
+  if (csS) row.cs_s = csS;
+  if (csB || csS) {
+    row.cs_l = [
+      Math.round(hi3 * 100) / 100,
+      Math.round((hi5 ?? hi3) * 100) / 100,
+      Math.round(lo3 * 100) / 100,
+      Math.round((lo5 ?? lo3) * 100) / 100,
+    ];
+  }
+}
+
 type SnapLike = {
   cut?: unknown;
   time?: unknown;
@@ -71,6 +142,7 @@ export function enrichRustySessionRfac<T extends SnapLike>(snapshots: T[], isoDa
 
   for (const snap of ordered) {
     const cut = String(snap.cut || snap.time || "").slice(0, 5);
+    const nativeClearSky = snap.cs_v === 1;
     const seen = new Set<string>();
     for (const side of ["bull", "bear"] as const) {
       const list = snap[side];
@@ -81,14 +153,16 @@ export function enrichRustySessionRfac<T extends SnapLike>(snapshots: T[], isoDa
         if (!sym) continue;
         // Native live VM2 R.Fac takes precedence and keeps running state in sync.
         if (finite(row.rfac) && finite(row.rfac_c) && typeof row.rfac_s === "string") {
-          if (!seen.has(sym) && finite(row.rfac_o20) && finite(row.c_close)) {
+          const cCloseNative = finite(row.c_close) ? row.c_close : null;
+          if (!nativeClearSky) applyClearSky(row, sym, isoDate, cCloseNative);
+          if (!seen.has(sym) && finite(row.rfac_o20) && cCloseNative !== null) {
             const denom = finite(row.rfac_d) ? row.rfac_d : causalRfacDenom(sym, isoDate);
             if (denom) {
               state.set(sym, {
                 o20: row.rfac_o20,
                 pk: row.rfac * denom,
                 pkCut: typeof row.rfac_pk === "string" ? row.rfac_pk : cut,
-                lastC: row.c_close,
+                lastC: cCloseNative,
               });
             }
             seen.add(sym);
@@ -97,10 +171,11 @@ export function enrichRustySessionRfac<T extends SnapLike>(snapshots: T[], isoDa
         }
 
         const denom = causalRfacDenom(sym, isoDate);
-        if (!denom) continue;
         const cTime = typeof row.c_time === "string" ? row.c_time.slice(0, 5) : "";
         const cOpen = finite(row.c_open) ? row.c_open : null;
         const cClose = finite(row.c_close) ? row.c_close : null;
+        if (!nativeClearSky) applyClearSky(row, sym, isoDate, cClose);
+        if (!denom) continue;
 
         let rec = state.get(sym);
         if (!rec) {

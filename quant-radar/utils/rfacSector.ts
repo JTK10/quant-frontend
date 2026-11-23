@@ -23,6 +23,9 @@ export type RfacStockRow = {
   levelSource: string;
   rvol: number | null;
   rvolSamples: number;
+  clearBull: 0 | 3 | 5;
+  clearBear: 0 | 3 | 5;
+  clearLevels: [number, number, number, number] | null; // [hi3, hi5, lo3, lo5]
 };
 
 export type RfacSectorRow = {
@@ -49,6 +52,7 @@ export type RfacSectorBoard = {
   sectors: RfacSectorRow[];
   bulls: RfacStockRow[];
   bears: RfacStockRow[];
+  all: RfacStockRow[];
   unmapped: number;
 };
 
@@ -110,6 +114,12 @@ export function buildRfacSectorScope(
                 : 'UNAVAILABLE'
             : 'UNAVAILABLE';
 
+      const clearBull: 0 | 3 | 5 = r.cs_b === 5 ? 5 : r.cs_b === 3 ? 3 : 0;
+      const clearBear: 0 | 3 | 5 = r.cs_s === 5 ? 5 : r.cs_s === 3 ? 3 : 0;
+      const rawLevels = Array.isArray(r.cs_l) && r.cs_l.length === 4 && r.cs_l.every((v) => rfacNum(v) !== null)
+        ? (r.cs_l as [number, number, number, number])
+        : null;
+
       const next: RfacStockRow = {
         symbol,
         direction,
@@ -131,6 +141,9 @@ export function buildRfacSectorScope(
         levelSource: ls,
         rvol: rfacNum(r.c_rvol),
         rvolSamples: rfacNum(r.c_rvol_samples) ?? 0,
+        clearBull,
+        clearBear,
+        clearLevels: rawLevels,
       };
 
       const prev = rows.get(symbol);
@@ -206,6 +219,7 @@ export function buildRfacSectorScope(
     sectors,
     bulls,
     bears,
+    all,
     unmapped: [...rows.keys()].filter((s) => !mapped.has(s)).length,
   };
 }

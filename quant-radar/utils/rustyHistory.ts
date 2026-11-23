@@ -47,11 +47,18 @@ export function projectRustySnapshot(snapshot:Snapshot,rvol?:RustyRvolPoints,cle
       rfac_s:typeof row.rfac_s==='string'?row.rfac_s:null,
       rfac_o20:typeof row.rfac_o20==='number'&&Number.isFinite(row.rfac_o20)?row.rfac_o20:null,
       rfac_d:typeof row.rfac_d==='number'&&Number.isFinite(row.rfac_d)?row.rfac_d:null,
-      rfac_pk:typeof row.rfac_pk==='string'?row.rfac_pk:null};
+      rfac_pk:typeof row.rfac_pk==='string'?row.rfac_pk:null,
+      cs_b:row.cs_b===3||row.cs_b===5?row.cs_b:null,
+      cs_s:row.cs_s===3||row.cs_s===5?row.cs_s:null,
+      cs_l:Array.isArray(row.cs_l)&&row.cs_l.length===4?row.cs_l:null};
     // Omitted unavailable fields render identically and avoid repeated null keys.
     return Object.fromEntries(Object.entries(projected).filter(([,value])=>value!==null&&value!==undefined));
   }):[];
-  return {source:'rusty',cap:'RUSTY',cut:snapshot.cut,time:snapshot.time,bull:visible(snapshot.bull,'bull'),bear:visible(snapshot.bear,'bear')};
+  return {
+    source:'rusty',cap:'RUSTY',cut:snapshot.cut,time:snapshot.time,
+    ...(snapshot.cs_v===1?{cs_v:1}:{}),
+    bull:visible(snapshot.bull,'bull'),bear:visible(snapshot.bear,'bear'),
+  };
 }
 type History={cuts:string[];snapshots:Map<string,string>;loaded:number;bytes:number};
 export function rustyHistoryCache({maxEntries=3,maxBytes=16*1024*1024,retention=300000}={}){
