@@ -7,6 +7,7 @@ import {projectRustySnapshot,rustyHistoryCache,rustyHistoryResponse,type RustyCl
 import {compactKairosEvents} from '@/utils/kairos';
 import {readRustyRvolArchive} from '@/utils/rustyRvolArchive';
 import {readRustyNovemberArchive} from '@/utils/rustyNovemberArchive';
+import {enrichRustySessionRfac} from '@/utils/rfac';
 import cleanRunnerArchive from '@/data/rusty-clean-runners.json';
 
 const cleanRunnerByDate=((cleanRunnerArchive as unknown) as {dates?:Record<string,RustyCleanRunnerDay>}).dates??{};
@@ -357,7 +358,9 @@ export async function GET(request: NextRequest) {
         const raw=archivedNov&&archivedNov.length>0?archivedNov:await getRawByDate(targetDate,'rusty');
         const rows=raw.filter(s=>s.source==='rusty').sort((a,b)=>Number(a.ts??0)-Number(b.ts??0)||String(a.cut||a.time||'').localeCompare(String(b.cut||b.time||'')));
         const rvol=historical?await readRustyRvolArchive(targetDate):undefined;
-        return normalizePantherSignals(rows.map(s=>projectRustySnapshot(s,rvol,crDay)));
+        const projected=rows.map(s=>projectRustySnapshot(s,rvol,crDay));
+        enrichRustySessionRfac(projected,isoDate);
+        return normalizePantherSignals(projected);
       });
       const body=rustyHistoryResponse(history,requestedCut,after);
       // Published cuts can be reused privately during the live day; Refresh can revalidate.

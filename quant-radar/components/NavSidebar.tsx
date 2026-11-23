@@ -133,6 +133,7 @@ const JaguarIcon = (props: any) => (
 // Publishers rfac-scanner / smartlist / v2dyn disabled on the VM the same day. --
 const NAV_ITEMS: any[] = [
   { href: "/rusty", icon: Cat, label: "Rusty", color: "#fb7185", rgb: "251,113,133" },
+  { href: "/intraday-boost", icon: Zap, label: "Intraday Boost", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/nifty-signals", icon: Target, label: "Nifty Signals", color: "#22d3ee", rgb: "34,211,238" },
   { href: "/sector", icon: BarChart2, label: "Sector Scope", color: "#fce205", rgb: "252,226,5" },
   { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },

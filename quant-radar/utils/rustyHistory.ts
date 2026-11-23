@@ -41,7 +41,13 @@ export function projectRustySnapshot(snapshot:Snapshot,rvol?:RustyRvolPoints,cle
       c_low:row.c_low??null,c_body:row.c_body??null,c_uw:row.c_uw??null,c_lw:row.c_lw??null,
       c_mv:row.c_mv??null,is_maru:row.is_maru??false,is_solid:row.is_solid??false,
       candle_tier:row.candle_tier??null,tgt_pct:row.tgt_pct??null,oi_broken:row.oi_broken??null,oi_break_time:row.oi_break_time??null,entry_confirmed:row.entry_confirmed??false,
-      cr_tier,cr_lane,cr_cut,cr_score};
+      cr_tier,cr_lane,cr_cut,cr_score,
+      rfac:typeof row.rfac==='number'&&Number.isFinite(row.rfac)?row.rfac:null,
+      rfac_c:typeof row.rfac_c==='number'&&Number.isFinite(row.rfac_c)?row.rfac_c:null,
+      rfac_s:typeof row.rfac_s==='string'?row.rfac_s:null,
+      rfac_o20:typeof row.rfac_o20==='number'&&Number.isFinite(row.rfac_o20)?row.rfac_o20:null,
+      rfac_d:typeof row.rfac_d==='number'&&Number.isFinite(row.rfac_d)?row.rfac_d:null,
+      rfac_pk:typeof row.rfac_pk==='string'?row.rfac_pk:null};
     // Omitted unavailable fields render identically and avoid repeated null keys.
     return Object.fromEntries(Object.entries(projected).filter(([,value])=>value!==null&&value!==undefined));
   }):[];

@@ -6,7 +6,7 @@ import {istSessionDate,sessionPollingDelay} from '@/utils/sessionPolling';
 import {mergeRustySnapshots,rustyCut,rustyExpectedCut,rustyNextPoll} from '@/utils/rustyFeed';
 import RustyClient,{type Snap} from './RustyClient';
 
-export default function RustyFeed({dateStr,followToday,Board=RustyClient,pagePath='/rusty'}:{dateStr:string;followToday:boolean;Board?:ComponentType<ComponentProps<typeof RustyClient>>;pagePath?:'/rusty'|'/sol'}){
+export default function RustyFeed({dateStr,followToday,Board=RustyClient,pagePath='/rusty'}:{dateStr:string;followToday:boolean;Board?:ComponentType<ComponentProps<typeof RustyClient>>;pagePath?:'/rusty'|'/sol'|'/intraday-boost'}){
   const router=useRouter();
   const [snaps,setSnaps]=useState<Snap[]>([]);
   const snapshots=useRef<Snap[]>([]),hasLoaded=useRef(false),lastRequested=useRef(0);

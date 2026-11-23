@@ -48,7 +48,7 @@ export async function GET(request:NextRequest){
  const history=Object.fromEntries(Object.entries(savedHistory).map(([cut,values])=>[
   cut,Object.fromEntries(Object.entries(values).filter(([key])=>!changedSectors.has(key.split('|')[0])))
  ]));
- const fields=['sector','symbol','direction','classification','ce_pct','pe_pct','move_pct','price','oi_bias','pdh_pdl_broken','pdh_pdl_break_time','rusty_level_source','ob_state','ob_broken_time','ob_retest_breakout_time'];
+ const fields=['sector','symbol','direction','classification','ce_pct','pe_pct','move_pct','price','oi_bias','pdh_pdl_broken','pdh_pdl_break_time','rusty_level_source','ob_state','ob_broken_time','ob_retest_breakout_time','rfac','curr_rfac','signed_rfac','stale','o20','peak_cut'];
  const safe=(v:unknown)=>JSON.stringify(v).replace(/</g,'\\u003c');
  const payload=`const META=${safe({date,fields,dates:earlier,baselineThrough:earlier.at(-1)||'none'})};const MEMBERS=${safe(towerMembers)};const BASELINE=${safe(history)};\n${runtime}`;
  const html=template.replace('/*__PAYLOAD__*/',()=>payload);htmlCache.set(date,html);while(htmlCache.size>4)htmlCache.delete(htmlCache.keys().next().value!);
