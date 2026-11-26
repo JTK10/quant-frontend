@@ -3,7 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { RadarSignal } from "@/utils/backend";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 type SortKey = "time" | "name" | "break" | "side" | "score" | "rank" | "oflow";
 
@@ -162,10 +162,10 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                   {shortTime(signal.FiredAt || signal.EntryTime)}
                 </span>
 
-                {/* NAME + symbol — inline TradingView link */}
+                {/* NAME + symbol — inline TradingCharts link */}
                 <div className="min-w-0">
                   <a
-                    href={signal.Chart || buildTradingViewUrl(signal.Symbol, signal.Name)}
+                    href={buildTradingChartsUrl(signal.Symbol, signal.Name)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="truncate text-[13px] font-semibold hover:underline block"
@@ -221,10 +221,10 @@ export default function SmartRadarTable({ signals }: { signals: RadarSignal[] })
                   {signal.PCR ? signal.PCR.toFixed(2) : "-"}
                 </span>
 
-                {/* TV LINK */}
+                {/* External chart link */}
                 <div className="text-right">
                   <a
-                    href={signal.Chart}
+                    href={buildTradingChartsUrl(signal.Symbol, signal.Name)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center rounded-md border p-1"

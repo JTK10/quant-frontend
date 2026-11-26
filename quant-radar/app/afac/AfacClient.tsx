@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 const ACCENT = "#fce205";
 
@@ -256,7 +256,7 @@ export default function AfacClient({ signals, latestTime }: { signals: any[]; la
                   {long ? "▲" : "▼"}
                 </span>
                 <a
-                  href={buildTradingViewUrl(signal.name, signal.name)}
+                  href={buildTradingChartsUrl(signal.name, signal.name)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="min-w-0 truncate text-[13px] font-semibold hover:underline"

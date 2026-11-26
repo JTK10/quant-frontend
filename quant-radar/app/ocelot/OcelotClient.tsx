@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 type Side = "bull" | "bear";
 
@@ -213,12 +213,12 @@ function Board({
                   <td className="px-3 py-1.5 font-medium">
                     <span className="inline-flex items-center gap-1.5">
                       <a
-                        href={buildTradingViewUrl(r.s, r.s)}
+                        href={buildTradingChartsUrl(r.s, r.s)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline decoration-white/20 decoration-dotted underline-offset-[3px] transition hover:decoration-white/70"
                         style={{ color: "inherit" }}
-                        title={`Open ${r.s} on TradingView`}
+                        title={`Open ${r.s} on TradingCharts`}
                       >
                         {r.s}
                       </a>

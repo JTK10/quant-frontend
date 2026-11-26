@@ -10,7 +10,12 @@ const source=fs.readFileSync('app/api/panther-signals/route.ts','utf8');
 const oldSource=execFileSync('git',['show','502e416:quant-radar/app/api/panther-signals/route.ts'],{encoding:'utf8'});
 const compile=(text,deps,globals={})=>{const exports={};vm.runInNewContext(ts.transpileModule(text,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,Date,Intl,Buffer,Headers,URL,Response,AbortSignal,Map,Set,console,...globals,require:name=>deps[name]});return exports;};
 const resultCache=compile(fs.readFileSync('utils/resultCache.ts','utf8'),{}).resultCache;
-const backend=compile(fs.readFileSync('utils/backend.ts','utf8'),{'./symbolMap.json':JSON.parse(fs.readFileSync('utils/symbolMap.json','utf8'))});
+const symbolMap=JSON.parse(fs.readFileSync('utils/symbolMap.json','utf8'));
+const tradingCharts=compile(fs.readFileSync('utils/tradingCharts.ts','utf8'),{
+  './symbolMap.json':symbolMap,
+  './tradingChartsInstruments.json':JSON.parse(fs.readFileSync('utils/tradingChartsInstruments.json','utf8')),
+},{URLSearchParams});
+const backend=compile(fs.readFileSync('utils/backend.ts','utf8'),{'./symbolMap.json':symbolMap,'./tradingCharts':tradingCharts});
 class NextResponse extends Response{static json(body,init){return new NextResponse(JSON.stringify(body),init);}}
 const payload=JSON.stringify({items:docs.map(doc=>({doc:JSON.stringify(doc)})),hasMore:false});
 const init=text=>compile(text,{'next/server':{NextResponse},'@/utils/auth':{requireApiSession:async()=>null},'@/utils/backend':{...backend,getTodayIstDate:()=> '2026-10-13'},'@/utils/resultCache':{resultCache}},

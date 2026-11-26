@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 const ACCENT = "#a78bfa";
 const HEAD_BG = "rgb(39, 39, 42)";
@@ -219,7 +219,7 @@ export default function LynxClient({ snaps, ocelotSnaps }: { snaps: any[]; ocelo
           return (
             <a
               key={r.sym}
-              href={buildTradingViewUrl(r.sym)}
+              href={buildTradingChartsUrl(r.sym)}
               target="_blank"
               rel="noopener noreferrer"
               className="block rounded-lg border border-white/10 p-3 transition hover:border-white/25"
@@ -400,7 +400,7 @@ function PoolTable({
                     style={{ background: r.side === "LONG" ? LONG_BG : SHORT_BG }}
                   >
                     <a
-                      href={buildTradingViewUrl(r.sym)}
+                      href={buildTradingChartsUrl(r.sym)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="hover:underline"

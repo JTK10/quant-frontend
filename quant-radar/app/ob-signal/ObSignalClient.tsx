@@ -1,5 +1,6 @@
 "use client";
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { ExternalLink } from "lucide-react";
 import { useState, useMemo } from "react";
 import type { ObSignalRow } from "@/utils/backend";
@@ -170,7 +171,7 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
               {/* NAME */}
               <div className="min-w-0">
                 <a
-                  href={sig.Chart}
+                  href={buildTradingChartsUrl(sig.Symbol, sig.Name)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="truncate text-[13px] font-semibold hover:underline block"
@@ -269,7 +270,7 @@ export default function ObSignalClient({ signals }: { signals: ObSignalRow[] }) 
               {/* TV */}
               <div className="text-right">
                 <a
-                  href={sig.Chart}
+                  href={buildTradingChartsUrl(sig.Symbol, sig.Name)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center rounded-md border p-1"

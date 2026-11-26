@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 
 export default function CapsClient({ signals }: { signals: any[] }) {
@@ -198,7 +198,7 @@ export default function CapsClient({ signals }: { signals: any[] }) {
 
               {/* NAME */}
               <a 
-                href={buildTradingViewUrl(name, name)} 
+                href={buildTradingChartsUrl(name, name)}
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="min-w-0 truncate text-[13px] font-semibold hover:underline" 

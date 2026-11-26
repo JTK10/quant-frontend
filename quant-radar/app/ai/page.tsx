@@ -1,5 +1,6 @@
 "use client";
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { Brain, Cpu, ExternalLink, Zap } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
@@ -80,7 +81,7 @@ function PickCard({ pick, rank }: { pick: AiPick; rank: number }) {
       </div>
 
       <a
-        href={pick.Chart}
+        href={buildTradingChartsUrl(pick.Symbol, pick.Name)}
         target="_blank"
         rel="noreferrer"
         className="mt-4 inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 font-mono text-[10px] tracking-[0.18em]"

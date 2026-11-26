@@ -1,5 +1,6 @@
 'use client';
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { useState, useMemo } from 'react';
 import { ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { V6Row } from '@/utils/backend';
@@ -214,14 +215,14 @@ export default function V6Client({ signals }: { signals: V6Row[] }) {
                 {/* STOCK (Clickable TV Link) */}
                 <div style={{ width: COLUMNS[0].width, minWidth: COLUMNS[0].width }}>
                   <div className="flex items-center gap-1.5">
-                    {sig.Chart ? (
+                    {(sig.Symbol || sig.Name) ? (
                       <a
-                        href={sig.Chart}
+                        href={buildTradingChartsUrl(sig.Symbol, sig.Name)}
                         target="_blank"
                         rel="noreferrer"
                         className="font-semibold text-[13px] truncate hover:underline"
                         style={{ color: 'var(--color-text2)' }}
-                        title="Open in TradingView"
+                        title="Open in TradingCharts"
                       >
                         {sig.Name}
                       </a>

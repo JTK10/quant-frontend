@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { Clock } from "lucide-react";
 import type { RvolPulseData, RvolPulseItem } from "@/utils/backend";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 type SortKey = "rank" | "name" | "dir" | "rvol" | "chg" | "rms";
 
@@ -179,10 +179,10 @@ function BoardTable({ board }: { board: RvolPulseItem[] }) {
                   #{originalRank}
                 </span>
 
-                {/* NAME — inline TradingView link */}
+                {/* NAME — inline TradingCharts link */}
                 <div className="relative z-10 min-w-0">
                   <a
-                    href={buildTradingViewUrl(item.stock)}
+                    href={buildTradingChartsUrl(item.stock)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="truncate text-[13px] font-semibold hover:underline block"

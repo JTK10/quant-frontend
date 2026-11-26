@@ -1,5 +1,6 @@
 "use client";
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { PulseRow } from "@/utils/backend";
@@ -118,7 +119,7 @@ function SignalList({ signals, type }: { signals: PulseRow[]; type: "BULL" | "BE
             </span>
             <div className="text-right">
               <a
-                href={row.Chart}
+                href={buildTradingChartsUrl(row.Symbol, row.Name)}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center rounded-md border p-1 opacity-80 hover:opacity-100 transition-opacity"

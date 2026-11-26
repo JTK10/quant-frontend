@@ -1,5 +1,6 @@
 "use client";
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { PulseData, PulseRow, PulseWatchlistItem } from "@/utils/backend";
@@ -109,7 +110,7 @@ function PulseRow({ row }: { row: PulseRow }) {
 
       <div className="text-right">
         <a
-          href={row.Chart}
+          href={buildTradingChartsUrl(row.Symbol, row.Name)}
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center rounded-md border p-1"
@@ -187,7 +188,7 @@ export default function SignalPulseClient({ data }: { data: PulseData }) {
           <span className="font-mono text-[8px] tracking-[0.14em] text-center" style={{ color: "var(--color-muted)" }}>SIDE</span>
           <span className="font-mono text-[8px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>SCORE</span>
           <span className="font-mono text-[8px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>PCR</span>
-          <span className="font-mono text-[8px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>TV</span>
+          <span className="font-mono text-[8px] tracking-[0.14em] text-right" style={{ color: "var(--color-muted)" }}>TC</span>
         </div>
 
         <div className="flex-1 overflow-auto">

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 type SectorItem = {
   Sector: string;
@@ -181,7 +181,7 @@ export default function MasterListClient({ dateStr }: { dateStr?: string }) {
                 <div key={`${s.Stock}-${idx}`} className={`grid grid-cols-12 items-center px-2.5 py-3 text-[11px] font-semibold font-mono border-b border-[rgba(255,255,255,0.02)] ${idx % 2 === 0 ? '' : 'bg-[rgba(255,255,255,0.01)]'} hover:bg-[rgba(255,255,255,0.05)] transition-colors`}>
                   <div className="col-span-3 flex items-center gap-2">
                      <div className="w-4 h-4 bg-[rgba(255,255,255,0.1)] rounded flex items-center justify-center text-[8px] opacity-70 shrink-0">✦</div>
-                     <a href={buildTradingViewUrl(s.Stock)} target="_blank" rel="noopener noreferrer" className="text-[rgba(255,255,255,0.9)] truncate tracking-wide hover:text-[#00e89a] hover:underline cursor-pointer">
+                     <a href={buildTradingChartsUrl(s.Stock)} target="_blank" rel="noopener noreferrer" className="text-[rgba(255,255,255,0.9)] truncate tracking-wide hover:text-[#00e89a] hover:underline cursor-pointer">
                        {s.Stock}
                      </a>
                   </div>

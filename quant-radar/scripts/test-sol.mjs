@@ -31,7 +31,7 @@ const policy=load('utils/sessionPolling.ts');
 const rusty=load('utils/rustyFeed.ts',{'./sessionPolling':policy});
 const shortlists=load('app/sol/bullShortlist.ts');
 const client=load('app/sol/SolClient.tsx',{
- '@/utils/backend':{buildTradingViewUrl:s=>'https://test.invalid/'+s},
+ '@/utils/backend':{buildTradingChartsUrl:s=>'https://test.invalid/'+s},
  '@/utils/chartWatchlist':{readChartWatchlist:()=>[],addChartWatchlistSymbol:s=>[s],CHART_WATCHLIST_STORAGE_KEY:'test',CHART_WATCHLIST_UPDATED_EVENT:'test'},
  '../rusty/sectors.json':{},'./sol.css':{},'./bullShortlist':shortlists,
 }).default;

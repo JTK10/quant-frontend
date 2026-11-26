@@ -13,7 +13,7 @@ function load(path, dependencies = {}) {
   const code = ts.transpileModule(fs.readFileSync(path, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2021, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
-  vm.runInNewContext(code, { exports, require: requireSource, console, URL, Intl, Date, Map, Set });
+  vm.runInNewContext(code, { exports, require: requireSource, console, URL, URLSearchParams, Intl, Date, Map, Set });
   return exports;
 }
 
@@ -23,7 +23,9 @@ assert.equal(k.kairosSource({ source: 'kairos_cr' }), 'kairos_cr');
 assert.equal(k.kairosSource({ cap: 'KAIROS_CR' }), 'kairos_cr');
 assert.equal(k.resolveKairosEngine(undefined), 'kairos10');
 
-const { normalizePantherSignals } = load('utils/backend.ts');
+const { normalizePantherSignals } = load('utils/backend.ts', {
+  './tradingCharts': load('utils/tradingCharts.ts'),
+});
 const e1 = {
   source: 'kairos_cr', cap: 'KAIROS_CR', kind: 'ENTRY', signal_id: 'cr_1', name: 'SBIN 800 CE',
   ts: 100, time: '09:20:00', mode: 'paper', side: 'LONG', expiry: '2026-12-29', dte: 36,

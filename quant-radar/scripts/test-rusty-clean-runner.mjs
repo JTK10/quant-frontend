@@ -73,7 +73,7 @@ const load=(file,deps={})=>{
   return modExports;
 };
 const RustyClient=load('app/rusty/RustyClient.tsx',{
-  '@/utils/backend':{buildTradingViewUrl:s=>'https://test.invalid/'+s},
+  '@/utils/backend':{buildTradingChartsUrl:s=>'https://test.invalid/'+s},
   '@/utils/chartWatchlist':{readChartWatchlist:()=>[],addChartWatchlistSymbol:s=>[s],CHART_WATCHLIST_STORAGE_KEY:'test',CHART_WATCHLIST_UPDATED_EVENT:'test'},
   './sectors.json':{},'./rusty.css':{},
 }).default;

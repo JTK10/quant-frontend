@@ -128,7 +128,7 @@ function render(overrides = {}) {
   const exports = {};
   vm.runInNewContext(source, {exports, Date, Intl, URLSearchParams, console, require: name => {
     if (name === 'react') return {useState: initial => {const slot = index++; return [slot in values ? values[slot] : typeof initial === 'function' ? initial() : initial, () => {}];}, useEffect: () => {}, useMemo: fn => fn()};
-    if (name === '@/utils/backend') return {buildTradingViewUrl: symbol => 'https://www.tradingview.com/chart/?symbol=NSE:' + symbol};
+    if (name === '@/utils/backend') return {buildTradingChartsUrl: symbol => 'https://www.tradingview.com/chart/?symbol=NSE:' + symbol};
     if (name === '@/utils/chartWatchlist') return {};
     if (name === '@/utils/sessionPolling') return policyExports;
     if (name === './feed') return feedExports;
@@ -141,7 +141,7 @@ const html = render();
 for (const label of ['PE OI Rising', 'CE OI Surge', 'PE OI Declining', 'Both Legs OI Rising (Flat)', 'Neutral Flow']) assert.ok(html.includes(label), label + ' survives the all-flow view');
 assert.ok(html.includes('HAL') && html.includes('PGEL'), 'Default desk preserves all locked v1 signals');
 assert.ok(html.includes('Add PGEL to Charts watchlist'));
-assert.ok(html.includes('Open PGEL on TradingView'));
+assert.ok(html.includes('Open PGEL on TradingCharts'));
 assert.ok(html.includes('CE %') && html.includes('PE %') && html.includes('OI bias'));
 const onlySurge = render({6: 'CE OI Surge'});
 assert.ok(onlySurge.includes('Add HAL to Charts watchlist'));

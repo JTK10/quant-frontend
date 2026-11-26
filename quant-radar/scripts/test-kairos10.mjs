@@ -10,7 +10,7 @@ function load(path,dependencies={}){
   const localRequire=createRequire(new URL('../'+path,import.meta.url));
   const requireSource=name=>name in dependencies ? dependencies[name] : localRequire(name);
   const code=ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2021,esModuleInterop:true,jsx:ts.JsxEmit.ReactJSX}}).outputText;
-  vm.runInNewContext(code,{exports,require:requireSource,console,URL,Intl,Date});
+  vm.runInNewContext(code,{exports,require:requireSource,console,URL,URLSearchParams,Intl,Date});
   return exports;
 }
 const k=load('utils/kairos.ts');
@@ -32,7 +32,7 @@ state=k.updateKairosFeed(state,{key:state.key,asOf:3,events:[{source:'kairos10',
 assert.equal(k.kairosSummary(state.events,'kairos10').open.length,1);
 state=k.updateKairosFeed(state,{key:'kairos10|2026-11-03',asOf:4,events:[],error:null},'kairos10');
 assert.equal(state.events.length,0);
-const {normalizePantherSignals}=load('utils/backend.ts');
+const {normalizePantherSignals}=load('utils/backend.ts',{'./tradingCharts':load('utils/tradingCharts.ts')});
 const normalized=normalizePantherSignals([{...entry,score_threshold:.3,last_cut:'10:00',initial_stop_pct:-10,runner_exit_buffer_seconds:60}])[0];
 assert.equal(normalized.source,'kairos10');assert.equal(normalized.model_id,entry.model_id);assert.equal(normalized.score_threshold,.3);
 const ospreyEntry={...entry,source:'kairos29',cap:'KAIROS29',model_id:'kairos29-osprey-fixture'};

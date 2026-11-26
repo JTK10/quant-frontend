@@ -1,3 +1,4 @@
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { ExternalLink } from "lucide-react";
 import type { SectorData } from "@/utils/backend";
 
@@ -105,7 +106,7 @@ export default function SectorFlowClient({ sectors }: { sectors: SectorData[] })
                         {signal.conf.toFixed(1)}
                       </span>
                       <a
-                        href={signal.chart}
+                        href={buildTradingChartsUrl(signal.sym, signal.name)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 font-mono text-[10px] tracking-[0.16em]"

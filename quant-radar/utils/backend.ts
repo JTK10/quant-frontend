@@ -1,5 +1,8 @@
 const INDIA_TZ = "Asia/Kolkata";
 import symbolMapData from "./symbolMap.json";
+import { buildTradingChartsUrl } from "./tradingCharts";
+
+export { buildTradingChartsUrl };
 const symbolMap: Record<string, string> = symbolMapData;
 
 type GenericRecord = Record<string, unknown>;
@@ -332,16 +335,6 @@ export function buildChartUrl(symbol: string, name?: string): string {
   const finalSymbol = mapped === "NIFTY50" ? "NIFTY 50" : mapped === "INDIAVIX" ? "INDIA VIX" : mapped;
   return `/charts?symbol=${encodeURIComponent(finalSymbol)}`;
 }
-export function buildTradingViewUrl(symbol: string, name?: string): string {
-  const token = textify(symbol) || textify(name) || "NIFTY";
-  const cleaned = token.replace(/\s+/g, "").toUpperCase();
-
-  // Cross-reference with the master mapping dictionary
-  const finalSymbol = symbolMap[cleaned] || cleaned;
-
-  return `https://www.tradingview.com/chart/?symbol=NSE:${encodeURIComponent(finalSymbol)}&interval=5`;
-}
-
 type BackendRoute = "smart-radar" | "market-velocity" | "ai-signals" | "sector-heatmap" | "flow-radar" | "flow-smartlist" | "sector-sentiment" | "institutional-watchlist" | "rvol-pulse" | "sniper-signal" | "ob-signal" | "capitulation-signal" | "v6-signals";
 
 export async function fetchBackendRoute(route: BackendRoute, dateStr: string, extraParams: Record<string, string> = {}): Promise<unknown> {
@@ -427,7 +420,7 @@ export function normalizeRadarSignals(payload: unknown): RadarSignal[] {
       FiredAt: textify(row.Fired_At ?? row.FiredAt ?? row.Time),
       HasOptions: truthy(row.HasOptions) || Boolean(pcr || atmStrike || maxPain),
       SignalRank: numberify(row.SignalRank ?? row.SmartRank ?? row.Confidence, rows.length - index),
-      Chart: textify(row.Chart, buildTradingViewUrl(symbol, name)),
+      Chart: buildTradingChartsUrl(symbol, name),
     };
   });
 }
@@ -452,7 +445,7 @@ function normalizePulseRow(input: GenericRecord): PulseRow {
     RSScore: numberify(input.RS_Score ?? input.RSScore),
     Time: textify(input.Fired_At ?? input.Time),
     Break: textify(input.Break, "INSIDE"),
-    Chart: textify(input.Chart, buildTradingViewUrl(symbol, name)),
+    Chart: buildTradingChartsUrl(symbol, name),
   };
 }
 
@@ -559,7 +552,7 @@ export function normalizeAiPayload(payload: unknown, dateStr: string): AiPayload
       Time: textify(pick.Time),
       Module: textify(pick.Module, "AI"),
       Direction: textify(pick.Direction),
-      Chart: textify(pick.Chart, buildTradingViewUrl(symbol, name)),
+      Chart: buildTradingChartsUrl(symbol, name),
     };
   });
 
@@ -633,7 +626,7 @@ export function normalizeInstitutionalWatchlist(payload: unknown): PulseData {
       RSScore: 0,
       Time: time,
       Break: "-",
-      Chart: buildTradingViewUrl(symbol, symbol)
+      Chart: buildTradingChartsUrl(symbol, symbol)
     };
 
     if (side === "BEAR") {
@@ -694,7 +687,7 @@ export function normalizeSniperSignals(payload: unknown): SniperRow[] {
       RVOL_Color: textify(row.RVOL_Color, "GRAY"),
       RMS: numberify(row.RMS),
       MaxMovePct: numberify(row.MaxMove_Pct),
-      Chart: buildTradingViewUrl(symbol, name),
+      Chart: buildTradingChartsUrl(symbol, name),
       TriggerMode: textify(row.TriggerMode),
       Conviction: numberify(row.Conviction),
       Sector: textify(row.Sector, "OTHER"),
@@ -742,7 +735,7 @@ export function normalizeObSignals(payload: unknown): ObSignalRow[] {
       Sector: textify(row.Sector),
       Sector_RMS_Rank: numberify(row.Sector_RMS_Rank),
       Sector_Size: numberify(row.Sector_Size),
-      Chart: buildTradingViewUrl(symbol, name),
+      Chart: buildTradingChartsUrl(symbol, name),
     };
   });
 }
@@ -763,7 +756,7 @@ export function normalizeCapitulationSignals(payload: unknown): CapitulationRow[
       SignalTime: textify(row.Signal_Time),
       EntryPrice: numberify(row.Entry),
       Triggers: textify(row.Triggers),
-      Chart: buildTradingViewUrl(symbol, name),
+      Chart: buildTradingChartsUrl(symbol, name),
     };
   });
 }
@@ -797,7 +790,7 @@ export function normalizeV6Signals(payload: unknown): V6Row[] {
       ORL_Held: textify(row.ORL_Held),
       Broke: textify(row.Broke),
       PremiumQualified: textify(row.PremiumQualified),
-      Chart: textify(row.Chart, buildTradingViewUrl(symbol, name)),
+      Chart: buildTradingChartsUrl(symbol, name),
     };
   });
 }
@@ -926,7 +919,7 @@ export function normalizePantherSignals(payload: unknown): PantherRow[] {
       spread_bps: numberify(row.spread_bps),
       spread_vs_norm: numberify(row.spread_vs_norm),
       source: textify(row.source, "panther"),
-      Chart: buildTradingViewUrl(symbol, symbol),
+      Chart: buildTradingChartsUrl(symbol, symbol),
       aligator: textify(row.aligator),
       // Preserve Caps fields so they aren't stripped before hitting the frontend
       cap: row.cap,

@@ -3,7 +3,7 @@
 import {useEffect, useMemo, useState, useTransition} from 'react';
 import {useRouter} from 'next/navigation';
 import {ArrowDown, ArrowUp, Check, ExternalLink, Plus} from 'lucide-react';
-import {buildTradingViewUrl} from '@/utils/backend';
+import {buildTradingChartsUrl} from '@/utils/backend';
 import {
   addChartWatchlistSymbol, readChartWatchlist,
   CHART_WATCHLIST_STORAGE_KEY, CHART_WATCHLIST_UPDATED_EVENT,
@@ -198,8 +198,8 @@ export default function ViperSignalClient({date, dates, archive, rows: archivedR
                           onClick={() => setWatchlist(addChartWatchlistSymbol(row.symbol))}>
                           {added ? <Check size={14} aria-hidden="true" /> : <Plus size={14} aria-hidden="true" />}
                         </button>
-                        <a href={buildTradingViewUrl(row.symbol, row.symbol)} target="_blank" rel="noopener noreferrer"
-                          title="Open TradingView" aria-label={'Open ' + row.symbol + ' on TradingView'}>
+                        <a href={buildTradingChartsUrl(row.symbol, row.symbol)} target="_blank" rel="noopener noreferrer"
+                          title="Open TradingCharts" aria-label={'Open ' + row.symbol + ' on TradingCharts'}>
                           <ExternalLink size={14} aria-hidden="true" />
                         </a>
                       </div>

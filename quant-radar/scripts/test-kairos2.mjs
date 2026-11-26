@@ -3,10 +3,11 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import ts from 'typescript';
 
-function moduleFrom(path) {
+function moduleFrom(path, dependencies={}) {
   const exports={};
   const localRequire=createRequire(new URL('../'+path,import.meta.url));
-  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2021,esModuleInterop:true}}).outputText,{exports,require:localRequire,console,URL,Intl,Date});
+  const requireSource=name=>name in dependencies ? dependencies[name] : localRequire(name);
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2021,esModuleInterop:true}}).outputText,{exports,require:requireSource,console,URL,URLSearchParams,Intl,Date});
   return exports;
 }
 // createRequire avoids a browser dependency; this tests the real row grouping.
@@ -24,7 +25,7 @@ assert.equal(b.open[0].entry.quantity,200);assert.equal(b.open[0].entry.capital_
 const c=kairosSummary([...rows,{...newer,kind:'EXIT',ts:7,pnl:100,entry_fill:102.5,entry:103}], 'kairos2');
 assert.equal(c.open.length,0);assert.equal(c.realized,100);assert.equal(c.unrealized,0);
 assert.equal(kairosNumber(null),null);assert.equal(kairosNumber(''),null);assert.equal(kairosNumber(true),null);assert.equal(kairosNumber(0),0);
-const {normalizePantherSignals}=moduleFrom('utils/backend.ts');
+const {normalizePantherSignals}=moduleFrom('utils/backend.ts',{'./tradingCharts':moduleFrom('utils/tradingCharts.ts')});
 const n=normalizePantherSignals([{...newer,mode:'paper',side:'LONG',stop_premium:87,quote_at:'2026-10-05T10:00:00+05:30',Doc_ID:'immutable'}])[0];
 assert.equal(n.ai_score,.8);assert.equal(n.quantity,200);assert.equal(n.lots,2);assert.equal(n.stop_premium,87);assert.equal(n.Doc_ID,'immutable');
 console.log('Kairos 2.0 source isolation, latest marks, P&L and API-field preservation passed.');

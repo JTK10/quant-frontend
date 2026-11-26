@@ -161,7 +161,6 @@ const NAV_ITEMS: any[] = [
 // exchange symbols are blocked in widgets by the NSE Data Sharing & Usage
 // Policy, so every pane rendered "this symbol is only available on
 // TradingView". The tickers were correct -- the embed is what is disallowed.
-// Click-through links to tradingview.com still work and are used elsewhere.
 // Restore this when the panes render our own bars instead. --
 // { href: "/charts", icon: BarChart2, label: "Charts", color: "#38bdf8", rgb: "56,189,248" },
 ];

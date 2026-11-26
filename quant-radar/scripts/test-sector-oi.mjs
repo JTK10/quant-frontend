@@ -28,7 +28,7 @@ const {act,create}=await import('react-test-renderer');
 const {createRequire}=await import('node:module');const require=createRequire(import.meta.url);
 globalThis.IS_REACT_ACT_ENVIRONMENT=true;
 const component={};
-vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/sector/SectorOiClient.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports:component,require:name=>name==='@/utils/backend'?{buildTradingViewUrl:s=>'https://test.invalid/'+s}:name==='./SectorBarChart'?(()=>null):require(name)});
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/sector/SectorOiClient.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports:component,require:name=>name==='@/utils/backend'?{buildTradingChartsUrl:s=>'https://test.invalid/'+s}:name==='./SectorBarChart'?(()=>null):require(name)});
 const Client=component.default,one=buildSectorOi({cut:'10:00',bull:[row('A','CE_DOWN_PE_UP')]},{X:['A']});
 let root;await act(async()=>{root=create(React.createElement(Client,{key:'2026-10-19',date:'2026-10-19',board:one,error:''}));});
 assert.equal(root.root.findAllByType('a').length,1);

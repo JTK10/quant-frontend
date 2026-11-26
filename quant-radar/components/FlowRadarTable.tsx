@@ -3,7 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { FlowRadarRow } from "@/utils/backend";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 type SortKey = "name" | "sector" | "engines" | "oichg" | "pricechg" | "score" | "buildup";
 
@@ -153,7 +153,7 @@ export default function FlowRadarTable({ rows }: { rows: FlowRadarRow[] }) {
                 {/* NAME + symbol */}
                 <div className="min-w-0">
                   <a
-                    href={buildTradingViewUrl(row.Symbol, row.Name)}
+                    href={buildTradingChartsUrl(row.Symbol, row.Name)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="truncate text-[13px] font-semibold hover:underline block"

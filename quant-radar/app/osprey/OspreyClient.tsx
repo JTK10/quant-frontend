@@ -2,7 +2,7 @@
 
 import {useEffect,useMemo,useState} from 'react';
 import {ArrowDown,ArrowUp,ArrowUpRight,ChartCandlestick,Check,ChevronLeft,ChevronRight,Plus,Radar,Search} from 'lucide-react';
-import {buildTradingViewUrl} from '@/utils/backend';
+import {buildTradingChartsUrl} from '@/utils/backend';
 import {istSessionDate} from '@/utils/sessionPolling';
 import {
   addChartWatchlistSymbol,readChartWatchlist,CHART_WATCHLIST_STORAGE_KEY,CHART_WATCHLIST_UPDATED_EVENT,
@@ -186,8 +186,8 @@ export default function OspreyClient({initialDate}:{initialDate?:string}) {
           </button>
           <a href={'/charts?'+new URLSearchParams({symbol:row.symbol,date})} aria-label={'Open '+row.symbol+' in Charts'}
             title="Open Charts" target="_blank" rel="noopener noreferrer"><ChartCandlestick size={13} aria-hidden="true" /></a>
-          <a href={buildTradingViewUrl(row.symbol)} aria-label={'Open '+row.symbol+' on TradingView'}
-            title="Open TradingView" target="_blank" rel="noopener noreferrer">TV <ArrowUpRight size={11} aria-hidden="true" /></a>
+          <a href={buildTradingChartsUrl(row.symbol)} aria-label={'Open '+row.symbol+' on TradingCharts'}
+            title="Open TradingCharts" target="_blank" rel="noopener noreferrer">TC <ArrowUpRight size={11} aria-hidden="true" /></a>
         </div></td>
         <td><span className="osprey-side" data-side={row.side}>{row.side}</span></td>
         <td className="num"><strong className="osprey-score">{row.score?.toFixed(2)??'—'}</strong></td>

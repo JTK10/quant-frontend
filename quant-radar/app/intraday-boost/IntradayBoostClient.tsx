@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 import {
   addChartWatchlistSymbol,
   CHART_WATCHLIST_STORAGE_KEY,
@@ -320,9 +320,9 @@ export default function IntradayBoostClient({
                           </button>
                           <a
                             className="tv-link"
-                            href={buildTradingViewUrl(r.symbol, r.symbol)}
-                            title={`Open ${r.symbol} on TradingView`}
-                            aria-label={`Open ${r.symbol} on TradingView`}
+                            href={buildTradingChartsUrl(r.symbol, r.symbol)}
+                            title={`Open ${r.symbol} on TradingCharts`}
+                            aria-label={`Open ${r.symbol} on TradingCharts`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

@@ -21,7 +21,7 @@ function render(input,sort={key:'score',descending:true}) {
     react:{useEffect(){},useMemo:fn=>fn(),useState:initial=>{
       const i=index++;return [i===12?input:i===11?sort:typeof initial==='function'?initial():initial,()=>{}];
     }},
-    'lucide-react':{},'@/utils/backend':{buildTradingViewUrl:()=>''},
+    'lucide-react':{},'@/utils/backend':{buildTradingChartsUrl:()=>''},
     '@/utils/sessionPolling':{istSessionDate:()=> '2026-11-19'},'@/utils/chartWatchlist':{},
     './feed':{},'./model':model,'./useSetupCandles':{useSetupCandles:()=>new Map()},
     './setup':{evaluateOspreySetup:()=>null},

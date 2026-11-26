@@ -2,7 +2,7 @@
 
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {Check, ExternalLink, Plus} from 'lucide-react';
-import {buildTradingViewUrl} from '@/utils/backend';
+import {buildTradingChartsUrl} from '@/utils/backend';
 import {addChartWatchlistSymbol, readChartWatchlist, CHART_WATCHLIST_STORAGE_KEY, CHART_WATCHLIST_UPDATED_EVENT} from '@/utils/chartWatchlist';
 import {istSessionDate} from '@/utils/sessionPolling';
 import {createViperFeed} from './feed';
@@ -266,8 +266,8 @@ export default function ViperClient({initialDate}: {initialDate?: string}) {
                   event.stopPropagation();
                   setWatchlist(addChartWatchlistSymbol(row.symbol));
                 }}>{watchlist.includes(row.symbol) ? <Check size={13} /> : <Plus size={13} />}</button>
-              <a href={buildTradingViewUrl(row.symbol, row.symbol)} target="_blank" rel="noopener noreferrer"
-                title="Open TradingView" aria-label={'Open ' + row.symbol + ' on TradingView'}
+              <a href={buildTradingChartsUrl(row.symbol, row.symbol)} target="_blank" rel="noopener noreferrer"
+                title="Open TradingCharts" aria-label={'Open ' + row.symbol + ' on TradingCharts'}
                 onClick={event => event.stopPropagation()}><ExternalLink size={13} /></a>
             </div>
               : key === 'state' ? <span className={'tag ' + stateClass(row.state)}>{row.state}</span>

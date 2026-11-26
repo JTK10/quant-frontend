@@ -3,7 +3,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Check, ExternalLink, Plus, Radar} from 'lucide-react';
 import {addChartWatchlistSymbol, readChartWatchlist, CHART_WATCHLIST_UPDATED_EVENT} from '@/utils/chartWatchlist';
-import {buildTradingViewUrl, getTodayIstDate} from '@/utils/backend';
+import {buildTradingChartsUrl, getTodayIstDate} from '@/utils/backend';
 import {IRBIS_CUTS, IRBIS_DEFAULT_END, type IrbisCandidate, type IrbisResponse} from '@/utils/irbis';
 import {sessionPollingDelay} from '@/utils/sessionPolling';
 import './irbis.css';
@@ -165,7 +165,7 @@ export default function IrbisClient() {
           <td><span className={c.ce_change_pct != null && c.ce_change_pct >= 0 ? 'positive' : 'negative'}>{signed(c.ce_change_pct)}</span><span className="divider"> / </span><span className={c.pe_change_pct != null && c.pe_change_pct >= 0 ? 'positive' : 'negative'}>{signed(c.pe_change_pct)}</span><small>Matched five-minute change</small></td>
           <td><strong>{c.coverage == null ? '—' : `${fmt(c.coverage * 100, 0)}%`}</strong><small>Both legs</small></td>
           <td><span className={`irbis-check ${c.confirmed ? 'yes' : ''}`}>{c.confirmed ? 'Confirmed' : latestCut === '10:00' ? 'Awaiting OI' : 'Watching'}</span><small>{c.confirmed ? 'VWAP + OI aligned' : 'No current confirmation'}</small></td>
-          <td><div className="irbis-actions"><button type="button" title="Add to Charts watchlist" aria-label={`Add ${c.symbol} to Charts watchlist`} disabled={watch.includes(c.symbol)} onClick={() => addWatch(c.symbol)}>{watch.includes(c.symbol) ? <Check size={15}/> : <Plus size={15}/>}</button><a href={buildTradingViewUrl(c.symbol)} target="_blank" rel="noopener noreferrer" title="Open TradingView" aria-label={`Open ${c.symbol} on TradingView`}><ExternalLink size={15}/></a></div></td>
+          <td><div className="irbis-actions"><button type="button" title="Add to Charts watchlist" aria-label={`Add ${c.symbol} to Charts watchlist`} disabled={watch.includes(c.symbol)} onClick={() => addWatch(c.symbol)}>{watch.includes(c.symbol) ? <Check size={15}/> : <Plus size={15}/>}</button><a href={buildTradingChartsUrl(c.symbol)} target="_blank" rel="noopener noreferrer" title="Open TradingCharts" aria-label={`Open ${c.symbol} on TradingCharts`}><ExternalLink size={15}/></a></div></td>
         </tr>)}</tbody></table>{!candidates.length && <div className="irbis-empty"><Radar size={24}/><strong>{emptyText}</strong><span>Rankings appear when an eligible scanner snapshot is available.</span></div>}</div>
         <div className="irbis-table-foot"><span>As of {mode === 'research' ? research?.asof ?? '—' : ist(view?.available_at)} IST · OI cut {view?.oi_cut ?? '—'}</span><span>{mode === 'live' ? `Checks every 60 seconds during market hours · last ${updated ? ist(new Date(updated).toISOString()) : '—'} IST` : 'Saved research cuts only'}</span></div>
       </div>

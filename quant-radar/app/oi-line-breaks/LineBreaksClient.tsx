@@ -2,7 +2,7 @@
 
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowDownUp,Check,ChevronLeft,ChevronRight,ExternalLink,Plus,Search} from 'lucide-react';
-import {buildTradingViewUrl} from '@/utils/backend';
+import {buildTradingChartsUrl} from '@/utils/backend';
 import {addChartWatchlistSymbol,readChartWatchlist,CHART_WATCHLIST_STORAGE_KEY,CHART_WATCHLIST_UPDATED_EVENT} from '@/utils/chartWatchlist';
 import {lineKey,type LineBoard,type LineRow,type LineSession} from './types';
 import {createLineArchiveFeed,createLineLiveFeed} from './feed';
@@ -121,7 +121,7 @@ export default function LineBreaksClient({initialDate,initialCut,sessions}:{init
         <tbody>{rows.map(row=><tr key={lineKey(row)} className={selectedDetail&&lineKey(selectedDetail)===lineKey(row)?'selected':''}>
           <td>{row.rank}</td><td className="stock"><div className="line-stock"><button type="button" onClick={()=>setDetail(row)} title="Show cash and OI evidence">{row.symbol}</button>{row.qualified&&<span title="Two or more defended days with fresh OI">●</span>}<button className="line-watch" type="button" title={watchlist.includes(row.symbol)?'Already in Charts watchlist':'Add to Charts watchlist'} aria-label={`Add ${row.symbol} to Charts watchlist`} disabled={watchlist.includes(row.symbol)} onClick={()=>{setWatchlist(addChartWatchlistSymbol(row.symbol));setNotice(`${row.symbol} added to Charts watchlist`);}}>{watchlist.includes(row.symbol)?<Check size={11}/>:<Plus size={11}/>}</button></div></td>
           <td className={row.move_pct!=null&&row.move_pct>=0?'positive':'negative'}>{percent(row.move_pct)}</td><td>₹{row.strike.toLocaleString('en-IN')}</td><td>{row.break_cut}</td><td>{levelFlag(side==='BULL'?row.pdh_broken:row.pdl_broken)}</td><td title={`Defended ${row.respected_days} days · fresh OI build ${row.trapped_buildup_days} days`}>{row.respected_days} / {row.trapped_buildup_days}</td><td>{row.fresh_oi_share_pct.toFixed(2)}%</td>
-          <td><div className="line-actions"><a href={`/charts?${new URLSearchParams({symbol:row.symbol,date})}`} target="_blank" rel="noopener noreferrer" title={`Open ${row.symbol} in Charts`}>Chart</a><a href={buildTradingViewUrl(row.symbol,row.symbol)} target="_blank" rel="noopener noreferrer" title={`Open ${row.symbol} on TradingView`} aria-label={`Open ${row.symbol} on TradingView`}><ExternalLink size={13}/></a></div></td>
+          <td><div className="line-actions"><a href={`/charts?${new URLSearchParams({symbol:row.symbol,date})}`} target="_blank" rel="noopener noreferrer" title={`Open ${row.symbol} in Charts`}>Chart</a><a href={buildTradingChartsUrl(row.symbol,row.symbol)} target="_blank" rel="noopener noreferrer" title={`Open ${row.symbol} on TradingCharts`} aria-label={`Open ${row.symbol} on TradingCharts`}><ExternalLink size={13}/></a></div></td>
         </tr>)}</tbody></table>{!rows.length&&<div className="line-empty">No lines match these filters at this cut.</div>}</div>
     </section>;
   }

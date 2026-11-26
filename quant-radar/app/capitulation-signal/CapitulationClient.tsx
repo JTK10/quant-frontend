@@ -1,5 +1,6 @@
 "use client";
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { useState, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { CapitulationRow } from "@/utils/backend";
@@ -160,14 +161,14 @@ export default function CapitulationClient({ signals }: { signals: CapitulationR
 
                 {/* NAME (Clickable TV Link) */}
                 <div style={{ flex: COLUMNS[1].flex, justifyContent: COLUMNS[1].justify }} className="flex items-center gap-2 pr-4">
-                  {sig.Chart ? (
+                  {(sig.Symbol || sig.Name) ? (
                     <a 
-                      href={sig.Chart} 
+                      href={buildTradingChartsUrl(sig.Symbol, sig.Name)}
                       target="_blank" 
                       rel="noreferrer"
                       className="font-semibold text-[14px] truncate hover:underline" 
                       style={{ color: "var(--color-accent)" }}
-                      title={`Open ${sig.Name} in TradingView`}
+                      title={`Open ${sig.Name} in TradingCharts`}
                     >
                       {sig.Name}
                     </a>

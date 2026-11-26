@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { buildTradingViewUrl } from "@/utils/backend";
+import { buildTradingChartsUrl } from "@/utils/backend";
 
 const ACCENT = "#ec4899";
 
@@ -216,7 +216,7 @@ export default function ServalClient({ signals }: { signals: any[] }) {
               </span>
               <div className="min-w-0 flex items-center gap-1.5">
                 <a
-                  href={buildTradingViewUrl(s.name, s.name)}
+                  href={buildTradingChartsUrl(s.name, s.name)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="min-w-0 truncate text-[13px] font-semibold hover:underline"

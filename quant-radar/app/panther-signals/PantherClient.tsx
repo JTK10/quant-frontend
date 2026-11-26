@@ -1,5 +1,6 @@
 'use client';
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { PantherRow } from '@/utils/backend';
@@ -278,15 +279,15 @@ export default function PantherClient({ signals }: { signals: PantherRow[] }) {
                 >
                   <div style={{ width: COLUMNS[0].width, minWidth: COLUMNS[0].width }}>
                     <div className="flex items-center gap-1.5">
-                      {sig.Chart ? (
+                      {(sig.name) ? (
                         <a
-                          href={sig.Chart}
+                          href={buildTradingChartsUrl(sig.name)}
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => { e.stopPropagation(); }}
                           className="font-semibold text-[13px] truncate hover:underline"
                           style={{ color: isSubRow ? 'var(--color-muted2)' : 'var(--color-text2)' }}
-                          title="Open in TradingView"
+                          title="Open in TradingCharts"
                         >
                           {sig.name}
                         </a>

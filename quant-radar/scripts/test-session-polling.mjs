@@ -28,7 +28,7 @@ function harness(start,{queryDate=null,states={}}={}) {
     fetch:async(url,options)=>{requests.push({url:String(url),options});return {ok:true,status:200,json:async()=>({signals:[],bars:[],errors:[],date:policy.istSessionDate(),symbol:'NIFTY 50',intraday:[],previous:[]})};}};
   let policy;
   const dependencies={react,'next/navigation':{useRouter:()=>({refresh:()=>refreshes++}),useSearchParams:()=>({get:()=>queryDate}),usePathname:()=>'/test'},
-    '@/utils/backend':{getTodayIstDate:()=>policy.istSessionDate(),buildTradingViewUrl:()=>''},
+    '@/utils/backend':{getTodayIstDate:()=>policy.istSessionDate(),buildTradingChartsUrl:()=>''},
     '@/utils/chartWatchlist':{readChartWatchlist:()=>[],addChartWatchlistSymbol:()=>[],CHART_WATCHLIST_UPDATED_EVENT:'watch'},
     '@/utils/pallas':{PALLAS_DATES:[],quoteKey:()=>'',pallasAiScore:()=>null,passesPallasAi:()=>true,pallasEngineLabel:()=>({label:'',detail:''}),pallasAiPassLabel:()=>'',pallasOiCrossed:()=>null},
     '@/utils/pallasTime':{pallasSessionRollover:()=>null,pallasPreviousWeekday:()=>''},

@@ -1,5 +1,6 @@
 "use client";
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { useState, useMemo } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { SniperRow } from "@/utils/backend";
@@ -182,14 +183,14 @@ export default function SniperClient({ signals }: { signals: SniperRow[] }) {
 
                 {/* NAME (Clickable TV Link) */}
                 <div style={{ justifyContent: COLUMNS[1].justify }} className="flex items-center gap-2 pr-4 min-w-0">
-                  {sig.Chart ? (
+                  {(sig.Symbol || sig.Name) ? (
                     <a 
-                      href={sig.Chart} 
+                      href={buildTradingChartsUrl(sig.Symbol, sig.Name)}
                       target="_blank" 
                       rel="noreferrer"
                       className="font-semibold text-[14px] truncate hover:underline" 
                       style={{ color: "var(--color-text2)" }}
-                      title={`Open ${sig.Name} in TradingView`}
+                      title={`Open ${sig.Name} in TradingCharts`}
                     >
                       {sig.Name}
                     </a>

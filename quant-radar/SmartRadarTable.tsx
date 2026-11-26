@@ -1,5 +1,6 @@
 'use client';
 
+import { buildTradingChartsUrl } from "@/utils/backend";
 import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
@@ -450,9 +451,9 @@ export default function SmartRadarTable({ signals }: { signals: Signal[] }) {
 
                   {/* TV link */}
                   <div className="ml-auto">
-                    {sig.Chart ? (
+                    {(sig.Symbol || sig.Name) ? (
                       <a
-                        href={sig.Chart}
+                        href={buildTradingChartsUrl(sig.Symbol, sig.Name)}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
